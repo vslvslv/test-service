@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { 
   Database, 
@@ -9,7 +10,8 @@ import {
   TrendingUp,
   AlertCircle,
   CheckCircle,
-  Package
+  Package,
+  ChevronRight
 } from 'lucide-react';
 import { apiService } from '../services/api';
 
@@ -23,6 +25,7 @@ interface Stats {
 
 const Dashboard: React.FC = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [stats, setStats] = useState<Stats>({
     totalSchemas: 0,
     totalEntities: 0,
@@ -62,6 +65,26 @@ const Dashboard: React.FC = () => {
     }
   };
 
+  const handleCreateSchema = () => {
+    navigate('/schemas/new');
+  };
+
+  const handleManageEnvironments = () => {
+    navigate('/environments');
+  };
+
+  const handleViewActivity = () => {
+    navigate('/activity');
+  };
+
+  const handleViewAllSchemas = () => {
+    navigate('/schemas');
+  };
+
+  const handleSchemaClick = (schemaName: string) => {
+    navigate(`/schemas/${schemaName}`);
+  };
+
   const statCards = [
     {
       title: 'Total Schemas',
@@ -69,6 +92,7 @@ const Dashboard: React.FC = () => {
       icon: Layers,
       color: 'blue',
       trend: '+12%',
+      onClick: () => navigate('/schemas'),
     },
     {
       title: 'Environments',
@@ -76,6 +100,7 @@ const Dashboard: React.FC = () => {
       icon: Server,
       color: 'green',
       trend: '+5%',
+      onClick: () => navigate('/environments'),
     },
     {
       title: 'Available Entities',
@@ -83,6 +108,7 @@ const Dashboard: React.FC = () => {
       icon: CheckCircle,
       color: 'purple',
       trend: '87%',
+      onClick: () => navigate('/entities'),
     },
     {
       title: 'Consumed Entities',
@@ -90,6 +116,7 @@ const Dashboard: React.FC = () => {
       icon: Activity,
       color: 'orange',
       trend: '13%',
+      onClick: () => navigate('/entities'),
     },
   ];
 
@@ -121,9 +148,10 @@ const Dashboard: React.FC = () => {
           };
 
           return (
-            <div
+            <button
               key={index}
-              className="bg-gray-800 rounded-lg border border-gray-700 p-6 hover:border-gray-600 transition-colors"
+              onClick={stat.onClick}
+              className="bg-gray-800 rounded-lg border border-gray-700 p-6 hover:border-gray-600 hover:bg-gray-750 transition-all text-left cursor-pointer"
             >
               <div className="flex items-center justify-between mb-4">
                 <div className={`p-3 rounded-lg ${colorClasses[stat.color as keyof typeof colorClasses]}`}>
@@ -135,7 +163,7 @@ const Dashboard: React.FC = () => {
                 <p className="text-gray-400 text-sm mb-1">{stat.title}</p>
                 <p className="text-3xl font-bold text-white">{stat.value}</p>
               </div>
-            </div>
+            </button>
           );
         })}
       </div>
@@ -149,35 +177,53 @@ const Dashboard: React.FC = () => {
               <Layers className="w-5 h-5" />
               Recent Schemas
             </h2>
-            <button className="text-blue-400 hover:text-blue-300 text-sm font-medium">
+            <button 
+              onClick={handleViewAllSchemas}
+              className="text-blue-400 hover:text-blue-300 text-sm font-medium flex items-center gap-1"
+            >
               View All
+              <ChevronRight className="w-4 h-4" />
             </button>
           </div>
           <div className="space-y-3">
             {recentSchemas.length > 0 ? (
               recentSchemas.map((schema, index) => (
-                <div
+                <button
                   key={index}
-                  className="p-4 bg-gray-700/50 rounded-lg border border-gray-600 hover:border-gray-500 transition-colors"
+                  onClick={() => handleSchemaClick(schema.entityName || schema.name)}
+                  className="w-full p-4 bg-gray-700/50 rounded-lg border border-gray-600 hover:border-blue-500 hover:bg-gray-700 transition-all text-left"
                 >
                   <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-white font-medium">{schema.name}</p>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <p className="text-white font-medium">{schema.entityName || schema.name}</p>
+                        {schema.excludeOnFetch && (
+                          <span className="text-xs px-2 py-0.5 bg-orange-500/20 text-orange-400 rounded border border-orange-500/30">
+                            Auto-consume
+                          </span>
+                        )}
+                      </div>
                       <p className="text-sm text-gray-400 mt-1">
                         {schema.fields?.length || 0} fields
-                        {schema.excludeOnFetch && (
-                          <span className="ml-2 text-xs text-orange-400">• Auto-consume</span>
-                        )}
                       </p>
                     </div>
-                    <Package className="w-5 h-5 text-gray-500" />
+                    <div className="flex items-center gap-2">
+                      <Package className="w-5 h-5 text-gray-500" />
+                      <ChevronRight className="w-4 h-4 text-gray-500" />
+                    </div>
                   </div>
-                </div>
+                </button>
               ))
             ) : (
               <div className="text-center py-8 text-gray-500">
                 <Layers className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                <p>No schemas found</p>
+                <p className="mb-3">No schemas found</p>
+                <button
+                  onClick={handleCreateSchema}
+                  className="text-blue-400 hover:text-blue-300 text-sm font-medium"
+                >
+                  Create your first schema
+                </button>
               </div>
             )}
           </div>
@@ -190,33 +236,57 @@ const Dashboard: React.FC = () => {
             Quick Actions
           </h2>
           <div className="space-y-3">
-            <button className="w-full p-4 bg-blue-600 hover:bg-blue-700 rounded-lg text-white font-medium transition-colors text-left">
-              <div className="flex items-center gap-3">
-                <Database className="w-5 h-5" />
-                <div>
-                  <p className="font-semibold">Create New Schema</p>
-                  <p className="text-sm text-blue-100">Define a new entity type</p>
+            <button 
+              onClick={handleCreateSchema}
+              className="w-full p-4 bg-blue-600 hover:bg-blue-700 rounded-lg text-white font-medium transition-colors text-left group"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-white/10 rounded-lg">
+                    <Database className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <p className="font-semibold">Create New Schema</p>
+                    <p className="text-sm text-blue-100">Define a new entity type</p>
+                  </div>
                 </div>
+                <ChevronRight className="w-5 h-5 opacity-0 group-hover:opacity-100 transition-opacity" />
               </div>
             </button>
             
-            <button className="w-full p-4 bg-gray-700 hover:bg-gray-600 rounded-lg text-white font-medium transition-colors text-left">
-              <div className="flex items-center gap-3">
-                <Server className="w-5 h-5" />
-                <div>
-                  <p className="font-semibold">Manage Environments</p>
-                  <p className="text-sm text-gray-300">Configure test environments</p>
+            <button 
+              onClick={handleManageEnvironments}
+              className="w-full p-4 bg-gray-700 hover:bg-gray-600 rounded-lg text-white font-medium transition-colors text-left group"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-white/5 rounded-lg">
+                    <Server className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <p className="font-semibold">Manage Environments</p>
+                    <p className="text-sm text-gray-300">Configure test environments</p>
+                  </div>
                 </div>
+                <ChevronRight className="w-5 h-5 opacity-0 group-hover:opacity-100 transition-opacity" />
               </div>
             </button>
             
-            <button className="w-full p-4 bg-gray-700 hover:bg-gray-600 rounded-lg text-white font-medium transition-colors text-left">
-              <div className="flex items-center gap-3">
-                <Activity className="w-5 h-5" />
-                <div>
-                  <p className="font-semibold">View Activity</p>
-                  <p className="text-sm text-gray-300">Check recent operations</p>
+            <button 
+              onClick={handleViewActivity}
+              className="w-full p-4 bg-gray-700 hover:bg-gray-600 rounded-lg text-white font-medium transition-colors text-left group"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-white/5 rounded-lg">
+                    <Activity className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <p className="font-semibold">View Activity</p>
+                    <p className="text-sm text-gray-300">Check recent operations</p>
+                  </div>
                 </div>
+                <ChevronRight className="w-5 h-5 opacity-0 group-hover:opacity-100 transition-opacity" />
               </div>
             </button>
           </div>
