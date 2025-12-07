@@ -24,7 +24,6 @@ cd TestService.Api && dotnet run
 - **[Dynamic System Guide](documents/guides/DYNAMIC_SYSTEM_GUIDE.md)** - Full guide to the dynamic entity system
 - **[Parallel Test Execution](documents/guides/PARALLEL_TEST_EXECUTION_GUIDE.md)** - Thread-safe test data management
 - **[Quick Reference](documents/guides/QUICK_REFERENCE.md)** - Common commands and operations
-- **[API Reference](documents/api-reference/AGENT_API_DOCUMENTATION.md)** - Legacy Agent API documentation
 
 ---
 
@@ -132,9 +131,8 @@ cd TestService.Tests
 dotnet test
 ```
 
-**Test Coverage**: 32 integration tests
+**Test Coverage**: 21 integration tests
 - 12 Dynamic Entity tests
-- 11 Agent API tests (legacy)
 - 9 TestData API tests (legacy)
 
 ---
@@ -161,7 +159,6 @@ dotnet test
 
 ### ?? Multiple API Styles
 - **Dynamic API**: Schema-driven entities (`/api/entities`, `/api/schemas`)
-- **Legacy API**: Static Agent API (`/api/agents`)
 - **Legacy API**: Static TestData API (`/api/testdata`)
 
 ---
@@ -190,7 +187,7 @@ dotnet test
 
 ### Legacy APIs (Still Supported)
 
-See [Agent API Documentation](documents/api-reference/AGENT_API_DOCUMENTATION.md) for legacy endpoint details.
+TestData API for backward compatibility. Use Dynamic Entity System for new development.
 
 ---
 
@@ -264,12 +261,10 @@ test-service/
 ?   ??? Controllers/
 ?   ?   ??? DynamicEntitiesController.cs  (NEW)
 ?   ?   ??? SchemasController.cs          (NEW)
-?   ?   ??? AgentsController.cs           (Legacy)
 ?   ?   ??? TestDataController.cs         (Legacy)
 ?   ??? Models/
 ?   ?   ??? EntitySchema.cs               (NEW)
 ?   ?   ??? DynamicEntity.cs              (NEW)
-?   ?   ??? Agent.cs                      (Legacy)
 ?   ?   ??? TestData.cs                   (Legacy)
 ?   ??? Services/
 ?   ?   ??? EntitySchemaRepository.cs     (NEW)
@@ -279,7 +274,6 @@ test-service/
 ?   ??? Program.cs
 ??? TestService.Tests/
 ?   ??? DynamicEntityTests.cs             (NEW)
-?   ??? AgentApiTests.cs                  (Legacy)
 ?   ??? TestDataApiTests.cs               (Legacy)
 ??? documents/                            ??
 ?   ??? INDEX.md                          - Documentation index
@@ -304,10 +298,10 @@ All documentation is organized in the [`documents/`](documents/) folder:
 - [Quick Reference](documents/guides/QUICK_REFERENCE.md) - Command cheat sheet
 
 ### ?? API Reference
-- [Agent API Documentation](documents/api-reference/AGENT_API_DOCUMENTATION.md) - Legacy Agent API
+- [Dynamic Entity API](documents/api-reference/) - Schema-based entity system
 
 ### ??? Architecture
-- [Restructuring Summary](documents/architecture/RESTRUCTURING_SUMMARY.md) - System evolution
+- [System Architecture](documents/architecture/) - Dynamic entity system design
 
 ### ?? Test Results
 - [Test Execution Results](documents/test-results/TEST_EXECUTION_RESULTS.md)

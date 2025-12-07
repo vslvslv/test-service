@@ -109,10 +109,6 @@ builder.Services.AddScoped<IEnvironmentService, EnvironmentService>();
 builder.Services.AddSingleton<ITestDataRepository, TestDataRepository>();
 builder.Services.AddScoped<ITestDataService, TestDataService>();
 
-// Register Agent services (legacy - kept for compatibility)
-builder.Services.AddSingleton<IAgentRepository, AgentRepository>();
-builder.Services.AddScoped<IAgentService, AgentService>();
-
 // Register Dynamic Entity services (new)
 builder.Services.AddSingleton<IEntitySchemaRepository, EntitySchemaRepository>();
 builder.Services.AddSingleton<IDynamicEntityRepository, DynamicEntityRepository>();
