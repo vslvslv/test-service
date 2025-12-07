@@ -102,7 +102,7 @@ const CreateSchema: React.FC = () => {
     try {
       // Prepare schema data
       const schemaData = {
-        name: schemaName.trim(),
+        entityName: schemaName.trim(),
         fields: fields.map(f => ({
           name: f.name.trim(),
           type: f.type,

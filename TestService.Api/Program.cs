@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using TestService.Api.Configuration;
 using TestService.Api.Services;
+using TestService.Api.Hubs;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -17,6 +18,9 @@ builder.Services.AddCors(options =>
               .AllowCredentials();
     });
 });
+
+// Add SignalR
+builder.Services.AddSignalR();
 
 // Add configuration
 var mongoDbSettings = new MongoDbSettings();
@@ -49,6 +53,23 @@ builder.Services.AddAuthentication(options =>
         ValidAudience = jwtSettings.Audience,
         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.SecretKey)),
         ClockSkew = TimeSpan.Zero
+    };
+
+    // Configure SignalR to accept tokens from query string
+    options.Events = new JwtBearerEvents
+    {
+        OnMessageReceived = context =>
+        {
+            var accessToken = context.Request.Query["access_token"];
+            var path = context.HttpContext.Request.Path;
+            
+            if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/notificationHub"))
+            {
+                context.Token = accessToken;
+            }
+            
+            return Task.CompletedTask;
+        }
     };
 });
 
@@ -100,6 +121,9 @@ builder.Services.AddScoped<IDynamicEntityService, DynamicEntityService>();
 // Register Message Bus service (shared)
 builder.Services.AddSingleton<IMessageBusService, MessageBusService>();
 
+// Register Notification service
+builder.Services.AddSingleton<INotificationService, NotificationService>();
+
 var app = builder.Build();
 
 // Initialize default admin user
@@ -136,6 +160,9 @@ app.MapGet("/health", () => Results.Ok(new { status = "healthy", timestamp = Dat
     .AllowAnonymous();
 
 app.MapControllers();
+
+// Map SignalR hub
+app.MapHub<NotificationHub>("/notificationHub");
 
 app.Run();
 

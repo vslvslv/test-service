@@ -140,11 +140,13 @@ const EditSchema: React.FC = () => {
         excludeOnFetch
       };
 
-      await apiService.request({
-        method: 'PUT',
-        url: `/api/schemas/${schema!.entityName}`,
-        data: updatedSchema
-      });
+      await apiService.updateSchema(schema!.entityName, updatedSchema);
+      
+      console.log('? Schema updated successfully:', schema!.entityName);
+      console.log('? Waiting for notification to arrive...');
+      
+      // Wait a bit for the notification to arrive before navigating
+      await new Promise(resolve => setTimeout(resolve, 500));
       
       // Navigate back to schemas list
       navigate('/schemas');
@@ -168,10 +170,13 @@ const EditSchema: React.FC = () => {
     }
 
     try {
-      await apiService.request({
-        method: 'DELETE',
-        url: `/api/schemas/${schema!.entityName}`
-      });
+      await apiService.deleteSchema(schema!.entityName);
+      
+      console.log('? Schema deleted successfully:', schema!.entityName);
+      console.log('? Waiting for notification to arrive...');
+      
+      // Wait a bit for the notification to arrive before navigating
+      await new Promise(resolve => setTimeout(resolve, 500));
       
       navigate('/schemas');
     } catch (err: any) {

@@ -9,11 +9,16 @@ namespace TestService.Api.Controllers;
 public class SchemasController : ControllerBase
 {
     private readonly IEntitySchemaRepository _schemaRepository;
+    private readonly INotificationService _notificationService;
     private readonly ILogger<SchemasController> _logger;
 
-    public SchemasController(IEntitySchemaRepository schemaRepository, ILogger<SchemasController> logger)
+    public SchemasController(
+        IEntitySchemaRepository schemaRepository,
+        INotificationService notificationService,
+        ILogger<SchemasController> logger)
     {
         _schemaRepository = schemaRepository;
+        _notificationService = notificationService;
         _logger = logger;
     }
 
@@ -100,6 +105,10 @@ public class SchemasController : ControllerBase
             }
 
             var created = await _schemaRepository.CreateSchemaAsync(schema);
+            
+            // Send notification
+            await _notificationService.NotifySchemaCreated(created.EntityName, created);
+            
             return CreatedAtAction(nameof(GetByName), new { entityName = created.EntityName }, created);
         }
         catch (Exception ex)
@@ -123,6 +132,10 @@ public class SchemasController : ControllerBase
             {
                 return NotFound($"Schema for entity '{entityName}' not found");
             }
+            
+            // Send notification
+            await _notificationService.NotifySchemaUpdated(entityName, schema);
+            
             return NoContent();
         }
         catch (Exception ex)
@@ -145,6 +158,10 @@ public class SchemasController : ControllerBase
             {
                 return NotFound($"Schema for entity '{entityName}' not found");
             }
+            
+            // Send notification
+            await _notificationService.NotifySchemaDeleted(entityName);
+            
             return NoContent();
         }
         catch (Exception ex)

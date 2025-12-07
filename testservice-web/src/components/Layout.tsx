@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect, useLayoutEffect } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useToast } from '../contexts/ToastContext';
+import NotificationBell, { NotificationBellRef } from './NotificationBell';
 import {
   Home,
   Database,
@@ -12,19 +14,82 @@ import {
   Menu,
   X,
   Search,
-  Bell,
   User as UserIcon
 } from 'lucide-react';
+import notificationService from '../services/notificationService';
 
 const Layout: React.FC = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const { user, logout } = useAuth();
+  const { setBellCallback, notifyBell } = useToast();
   const location = useLocation();
   const navigate = useNavigate();
+  const bellRef = useRef<NotificationBellRef>(null);
+
+  // Use useLayoutEffect to register callback synchronously after render
+  useLayoutEffect(() => {
+    // Use a small delay to ensure ref is populated
+    const timer = setTimeout(() => {
+      if (bellRef.current?.addNotification) {
+        console.log('? Registering bell callback (useLayoutEffect)');
+        setBellCallback(bellRef.current.addNotification);
+      } else {
+        console.log('? Bell ref not ready in useLayoutEffect, will retry...');
+      }
+    }, 50);
+
+    return () => clearTimeout(timer);
+  }, []); // Run once on mount
+
+  // Also register on any changes to ensure it's set
+  useEffect(() => {
+    if (bellRef.current?.addNotification) {
+      console.log('? Re-registering bell callback (useEffect)');
+      setBellCallback(bellRef.current.addNotification);
+    } else {
+      console.log('? Bell ref still not ready in useEffect');
+      // Keep trying
+      const retryTimer = setInterval(() => {
+        if (bellRef.current?.addNotification) {
+          console.log('? Bell callback registered after retry');
+          setBellCallback(bellRef.current.addNotification);
+          clearInterval(retryTimer);
+        }
+      }, 100);
+
+      // Stop trying after 5 seconds
+      setTimeout(() => clearInterval(retryTimer), 5000);
+
+      return () => clearInterval(retryTimer);
+    }
+  }, [setBellCallback]);
 
   const handleLogout = () => {
     logout();
     navigate('/login');
+  };
+
+  const handleTestNotification = () => {
+    console.log('?? Test notification button clicked');
+    const testNotification = {
+      type: 'schema_created' as const,
+      schemaName: 'test-debug-' + Date.now(),
+      timestamp: new Date().toISOString()
+    };
+    console.log('?? Calling notifyBell with:', testNotification);
+    notifyBell(testNotification);
+  };
+
+  const handleCheckSignalR = () => {
+    console.log('?? Checking SignalR connection status...');
+    const debugInfo = (notificationService as any).getDebugInfo();
+    console.log('SignalR Debug Info:', debugInfo);
+    console.log('  Connection State:', debugInfo.connectionState);
+    console.log('  Connection ID:', debugInfo.connectionId);
+    console.log('  Is Connected:', debugInfo.isConnected);
+    console.log('  Handler Count:', debugInfo.handlerCount);
+    
+    alert(`SignalR Status:\n\nConnected: ${debugInfo.isConnected}\nState: ${debugInfo.connectionState}\nHandlers: ${debugInfo.handlerCount}\nConnection ID: ${debugInfo.connectionId || 'N/A'}`);
   };
 
   const menuItems = [
@@ -73,10 +138,25 @@ const Layout: React.FC = () => {
 
           {/* Right side */}
           <div className="flex items-center gap-3">
-            <button className="p-2 hover:bg-gray-700 rounded-lg transition-colors text-gray-400 hover:text-white relative">
-              <Bell className="w-5 h-5" />
-              <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+            {/* Debug: SignalR Status button */}
+            <button
+              onClick={handleCheckSignalR}
+              className="p-2 hover:bg-gray-700 rounded-lg transition-colors text-gray-400 hover:text-white"
+              title="Check SignalR Status"
+            >
+              ??
             </button>
+            
+            {/* Debug: Test notification button */}
+            <button
+              onClick={handleTestNotification}
+              className="p-2 hover:bg-gray-700 rounded-lg transition-colors text-gray-400 hover:text-white"
+              title="Test Notification (Debug)"
+            >
+              ??
+            </button>
+            
+            <NotificationBell ref={bellRef} />
             
             <div className="flex items-center gap-3 pl-3 border-l border-gray-700">
               <div className="flex items-center gap-2">

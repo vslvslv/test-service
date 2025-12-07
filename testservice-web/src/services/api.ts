@@ -92,6 +92,16 @@ class ApiService {
     return response.data;
   }
 
+  async updateSchema(name: string, schemaData: any) {
+    const response = await this.api.put(`/api/schemas/${name}`, schemaData);
+    return response.data;
+  }
+
+  async deleteSchema(name: string) {
+    const response = await this.api.delete(`/api/schemas/${name}`);
+    return response.data;
+  }
+
   // Dynamic Entities
   async getEntities(entityType: string, environment?: string) {
     const params = environment ? { environment } : {};
