@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { LogIn } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { Lock, User, AlertCircle, Database } from 'lucide-react';
+import { getErrorMessage } from '../types';
 
 const Login: React.FC = () => {
   const [username, setUsername] = useState('');
@@ -19,8 +20,8 @@ const Login: React.FC = () => {
     try {
       await login(username, password);
       navigate('/');
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Invalid username or password');
+    } catch (err) {
+      setError(getErrorMessage(err));
     } finally {
       setIsLoading(false);
     }
@@ -32,7 +33,7 @@ const Login: React.FC = () => {
         {/* Logo/Brand */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-600 rounded-lg mb-4">
-            <Database className="w-8 h-8 text-white" />
+            <LogIn className="w-8 h-8 text-white" />
           </div>
           <h1 className="text-3xl font-bold text-white mb-2">Test Service</h1>
           <p className="text-gray-400">Dynamic Test Data Management Platform</p>
@@ -44,7 +45,9 @@ const Login: React.FC = () => {
 
           {error && (
             <div className="mb-4 p-3 bg-red-500/10 border border-red-500/50 rounded-lg flex items-center gap-2 text-red-400">
-              <AlertCircle className="w-5 h-5 flex-shrink-0" />
+              <svg className="h-5 w-5 flex-shrink-0 text-red-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h8m-4-4v8" />
+              </svg>
               <span className="text-sm">{error}</span>
             </div>
           )}
@@ -57,7 +60,9 @@ const Login: React.FC = () => {
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <User className="h-5 w-5 text-gray-500" />
+                  <svg className="h-5 w-5 text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11.576V4H8v7.576A4.992 4.992 0 0112 17c1.104 0 2.12-.373 3-1.003M8 21h8M8 17h8" />
+                  </svg>
                 </div>
                 <input
                   id="username"
@@ -79,7 +84,9 @@ const Login: React.FC = () => {
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Lock className="h-5 w-5 text-gray-500" />
+                  <svg className="h-5 w-5 text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11.576V4H8v7.576A4.992 4.992 0 0112 17c1.104 0 2.12-.373 3-1.003M8 21h8m-8-4h8" />
+                  </svg>
                 </div>
                 <input
                   id="password"

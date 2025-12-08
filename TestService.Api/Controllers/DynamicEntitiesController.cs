@@ -87,6 +87,8 @@ public class DynamicEntitiesController : ControllerBase
     /// <summary>
     /// Get next available (non-consumed) entity - atomically marks it as consumed
     /// </summary>
+    /// <param name="entityType">The entity type</param>
+    /// <param name="environment">Optional: Filter by environment name</param>
     /// <remarks>
     /// This endpoint is specifically designed for parallel test execution.
     /// It atomically finds and marks an entity as consumed in a single operation,
@@ -94,10 +96,12 @@ public class DynamicEntitiesController : ControllerBase
     /// 
     /// Only works if the schema has excludeOnFetch=true.
     /// 
-    /// Example: GET /api/entities/Agent/next
+    /// Example: GET /api/entities/Agent/next?environment=dev
     /// </remarks>
     [HttpGet("{entityType}/next")]
-    public async Task<ActionResult<DynamicEntity>> GetNextAvailable(string entityType)
+    public async Task<ActionResult<DynamicEntity>> GetNextAvailable(
+        string entityType,
+        [FromQuery] string? environment = null)
     {
         try
         {
@@ -112,7 +116,7 @@ public class DynamicEntitiesController : ControllerBase
                 return BadRequest($"Entity type '{entityType}' does not have excludeOnFetch enabled");
             }
 
-            var entity = await _entityService.GetNextAvailableAsync(entityType);
+            var entity = await _entityService.GetNextAvailableAsync(entityType, environment);
             if (entity == null)
             {
                 return NotFound("No available entities found");
@@ -130,8 +134,12 @@ public class DynamicEntitiesController : ControllerBase
     /// <summary>
     /// Get entities filtered by a field value
     /// </summary>
+    /// <param name="entityType">The entity type</param>
+    /// <param name="fieldName">The field name to filter by</param>
+    /// <param name="value">The field value to filter by</param>
+    /// <param name="environment">Optional: Filter by environment name</param>
     /// <remarks>
-    /// Example: GET /api/entities/Agent/filter/brandId/brand123
+    /// Example: GET /api/entities/Agent/filter/brandId/brand123?environment=dev
     /// 
     /// If the schema has excludeOnFetch=true, this will only return non-consumed entities
     /// </remarks>
@@ -139,7 +147,8 @@ public class DynamicEntitiesController : ControllerBase
     public async Task<ActionResult<IEnumerable<DynamicEntity>>> GetByFieldValue(
         string entityType, 
         string fieldName, 
-        string value)
+        string value,
+        [FromQuery] string? environment = null)
     {
         try
         {
@@ -154,7 +163,7 @@ public class DynamicEntitiesController : ControllerBase
                 return BadRequest($"Field '{fieldName}' is not marked as filterable for entity type '{entityType}'");
             }
 
-            var entities = await _entityService.GetByFieldValueAsync(entityType, fieldName, value);
+            var entities = await _entityService.GetByFieldValueAsync(entityType, fieldName, value, environment);
             return Ok(entities);
         }
         catch (Exception ex)
@@ -302,11 +311,17 @@ public class DynamicEntitiesController : ControllerBase
     /// <summary>
     /// Reset all consumed entities of a specific type
     /// </summary>
+    /// <param name="entityType">The entity type</param>
+    /// <param name="environment">Optional: Only reset entities in this environment</param>
     /// <remarks>
     /// Useful for cleaning up after test runs. Returns the count of reset entities.
+    /// 
+    /// Example: POST /api/entities/Agent/reset-all?environment=dev
     /// </remarks>
     [HttpPost("{entityType}/reset-all")]
-    public async Task<ActionResult<int>> ResetAllConsumed(string entityType)
+    public async Task<ActionResult<int>> ResetAllConsumed(
+        string entityType,
+        [FromQuery] string? environment = null)
     {
         try
         {
@@ -315,7 +330,7 @@ public class DynamicEntitiesController : ControllerBase
                 return NotFound($"Entity type '{entityType}' not found");
             }
 
-            var count = await _entityService.ResetAllConsumedAsync(entityType);
+            var count = await _entityService.ResetAllConsumedAsync(entityType, environment);
             return Ok(new { resetCount = count, message = $"Reset {count} consumed entities" });
         }
         catch (Exception ex)

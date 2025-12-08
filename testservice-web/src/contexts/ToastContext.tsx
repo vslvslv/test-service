@@ -1,11 +1,6 @@
-import React, { createContext, useContext, useState, useCallback, ReactNode, useRef } from 'react';
-import { 
-  CheckCircle,
-  AlertCircle,
-  Info,
-  X,
-  AlertTriangle
-} from 'lucide-react';
+import { createContext, useContext, useState, useCallback, useRef, ReactNode } from 'react';
+import { X, CheckCircle, AlertCircle, Info, AlertTriangle } from 'lucide-react';
+import type { Notification } from '../services/notificationService';
 
 export interface Toast {
   id: string;
@@ -17,14 +12,13 @@ export interface Toast {
 
 interface ToastContextType {
   toasts: Toast[];
-  addToast: (toast: Omit<Toast, 'id'>) => void;
-  removeToast: (id: string) => void;
   success: (title: string, message?: string) => void;
   error: (title: string, message?: string) => void;
-  info: (title: string, message?: string) => void;
   warning: (title: string, message?: string) => void;
-  setBellCallback: (callback: (notification: any) => void) => void;
-  notifyBell: (notification: any) => void;
+  info: (title: string, message?: string) => void;
+  removeToast: (id: string) => void;
+  setBellCallback: (callback: (notification: Notification) => void) => void;
+  notifyBell: (notification: Notification) => void;
 }
 
 const ToastContext = createContext<ToastContextType | undefined>(undefined);
@@ -43,7 +37,7 @@ interface ToastProviderProps {
 
 export const ToastProvider: React.FC<ToastProviderProps> = ({ children }) => {
   const [toasts, setToasts] = useState<Toast[]>([]);
-  const bellCallbackRef = useRef<((notification: any) => void) | null>(null);
+  const bellCallbackRef = useRef<((notification: Notification) => void) | null>(null);
 
   const removeToast = useCallback((id: string) => {
     setToasts(prev => prev.filter(toast => toast.id !== id));
@@ -78,25 +72,20 @@ export const ToastProvider: React.FC<ToastProviderProps> = ({ children }) => {
     addToast({ type: 'warning', title, message, duration: 6000 });
   }, [addToast]);
 
-  const setBellCallback = useCallback((callback: (notification: any) => void) => {
-    console.log('?? Setting bell callback (using ref)');
+  const setBellCallback = useCallback((callback: (notification: Notification) => void) => {
     bellCallbackRef.current = callback;
   }, []);
 
-  const notifyBell = useCallback((notification: any) => {
-    console.log('?? notifyBell called with:', notification);
+  // Function to trigger bell notification
+  const notifyBell = useCallback((notification: Notification) => {
     if (bellCallbackRef.current) {
-      console.log('? Calling bell callback');
       bellCallbackRef.current(notification);
-    } else {
-      console.log('? No bell callback registered');
     }
   }, []); // No dependencies - uses ref which is always current
 
   return (
     <ToastContext.Provider value={{ 
       toasts, 
-      addToast, 
       removeToast, 
       success, 
       error, 

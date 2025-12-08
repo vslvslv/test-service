@@ -16,12 +16,11 @@ import {
   Search,
   User as UserIcon
 } from 'lucide-react';
-import notificationService from '../services/notificationService';
 
 const Layout: React.FC = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const { user, logout } = useAuth();
-  const { setBellCallback, notifyBell } = useToast();
+  const { setBellCallback } = useToast();
   const location = useLocation();
   const navigate = useNavigate();
   const bellRef = useRef<NotificationBellRef>(null);
@@ -67,29 +66,6 @@ const Layout: React.FC = () => {
   const handleLogout = () => {
     logout();
     navigate('/login');
-  };
-
-  const handleTestNotification = () => {
-    console.log('?? Test notification button clicked');
-    const testNotification = {
-      type: 'schema_created' as const,
-      schemaName: 'test-debug-' + Date.now(),
-      timestamp: new Date().toISOString()
-    };
-    console.log('?? Calling notifyBell with:', testNotification);
-    notifyBell(testNotification);
-  };
-
-  const handleCheckSignalR = () => {
-    console.log('?? Checking SignalR connection status...');
-    const debugInfo = (notificationService as any).getDebugInfo();
-    console.log('SignalR Debug Info:', debugInfo);
-    console.log('  Connection State:', debugInfo.connectionState);
-    console.log('  Connection ID:', debugInfo.connectionId);
-    console.log('  Is Connected:', debugInfo.isConnected);
-    console.log('  Handler Count:', debugInfo.handlerCount);
-    
-    alert(`SignalR Status:\n\nConnected: ${debugInfo.isConnected}\nState: ${debugInfo.connectionState}\nHandlers: ${debugInfo.handlerCount}\nConnection ID: ${debugInfo.connectionId || 'N/A'}`);
   };
 
   const menuItems = [
@@ -138,24 +114,6 @@ const Layout: React.FC = () => {
 
           {/* Right side */}
           <div className="flex items-center gap-3">
-            {/* Debug: SignalR Status button */}
-            <button
-              onClick={handleCheckSignalR}
-              className="p-2 hover:bg-gray-700 rounded-lg transition-colors text-gray-400 hover:text-white"
-              title="Check SignalR Status"
-            >
-              ??
-            </button>
-            
-            {/* Debug: Test notification button */}
-            <button
-              onClick={handleTestNotification}
-              className="p-2 hover:bg-gray-700 rounded-lg transition-colors text-gray-400 hover:text-white"
-              title="Test Notification (Debug)"
-            >
-              ??
-            </button>
-            
             <NotificationBell ref={bellRef} />
             
             <div className="flex items-center gap-3 pl-3 border-l border-gray-700">

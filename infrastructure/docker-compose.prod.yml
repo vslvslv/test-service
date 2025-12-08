@@ -1,0 +1,122 @@
+version: '3.8'
+
+# Production Docker Compose Configuration
+# This uses published container images instead of building locally
+
+services:
+  # MongoDB Database
+  mongodb:
+    image: mongo:latest
+    container_name: testservice-mongodb-prod
+    restart: always
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER:-admin}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:?MONGO_PASSWORD is required}
+      MONGO_INITDB_DATABASE: TestServiceDb
+    volumes:
+      - mongodb_data:/data/db
+      - mongodb_config:/data/configdb
+    networks:
+      - testservice-network
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/TestServiceDb --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  # RabbitMQ Message Bus
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: testservice-rabbitmq-prod
+    restart: always
+    ports:
+      - "5672:5672"   # AMQP port
+      - "15672:15672" # Management UI
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-guest}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:?RABBITMQ_PASSWORD is required}
+      RABBITMQ_DEFAULT_VHOST: /
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+      - rabbitmq_logs:/var/log/rabbitmq
+    networks:
+      - testservice-network
+    healthcheck:
+      test: rabbitmq-diagnostics -q ping
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  # API Service (using published image)
+  api:
+    image: ${CONTAINER_REGISTRY:-docker.io}/${REGISTRY_USERNAME:?REGISTRY_USERNAME is required}/testservice-api:${IMAGE_TAG:-latest}
+    container_name: testservice-api-prod
+    restart: always
+    ports:
+      - "${API_PORT:-5000}:80"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=${ENVIRONMENT:-Production}
+      - ASPNETCORE_URLS=http://+:80
+      - MongoDbSettings__ConnectionString=mongodb://${MONGO_USER:-admin}:${MONGO_PASSWORD}@mongodb:27017/TestServiceDb?authSource=admin
+      - MongoDbSettings__DatabaseName=TestServiceDb
+      - RabbitMqSettings__HostName=rabbitmq
+      - RabbitMqSettings__Port=5672
+      - RabbitMqSettings__UserName=${RABBITMQ_USER:-guest}
+      - RabbitMqSettings__Password=${RABBITMQ_PASSWORD}
+      - JwtSettings__SecretKey=${JWT_SECRET_KEY:?JWT_SECRET_KEY is required}
+      - JwtSettings__Issuer=TestServiceApi
+      - JwtSettings__Audience=TestServiceClients
+      - JwtSettings__ExpirationMinutes=${JWT_EXPIRATION_MINUTES:-60}
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - testservice-network
+    healthcheck:
+      test: ["CMD-SHELL", "wget --quiet --tries=1 --spider http://localhost:80/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Web UI (using published image)
+  web:
+    image: ${CONTAINER_REGISTRY:-docker.io}/${REGISTRY_USERNAME}/testservice-web:${IMAGE_TAG:-latest}
+    container_name: testservice-web-prod
+    restart: always
+    ports:
+      - "${WEB_PORT:-3000}:80"
+    environment:
+      - VITE_API_BASE_URL=${API_BASE_URL:-http://localhost:5000}
+    depends_on:
+      api:
+        condition: service_healthy
+    networks:
+      - testservice-network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:80/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+volumes:
+  mongodb_data:
+    name: testservice_mongodb_data_prod
+  mongodb_config:
+    name: testservice_mongodb_config_prod
+  rabbitmq_data:
+    name: testservice_rabbitmq_data_prod
+  rabbitmq_logs:
+    name: testservice_rabbitmq_logs_prod
+
+networks:
+  testservice-network:
+    name: testservice-network-prod
+    driver: bridge

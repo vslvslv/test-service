@@ -4,7 +4,6 @@ import { useAuth } from '../contexts/AuthContext';
 import { 
   Database, 
   Server, 
-  Users, 
   Layers, 
   Activity,
   TrendingUp,
@@ -14,6 +13,7 @@ import {
   ChevronRight
 } from 'lucide-react';
 import { apiService } from '../services/api';
+import type { Schema } from '../types';
 
 interface Stats {
   totalSchemas: number;
@@ -34,7 +34,7 @@ const Dashboard: React.FC = () => {
     consumedEntities: 0,
   });
   const [isLoading, setIsLoading] = useState(true);
-  const [recentSchemas, setRecentSchemas] = useState<any[]>([]);
+  const [recentSchemas, setRecentSchemas] = useState<Schema[]>([]);
 
   useEffect(() => {
     loadDashboardData();
@@ -172,55 +172,57 @@ const Dashboard: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Recent Schemas */}
         <div className="bg-gray-800 rounded-lg border border-gray-700 p-6">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between mb-6">
             <h2 className="text-lg font-semibold text-white flex items-center gap-2">
               <Layers className="w-5 h-5" />
               Recent Schemas
             </h2>
             <button 
               onClick={handleViewAllSchemas}
-              className="text-blue-400 hover:text-blue-300 text-sm font-medium flex items-center gap-1"
+              className="text-blue-400 hover:text-blue-300 text-sm font-medium flex items-center gap-1 transition-colors"
             >
               View All
               <ChevronRight className="w-4 h-4" />
             </button>
           </div>
-          <div className="space-y-3">
+          <div className="space-y-2">
             {recentSchemas.length > 0 ? (
               recentSchemas.map((schema, index) => (
                 <button
                   key={index}
-                  onClick={() => handleSchemaClick(schema.entityName || schema.name)}
-                  className="w-full p-4 bg-gray-700/50 rounded-lg border border-gray-600 hover:border-blue-500 hover:bg-gray-700 transition-all text-left"
+                  onClick={() => handleSchemaClick(schema.entityName)}
+                  className="w-full p-4 bg-gray-750 rounded-lg border border-gray-700 hover:border-gray-600 hover:bg-gray-700 transition-all text-left group"
                 >
                   <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <p className="text-white font-medium">{schema.entityName || schema.name}</p>
-                        {schema.excludeOnFetch && (
-                          <span className="text-xs px-2 py-0.5 bg-orange-500/20 text-orange-400 rounded border border-orange-500/30">
-                            Auto-consume
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-sm text-gray-400 mt-1">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-white font-medium mb-1 group-hover:text-blue-400 transition-colors">
+                        {schema.entityName}
+                      </h3>
+                      <p className="text-sm text-gray-400">
                         {schema.fields?.length || 0} fields
                       </p>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Package className="w-5 h-5 text-gray-500" />
-                      <ChevronRight className="w-4 h-4 text-gray-500" />
+                    <div className="flex items-center gap-3 ml-4">
+                      {schema.excludeOnFetch && (
+                        <span className="text-xs px-2.5 py-1 bg-orange-500/15 text-orange-400 rounded-md border border-orange-500/30 font-medium whitespace-nowrap">
+                          Auto-consume
+                        </span>
+                      )}
+                      <div className="flex items-center gap-2 text-gray-500 group-hover:text-gray-400 transition-colors">
+                        <Package className="w-5 h-5" />
+                        <ChevronRight className="w-4 h-4" />
+                      </div>
                     </div>
                   </div>
                 </button>
               ))
             ) : (
-              <div className="text-center py-8 text-gray-500">
-                <Layers className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                <p className="mb-3">No schemas found</p>
+              <div className="text-center py-12 text-gray-500">
+                <Layers className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                <p className="mb-4 text-gray-400">No schemas found</p>
                 <button
                   onClick={handleCreateSchema}
-                  className="text-blue-400 hover:text-blue-300 text-sm font-medium"
+                  className="text-blue-400 hover:text-blue-300 text-sm font-medium transition-colors"
                 >
                   Create your first schema
                 </button>

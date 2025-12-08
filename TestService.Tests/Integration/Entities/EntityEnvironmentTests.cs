@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using TestService.Api.Models;
 using TestService.Tests.Infrastructure;
+using System.Text.Json;
 
 namespace TestService.Tests.Integration.Entities;
 
@@ -20,6 +21,7 @@ public class EntityEnvironmentTests : IntegrationTestBase
             .WithField("name", "string", required: true)
             .WithField("category", "string")
             .WithFilterableFields("name", "category")
+            .WithExcludeOnFetch(true)
             .Build();
         
         await ApiHelpers.CreateSchemaAsync(Client, schema);
@@ -249,8 +251,8 @@ public class EntityEnvironmentTests : IntegrationTestBase
         // Assert
         AssertStatusCode(response, HttpStatusCode.OK);
         
-        var result = await response.Content.ReadFromJsonAsync<Dictionary<string, object>>();
-        Assert.That(Convert.ToInt32(result!["resetCount"]), Is.GreaterThanOrEqualTo(3));
+        var result = await response.Content.ReadFromJsonAsync<Dictionary<string, JsonElement>>();
+        Assert.That(result!["resetCount"].GetInt32(), Is.GreaterThanOrEqualTo(3));
 
         // Verify - Dev entities should be available, staging still consumed
         var devResponse = await Client.GetAsync($"/api/entities/{TestEntityType}?environment=dev");
@@ -431,8 +433,8 @@ public class ParallelExecutionWithEnvironmentTests : IntegrationTestBase
         // Assert
         AssertStatusCode(response, HttpStatusCode.OK);
         
-        var result = await response.Content.ReadFromJsonAsync<Dictionary<string, object>>();
-        Assert.That(Convert.ToInt32(result!["resetCount"]), Is.GreaterThanOrEqualTo(3));
+        var result = await response.Content.ReadFromJsonAsync<Dictionary<string, JsonElement>>();
+        Assert.That(result!["resetCount"].GetInt32(), Is.GreaterThanOrEqualTo(3));
 
         // Verify - Dev entities should be available, staging still consumed
         var devResponse = await Client.GetAsync($"/api/entities/{TestEntityType}?environment=dev");

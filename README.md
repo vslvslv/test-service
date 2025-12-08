@@ -4,16 +4,83 @@ A microservice application for dynamic test data storage, consumption, aggregati
 
 ## ?? Quick Start
 
+### Option 1: Using Docker (Recommended)
+
 ```bash
-# 1. Start infrastructure
-docker compose up -d
+# Build and run all services with containers
+docker compose -f infrastructure/docker-compose.yml up -d
+
+# View logs
+docker compose -f infrastructure/docker-compose.yml logs -f
+
+# Stop services
+docker compose -f infrastructure/docker-compose.yml down
+```
+
+Access the application:
+- **API**: http://localhost:5000
+- **Web UI**: http://localhost:3000
+- **Swagger**: http://localhost:5000/swagger
+- **RabbitMQ Management**: http://localhost:15672 (guest/guest)
+
+### Option 2: Local Development
+
+```bash
+# 1. Start infrastructure only
+docker compose -f infrastructure/docker-compose.yml up mongodb rabbitmq -d
 
 # 2. Run the API
 cd TestService.Api && dotnet run
 
-# 3. Open Swagger UI
-# Navigate to: https://localhost:5001/swagger
+# 3. Run the Web UI
+cd testservice-web && npm install && npm run dev
+
+# 4. Open your browser
+# API: https://localhost:5001/swagger
+# Web: http://localhost:5173
 ```
+
+## ?? Container Deployment
+
+### Build Containers Locally
+
+```powershell
+# PowerShell
+./build-and-publish.ps1
+```
+
+```bash
+# Bash
+./build-and-publish.sh
+```
+
+### Build and Publish to Registry
+
+```powershell
+# Docker Hub
+./build-and-publish.ps1 -Registry "docker.io/yourusername" -Tag "v1.0.0" -Push
+
+# GitHub Container Registry
+./build-and-publish.ps1 -Registry "ghcr.io/yourorg" -Tag "v1.0.0" -Push
+
+# Azure Container Registry
+./build-and-publish.ps1 -Registry "yourregistry.azurecr.io" -Tag "v1.0.0" -Push
+```
+
+### Deploy from Published Images
+
+1. **Copy and configure environment:**
+   ```bash
+   cp infrastructure/.env.example infrastructure/.env
+   # Edit .env with your values
+   ```
+
+2. **Deploy:**
+   ```bash
+   docker compose -f infrastructure/docker-compose.prod.yml up -d
+   ```
+
+**?? Full deployment guide:** [Container Deployment Guide](documents/CONTAINER_DEPLOYMENT_GUIDE.md)
 
 ## ?? Documentation
 
@@ -21,6 +88,7 @@ cd TestService.Api && dotnet run
 
 ### Quick Links
 - **[Documentation Index](documents/INDEX.md)** - Complete documentation navigation
+- **[Container Deployment Guide](documents/CONTAINER_DEPLOYMENT_GUIDE.md)** - ?? Build & deploy containers
 - **[Dynamic System Guide](documents/guides/DYNAMIC_SYSTEM_GUIDE.md)** - Full guide to the dynamic entity system
 - **[Parallel Test Execution](documents/guides/PARALLEL_TEST_EXECUTION_GUIDE.md)** - Thread-safe test data management
 - **[Quick Reference](documents/guides/QUICK_REFERENCE.md)** - Common commands and operations
@@ -139,7 +207,7 @@ dotnet test
 
 ## Key Features
 
-### ? Dynamic Entity System
+### ?? Dynamic Entity System
 - Define entity types via API (no code required)
 - Automatic CRUD operations
 - Flexible filtering on any field

@@ -1,7 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ToastProvider, useToast } from './contexts/ToastContext';
-import { useEffect } from 'react';
+import { useCallback, useEffect } from 'react';
 import notificationService, { Notification } from './services/notificationService';
 import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -19,27 +19,7 @@ function NotificationHandler() {
   const { success, info, warning, notifyBell } = useToast();
   const { isAuthenticated } = useAuth();
 
-  useEffect(() => {
-    if (!isAuthenticated) return;
-
-    console.log('?? Connecting to SignalR notification hub...');
-
-    // Connect to notification hub
-    notificationService.connect().catch(console.error);
-
-    // Subscribe to notifications
-    const unsubscribe = notificationService.subscribe((notification: Notification) => {
-      handleNotification(notification);
-    });
-
-    return () => {
-      console.log('?? Disconnecting from SignalR notification hub...');
-      unsubscribe();
-      notificationService.disconnect();
-    };
-  }, [isAuthenticated]); // Only reconnect when auth status changes
-
-  const handleNotification = (notification: Notification) => {
+  const handleNotification = useCallback((notification: Notification) => {
     console.log('?? Notification received in handler:', notification);
     console.log('   Type:', notification.type);
     console.log('   Schema:', notification.schemaName);
@@ -77,7 +57,25 @@ function NotificationHandler() {
       default:
         console.warn('?? Unknown notification type:', notification.type);
     }
-  };
+  }, [success, info, warning, notifyBell]);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    console.log('?? Connecting to SignalR notification hub...');
+
+    // Connect to notification hub
+    notificationService.connect().catch(console.error);
+
+    // Subscribe to notifications
+    const unsubscribe = notificationService.subscribe(handleNotification);
+
+    return () => {
+      console.log('?? Disconnecting from SignalR notification hub...');
+      unsubscribe();
+      notificationService.disconnect();
+    };
+  }, [isAuthenticated, handleNotification]);
 
   return null;
 }

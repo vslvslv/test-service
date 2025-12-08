@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Plus, 
-  X, 
   Save,
   ArrowLeft,
   AlertCircle,

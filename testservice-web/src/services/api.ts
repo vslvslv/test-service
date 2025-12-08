@@ -1,4 +1,5 @@
 import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
+import type { Schema, Environment, Entity, User } from '../types';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
 
@@ -60,39 +61,39 @@ class ApiService {
     return response.data;
   }
 
-  async createUser(userData: any) {
+  async createUser(userData: Partial<User>) {
     const response = await this.api.post('/api/users', userData);
     return response.data;
   }
 
   // Environments
-  async getEnvironments() {
-    const response = await this.api.get('/api/environments');
+  async getEnvironments(): Promise<Environment[]> {
+    const response = await this.api.get<Environment[]>('/api/environments');
     return response.data;
   }
 
-  async createEnvironment(envData: any) {
+  async createEnvironment(envData: Partial<Environment>) {
     const response = await this.api.post('/api/environments', envData);
     return response.data;
   }
 
   // Schemas
-  async getSchemas() {
-    const response = await this.api.get('/api/schemas');
+  async getSchemas(): Promise<Schema[]> {
+    const response = await this.api.get<Schema[]>('/api/schemas');
     return response.data;
   }
 
-  async createSchema(schemaData: any) {
+  async createSchema(schemaData: Partial<Schema>) {
     const response = await this.api.post('/api/schemas', schemaData);
     return response.data;
   }
 
-  async getSchema(name: string) {
-    const response = await this.api.get(`/api/schemas/${name}`);
+  async getSchema(name: string): Promise<Schema> {
+    const response = await this.api.get<Schema>(`/api/schemas/${name}`);
     return response.data;
   }
 
-  async updateSchema(name: string, schemaData: any) {
+  async updateSchema(name: string, schemaData: Partial<Schema>) {
     const response = await this.api.put(`/api/schemas/${name}`, schemaData);
     return response.data;
   }
@@ -103,23 +104,23 @@ class ApiService {
   }
 
   // Dynamic Entities
-  async getEntities(entityType: string, environment?: string) {
+  async getEntities(entityType: string, environment?: string): Promise<Entity[]> {
     const params = environment ? { environment } : {};
-    const response = await this.api.get(`/api/entities/${entityType}`, { params });
+    const response = await this.api.get<Entity[]>(`/api/entities/${entityType}`, { params });
     return response.data;
   }
 
-  async getEntity(entityType: string, id: string) {
-    const response = await this.api.get(`/api/entities/${entityType}/${id}`);
+  async getEntity(entityType: string, id: string): Promise<Entity> {
+    const response = await this.api.get<Entity>(`/api/entities/${entityType}/${id}`);
     return response.data;
   }
 
-  async createEntity(entityType: string, entityData: any) {
+  async createEntity(entityType: string, entityData: Record<string, unknown>) {
     const response = await this.api.post(`/api/entities/${entityType}`, entityData);
     return response.data;
   }
 
-  async updateEntity(entityType: string, id: string, entityData: any) {
+  async updateEntity(entityType: string, id: string, entityData: Record<string, unknown>) {
     const response = await this.api.put(`/api/entities/${entityType}/${id}`, entityData);
     return response.data;
   }
@@ -129,14 +130,14 @@ class ApiService {
     return response.data;
   }
 
-  async getNextAvailable(entityType: string, environment?: string) {
+  async getNextAvailable(entityType: string, environment?: string): Promise<Entity> {
     const params = environment ? { environment } : {};
-    const response = await this.api.get(`/api/entities/${entityType}/next`, { params });
+    const response = await this.api.get<Entity>(`/api/entities/${entityType}/next`, { params });
     return response.data;
   }
 
   // Generic request method
-  async request<T = any>(config: AxiosRequestConfig): Promise<T> {
+  async request<T = unknown>(config: AxiosRequestConfig): Promise<T> {
     const response = await this.api.request<T>(config);
     return response.data;
   }

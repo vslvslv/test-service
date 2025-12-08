@@ -1,20 +1,27 @@
 import * as signalR from '@microsoft/signalr';
+import type { Schema } from '../types';
 
 export interface Notification {
   type: 'schema_created' | 'schema_updated' | 'schema_deleted' | 'entity_created' | 'entity_updated' | 'entity_deleted';
   schemaName?: string;
   entityType?: string;
   entityId?: string;
-  schema?: any;
+  schema?: Schema;
   timestamp: string;
 }
 
 export type NotificationHandler = (notification: Notification) => void;
 
+interface SignalRSchemaData {
+  schemaName: string;
+  timestamp: string;
+  schema?: Schema;
+}
+
 class NotificationService {
   private connection: signalR.HubConnection | null = null;
   private handlers: NotificationHandler[] = [];
-  private reconnectTimer: NodeJS.Timeout | null = null;
+  private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 
   async connect() {
     const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
@@ -47,7 +54,7 @@ class NotificationService {
       .build();
 
     // Set up event handlers
-    this.connection.on('SchemaCreated', (data: any) => {
+    this.connection.on('SchemaCreated', (data: SignalRSchemaData) => {
       console.log('?? SchemaCreated event received from SignalR:', data);
       console.log('   Raw data:', JSON.stringify(data, null, 2));
       
@@ -63,7 +70,7 @@ class NotificationService {
       this.notifyHandlers(notification);
     });
 
-    this.connection.on('SchemaUpdated', (data: any) => {
+    this.connection.on('SchemaUpdated', (data: SignalRSchemaData) => {
       console.log('?? SchemaUpdated event received from SignalR:', data);
       console.log('   Raw data:', JSON.stringify(data, null, 2));
       
@@ -79,7 +86,7 @@ class NotificationService {
       this.notifyHandlers(notification);
     });
 
-    this.connection.on('SchemaDeleted', (data: any) => {
+    this.connection.on('SchemaDeleted', (data: SignalRSchemaData) => {
       console.log('?? SchemaDeleted event received from SignalR:', data);
       console.log('   Raw data:', JSON.stringify(data, null, 2));
       

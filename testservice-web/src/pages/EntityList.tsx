@@ -5,7 +5,6 @@ import {
   Search,
   ArrowLeft,
   Eye,
-  Edit,
   Trash2,
   RefreshCw,
   AlertCircle,
@@ -184,7 +183,7 @@ const EntityList: React.FC = () => {
   };
 
   // Filter entities
-  let filteredEntities = entities.filter(entity => {
+  const filteredEntities = entities.filter(entity => {
     // Search filter
     if (searchTerm) {
       const searchLower = searchTerm.toLowerCase();

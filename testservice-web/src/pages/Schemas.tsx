@@ -1,44 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
-  Plus, 
-  Search, 
   Layers, 
+  Plus, 
   Edit, 
   Trash2, 
-  ChevronRight,
-  Package,
+  Eye,
   AlertCircle,
-  Grid3x3,
-  List,
-  Filter,
-  Calendar,
-  Hash,
-  Type,
-  CheckSquare
+  RefreshCw
 } from 'lucide-react';
 import { apiService } from '../services/api';
-
-interface SchemaField {
-  name: string;
-  type: string;
-  required: boolean;
-  defaultValue?: string;
-  description?: string;
-}
-
-interface Schema {
-  id?: string;
-  entityName: string;  // Changed from 'name' to match API
-  fields: SchemaField[];
-  filterableFields?: string[];
-  excludeOnFetch: boolean;
-  createdAt?: string;
-  updatedAt?: string;
-}
-
-type ViewMode = 'list' | 'grid';
-type SortOption = 'name' | 'fields' | 'recent';
+import { getErrorMessage, type Schema } from '../types';
 
 const Schemas: React.FC = () => {
   const navigate = useNavigate();
@@ -46,8 +18,8 @@ const Schemas: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [error, setError] = useState('');
-  const [viewMode, setViewMode] = useState<ViewMode>('list');
-  const [sortBy, setSortBy] = useState<SortOption>('name');
+  const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
+  const [sortBy, setSortBy] = useState<'name' | 'fields' | 'recent'>('name');
   const [showAutoConsumeOnly, setShowAutoConsumeOnly] = useState(false);
 
   useEffect(() => {
@@ -63,8 +35,8 @@ const Schemas: React.FC = () => {
       console.log('Number of schemas:', data?.length);
       console.log('First schema:', data?.[0]);
       setSchemas(data);
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to load schemas');
+    } catch (err) {
+      setError(getErrorMessage(err));
       console.error('Failed to load schemas:', err);
     } finally {
       setIsLoading(false);
@@ -93,8 +65,8 @@ const Schemas: React.FC = () => {
       });
       
       await loadSchemas();
-    } catch (err: any) {
-      alert(err.response?.data?.message || 'Failed to delete schema');
+    } catch (err) {
+      alert(getErrorMessage(err));
     }
   };
 
