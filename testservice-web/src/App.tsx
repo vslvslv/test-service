@@ -13,6 +13,7 @@ import EditSchema from './pages/EditSchema';
 import Environments from './pages/Environments';
 import Entities from './pages/Entities';
 import EntityList from './pages/EntityList';
+import Settings from './pages/Settings';
 import './App.css';
 
 function NotificationHandler() {
@@ -114,7 +115,7 @@ function AppRoutes() {
           <Route path="entities/:entityType/:id" element={<div className="text-white">Entity Details - Coming Soon</div>} />
           
           <Route path="users" element={<div className="text-white">Users Page - Coming Soon</div>} />
-          <Route path="settings" element={<div className="text-white">Settings Page - Coming Soon</div>} />
+          <Route path="settings" element={<Settings />} />
           <Route path="activity" element={<div className="text-white">Activity Page - Coming Soon</div>} />
         </Route>
         

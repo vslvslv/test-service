@@ -120,6 +120,12 @@ builder.Services.AddSingleton<IMessageBusService, MessageBusService>();
 // Register Notification service
 builder.Services.AddSingleton<INotificationService, NotificationService>();
 
+// Register Settings services
+builder.Services.AddSingleton<ISettingsRepository, SettingsRepository>();
+
+// Register background services
+builder.Services.AddHostedService<TestService.Api.BackgroundServices.DataCleanupService>();
+
 var app = builder.Build();
 
 // Initialize default admin user

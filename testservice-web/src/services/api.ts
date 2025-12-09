@@ -136,6 +136,33 @@ class ApiService {
     return response.data;
   }
 
+  // Settings
+  async getSettings() {
+    const response = await this.api.get('/api/settings');
+    return response.data;
+  }
+
+  async updateSettings(settings: any) {
+    const response = await this.api.put('/api/settings', settings);
+    return response.data;
+  }
+
+  // API Keys
+  async getApiKeys() {
+    const response = await this.api.get('/api/settings/api-keys');
+    return response.data;
+  }
+
+  async createApiKey(keyData: { name: string; expirationDays: number | null }) {
+    const response = await this.api.post('/api/settings/api-keys', keyData);
+    return response.data;
+  }
+
+  async deleteApiKey(id: string) {
+    const response = await this.api.delete(`/api/settings/api-keys/${id}`);
+    return response.data;
+  }
+
   // Generic request method
   async request<T = unknown>(config: AxiosRequestConfig): Promise<T> {
     const response = await this.api.request<T>(config);

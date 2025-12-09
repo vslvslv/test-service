@@ -4,13 +4,23 @@ import {
   Layers, 
   Plus, 
   Edit, 
-  Trash2, 
-  Eye,
+  Trash2,
   AlertCircle,
-  RefreshCw
+  Search,
+  List,
+  Grid3x3,
+  Filter,
+  Package,
+  ChevronRight,
+  Type,
+  Hash,
+  CheckSquare,
+  Calendar
 } from 'lucide-react';
 import { apiService } from '../services/api';
 import { getErrorMessage, type Schema } from '../types';
+
+type SortOption = 'name' | 'fields' | 'recent';
 
 const Schemas: React.FC = () => {
   const navigate = useNavigate();
