@@ -5,13 +5,13 @@ WORKDIR /app
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies
-RUN npm ci --only=production=false
+# Clean install with no cache to ensure consistent builds
+RUN npm ci --prefer-offline --no-audit
 
 # Copy source files
 COPY . .
 
-# Build application
+# Build application with clean output
 RUN npm run build
 
 # Production stage

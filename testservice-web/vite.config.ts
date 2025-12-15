@@ -22,9 +22,13 @@ export default defineConfig({
       output: {
         manualChunks: {
           'react-vendor': ['react', 'react-dom'],
-          'router': ['react-router-dom']
+          'router': ['react-router-dom'],
+          'icons': ['lucide-react']
         }
       }
     }
+  },
+  optimizeDeps: {
+    include: ['lucide-react']
   }
 })
