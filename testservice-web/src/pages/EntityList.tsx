@@ -131,7 +131,7 @@ const EntityList: React.FC = () => {
       if (selectedEntity?.id === id) {
         const updatedEntity = entities.find(e => e.id === id);
         if (updatedEntity) {
-          setSelectedEntity({ ...updatedEntity, consumed: false });
+          setSelectedEntity({ ...updatedEntity, isConsumed: false });
         }
       }
     } catch (err: any) {
@@ -194,7 +194,7 @@ const EntityList: React.FC = () => {
     }
 
     // Consumed filter
-    if (showConsumedOnly && !entity.consumed) return false;
+    if (showConsumedOnly && !entity.isConsumed) return false;
 
     // Environment filter
     if (selectedEnvironment !== 'all' && entity.environment !== selectedEnvironment) return false;
@@ -202,8 +202,8 @@ const EntityList: React.FC = () => {
     return true;
   });
 
-  const availableCount = entities.filter(e => !e.consumed).length;
-  const consumedCount = entities.filter(e => e.consumed).length;
+  const availableCount = entities.filter(e => !e.isConsumed).length;
+  const consumedCount = entities.filter(e => e.isConsumed).length;
   const environments = Array.from(new Set(entities.map(e => e.environment).filter(Boolean)));
 
   if (isLoading) {
@@ -407,7 +407,7 @@ const EntityList: React.FC = () => {
                     onClick={() => handleViewEntity(entity)}
                   >
                     <td className="px-6 py-4 whitespace-nowrap">
-                      {entity.consumed ? (
+                      {entity.isConsumed ? (
                         <span className="flex items-center gap-1 text-orange-400 text-sm">
                           <XCircle className="w-4 h-4" />
                           Consumed
@@ -441,7 +441,7 @@ const EntityList: React.FC = () => {
                         >
                           <Eye className="w-4 h-4 text-gray-400 hover:text-white" />
                         </button>
-                        {entity.consumed && schema.excludeOnFetch && (
+                        {entity.isConsumed && schema.excludeOnFetch && (
                           <button
                             onClick={(e) => handleResetEntity(entity.id, e)}
                             className="p-1.5 hover:bg-green-500/10 rounded transition-colors"

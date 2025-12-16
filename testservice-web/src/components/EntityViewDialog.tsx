@@ -91,7 +91,7 @@ const EntityViewDialog: React.FC<EntityViewDialogProps> = ({
               {/* Status */}
               <div className="bg-gray-700/50 rounded-lg border border-gray-600 p-4">
                 <p className="text-xs text-gray-400 mb-2">Status</p>
-                {entity.consumed ? (
+                {entity.isConsumed ? (
                   <div className="flex items-center gap-2">
                     <XCircle className="w-5 h-5 text-orange-400" />
                     <span className="text-orange-400 font-medium">Consumed</span>
@@ -231,7 +231,7 @@ const EntityViewDialog: React.FC<EntityViewDialogProps> = ({
               </button>
             </div>
             <div className="flex gap-2">
-              {entity.consumed && schema?.excludeOnFetch && onReset && (
+              {entity.isConsumed && schema?.excludeOnFetch && onReset && (
                 <button
                   onClick={onReset}
                   className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"

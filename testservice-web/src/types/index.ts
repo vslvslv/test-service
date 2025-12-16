@@ -7,19 +7,13 @@ export interface SchemaField {
   defaultValue?: string;
 }
 
-export interface Schema {
-  entityName: string;
-  fields: SchemaField[];
-  filterableFields?: string[];
-  excludeOnFetch: boolean;
-  createdAt?: string;
-}
+export interface Schema {`n  entityName: string;`n  fields: SchemaField[];`n  filterableFields?: string[];`n  uniqueFields?: string[];`n  useCompoundUnique?: boolean;`n  excludeOnFetch: boolean;`n  createdAt?: string;`n}
 
 export interface Entity {
   id: string;
   entityType: string;
   fields: Record<string, unknown>;
-  consumed: boolean;
+  isConsumed: boolean;
   environment?: string;
   createdAt?: string;
   updatedAt?: string;

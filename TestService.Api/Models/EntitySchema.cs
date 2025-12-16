@@ -31,6 +31,19 @@ public class EntitySchema
     public List<string> FilterableFields { get; set; } = new();
 
     /// <summary>
+    /// List of fields that should be unique across all entities of this type
+    /// </summary>
+    [BsonElement("uniqueFields")]
+    public List<string> UniqueFields { get; set; } = new();
+
+    /// <summary>
+    /// If true, creates a compound unique index on all uniqueFields
+    /// If false, creates separate unique indexes for each field
+    /// </summary>
+    [BsonElement("useCompoundUnique")]
+    public bool UseCompoundUnique { get; set; } = false;
+
+    /// <summary>
     /// If true, entities of this type will be marked as consumed when fetched
     /// and excluded from subsequent queries (useful for parallel test execution)
     /// </summary>

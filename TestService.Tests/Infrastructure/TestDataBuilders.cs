@@ -11,7 +11,9 @@ public class EntitySchemaBuilder
     private string _entityName = "TestEntity";
     private List<FieldDefinition> _fields = new();
     private List<string> _filterableFields = new();
+    private List<string> _uniqueFields = new();
     private bool _excludeOnFetch = false;
+    private bool _useCompoundUnique = false;
 
     public EntitySchemaBuilder WithEntityName(string entityName)
     {
@@ -52,6 +54,24 @@ public class EntitySchemaBuilder
         return this;
     }
 
+    public EntitySchemaBuilder WithUniqueField(string fieldName)
+    {
+        _uniqueFields.Add(fieldName);
+        return this;
+    }
+
+    public EntitySchemaBuilder WithUniqueFields(params string[] fieldNames)
+    {
+        _uniqueFields.AddRange(fieldNames);
+        return this;
+    }
+
+    public EntitySchemaBuilder WithCompoundUnique(bool useCompound = true)
+    {
+        _useCompoundUnique = useCompound;
+        return this;
+    }
+
     public EntitySchemaBuilder WithExcludeOnFetch(bool excludeOnFetch = true)
     {
         _excludeOnFetch = excludeOnFetch;
@@ -65,6 +85,8 @@ public class EntitySchemaBuilder
             EntityName = _entityName,
             Fields = _fields,
             FilterableFields = _filterableFields,
+            UniqueFields = _uniqueFields,
+            UseCompoundUnique = _useCompoundUnique,
             ExcludeOnFetch = _excludeOnFetch
         };
     }
