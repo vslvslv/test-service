@@ -4,10 +4,19 @@ export interface SchemaField {
   name: string;
   type: string;
   required: boolean;
+  isUnique?: boolean;
   defaultValue?: string;
 }
 
-export interface Schema {`n  entityName: string;`n  fields: SchemaField[];`n  filterableFields?: string[];`n  uniqueFields?: string[];`n  useCompoundUnique?: boolean;`n  excludeOnFetch: boolean;`n  createdAt?: string;`n}
+export interface Schema {
+  entityName: string;
+  fields: SchemaField[];
+  filterableFields?: string[];
+  uniqueFields?: string[];
+  useCompoundUnique?: boolean;
+  excludeOnFetch: boolean;
+  createdAt?: string;
+}
 
 export interface Entity {
   id: string;

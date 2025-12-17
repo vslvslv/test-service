@@ -1,11 +1,26 @@
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
+using MongoDB.Bson.Serialization;
+using MongoDB.Bson.Serialization.Conventions;
 using TestService.Api.Configuration;
 using TestService.Api.Services;
 using TestService.Api.Hubs;
+using TestService.Api.Models;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Configure MongoDB serialization to always serialize boolean fields
+if (!BsonClassMap.IsClassMapRegistered(typeof(FieldDefinition)))
+{
+    BsonClassMap.RegisterClassMap<FieldDefinition>(cm =>
+    {
+        cm.AutoMap();
+        cm.MapMember(c => c.IsUnique)
+          .SetDefaultValue(false)
+          .SetShouldSerializeMethod(obj => true); // Always serialize
+    });
+}
 
 // Add CORS
 builder.Services.AddCors(options =>

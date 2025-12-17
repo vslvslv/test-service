@@ -21,7 +21,7 @@ interface Entity {
   id: string;
   entityType: string;
   fields: Record<string, any>;
-  consumed: boolean;
+  isConsumed: boolean;
   environment?: string;
   createdAt?: string;
   updatedAt?: string;
@@ -253,7 +253,7 @@ const EntityList: React.FC = () => {
                 </span>
               )}
             </div>
-            <p className="text-gray-400 mt-1 text-sm">{entities.length} entities • {schema.fields.length} fields</p>
+            <p className="text-gray-400 mt-1 text-sm">{entities.length} entities ï¿½ {schema.fields.length} fields</p>
           </div>
         </div>
         

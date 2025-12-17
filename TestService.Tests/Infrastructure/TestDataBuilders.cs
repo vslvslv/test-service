@@ -21,13 +21,14 @@ public class EntitySchemaBuilder
         return this;
     }
 
-    public EntitySchemaBuilder WithField(string name, string type = "string", bool required = false, string? description = null)
+    public EntitySchemaBuilder WithField(string name, string type = "string", bool required = false, bool isUnique = false, string? description = null)
     {
         _fields.Add(new FieldDefinition
         {
             Name = name,
             Type = type,
             Required = required,
+            IsUnique = isUnique,
             Description = description
         });
         return this;
@@ -37,8 +38,22 @@ public class EntitySchemaBuilder
     {
         foreach (var (name, type, required) in fields)
         {
-            WithField(name, type, required);
+            WithField(name, type, required, isUnique: false);
         }
+        return this;
+    }
+
+    public EntitySchemaBuilder WithUniqueField(string name, string type = "string", bool required = false, string? description = null)
+    {
+        _fields.Add(new FieldDefinition
+        {
+            Name = name,
+            Type = type,
+            Required = required,
+            IsUnique = true,
+            Description = description
+        });
+        _uniqueFields.Add(name); // Also add to uniqueFields array for backward compatibility
         return this;
     }
 

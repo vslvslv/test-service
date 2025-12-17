@@ -69,7 +69,12 @@ public class FieldDefinition
     public string Type { get; set; } = "string"; // string, number, boolean, datetime
 
     [BsonElement("required")]
+    [BsonRepresentation(MongoDB.Bson.BsonType.Boolean)]
     public bool Required { get; set; } = false;
+
+    [BsonElement("isUnique")]
+    [BsonRepresentation(MongoDB.Bson.BsonType.Boolean)]
+    public bool IsUnique { get; set; } = false;
 
     [BsonElement("description")]
     public string? Description { get; set; }

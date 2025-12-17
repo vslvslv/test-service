@@ -59,7 +59,7 @@ const Entities: React.FC = () => {
         try {
           const entities = await apiService.getEntities(schema.entityName);
           const totalCount = entities.length;
-          const consumedCount = entities.filter((e: any) => e.consumed).length;
+          const consumedCount = entities.filter((e: any) => e.isConsumed).length;
           const availableCount = totalCount - consumedCount;
 
           statsMap.set(schema.entityName, {
@@ -231,19 +231,19 @@ const Entities: React.FC = () => {
                           <span>{schema.fields?.length || 0} fields</span>
                           {stats && (
                             <>
-                              <span>•</span>
+                              <span>ï¿½</span>
                               <span className="flex items-center gap-1">
                                 <Database className="w-3 h-3" />
                                 {stats.totalCount} total
                               </span>
-                              <span>•</span>
+                              <span>ï¿½</span>
                               <span className="flex items-center gap-1 text-green-400">
                                 <CheckCircle className="w-3 h-3" />
                                 {stats.availableCount} available
                               </span>
                               {stats.consumedCount > 0 && (
                                 <>
-                                  <span>•</span>
+                                  <span>ï¿½</span>
                                   <span className="flex items-center gap-1 text-orange-400">
                                     <XCircle className="w-3 h-3" />
                                     {stats.consumedCount} consumed

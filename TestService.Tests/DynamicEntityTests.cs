@@ -34,15 +34,15 @@ public class DynamicEntityTests
             EntityName = "Agent",
             Fields = new List<FieldDefinition>
             {
-                new() { Name = "username", Type = "string", Required = true },
-                new() { Name = "password", Type = "string", Required = true },
-                new() { Name = "userId", Type = "string", Required = true },
-                new() { Name = "firstName", Type = "string", Required = false },
-                new() { Name = "lastName", Type = "string", Required = false },
-                new() { Name = "brandId", Type = "string", Required = false },
-                new() { Name = "labelId", Type = "string", Required = false },
-                new() { Name = "orientationType", Type = "string", Required = false },
-                new() { Name = "agentType", Type = "string", Required = false }
+                new() { Name = "username", Type = "string", Required = true, IsUnique = false },
+                new() { Name = "password", Type = "string", Required = true, IsUnique = false },
+                new() { Name = "userId", Type = "string", Required = true, IsUnique = false },
+                new() { Name = "firstName", Type = "string", Required = false, IsUnique = false },
+                new() { Name = "lastName", Type = "string", Required = false, IsUnique = false },
+                new() { Name = "brandId", Type = "string", Required = false, IsUnique = false },
+                new() { Name = "labelId", Type = "string", Required = false, IsUnique = false },
+                new() { Name = "orientationType", Type = "string", Required = false, IsUnique = false },
+                new() { Name = "agentType", Type = "string", Required = false, IsUnique = false }
             },
             FilterableFields = new List<string> 
             { 

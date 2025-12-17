@@ -17,11 +17,11 @@ public class EntitySingleUniqueFieldTests : IntegrationTestBase
     {
         var schema = new EntitySchemaBuilder()
             .WithEntityName(TestEntityType)
-            .WithField("username", "string", required: true)
+            .WithField("username", "string", required: true, isUnique: true)  // Username is unique
             .WithField("email", "string", required: true)
             .WithField("brandId", "string")
             .WithFilterableField("username")
-            .WithUniqueField("username")  // Username must be unique
+            .WithUniqueFields("username")  // Also add to uniqueFields array
             .Build();
         
         await ApiHelpers.CreateSchemaAsync(Client, schema);
@@ -194,8 +194,8 @@ public class EntityMultipleUniqueFieldsTests : IntegrationTestBase
     {
         var schema = new EntitySchemaBuilder()
             .WithEntityName(TestEntityType)
-            .WithField("username", "string", required: true)
-            .WithField("email", "string", required: true)
+            .WithField("username", "string", required: true, isUnique: true)
+            .WithField("email", "string", required: true, isUnique: true)
             .WithField("phone", "string")
             .WithFilterableFields("username", "email")
             .WithUniqueFields("username", "email")  // Both must be unique
@@ -314,8 +314,8 @@ public class EntityCompoundUniqueTests : IntegrationTestBase
     {
         var schema = new EntitySchemaBuilder()
             .WithEntityName(TestEntityType)
-            .WithField("brandId", "string", required: true)
-            .WithField("agentId", "string", required: true)
+            .WithField("brandId", "string", required: true, isUnique: true)
+            .WithField("agentId", "string", required: true, isUnique: true)
             .WithField("region", "string")
             .WithFilterableFields("brandId", "agentId")
             .WithUniqueFields("brandId", "agentId")  // Combination must be unique
@@ -459,10 +459,10 @@ public class EntityDuplicateEdgeCaseTests : IntegrationTestBase
     {
         var schema = new EntitySchemaBuilder()
             .WithEntityName(TestEntityType)
-            .WithField("username", "string", required: true)
+            .WithField("username", "string", required: true, isUnique: true)
             .WithField("email", "string")
             .WithField("optional", "string")
-            .WithUniqueField("username")
+            .WithUniqueFields("username")
             .Build();
         
         await ApiHelpers.CreateSchemaAsync(Client, schema);
@@ -579,9 +579,9 @@ public class EntityDuplicatePerformanceTests : IntegrationTestBase
     {
         var schema = new EntitySchemaBuilder()
             .WithEntityName(TestEntityType)
-            .WithField("username", "string", required: true)
+            .WithField("username", "string", required: true, isUnique: true)
             .WithField("email", "string", required: true)
-            .WithUniqueField("username")
+            .WithUniqueFields("username")
             .Build();
         
         await ApiHelpers.CreateSchemaAsync(Client, schema);

@@ -40,20 +40,17 @@ public class DynamicEntityService : IDynamicEntityService
         _logger.LogInformation("Retrieving all entities of type: {EntityType}, environment: {Environment}", 
             entityType, environment ?? "all");
         
-        var schema = await _schemaRepository.GetSchemaByNameAsync(entityType);
-        bool excludeConsumed = schema?.ExcludeOnFetch ?? false;
-        
-        return await _repository.GetAllAsync(entityType, excludeConsumed, environment);
+        // Always return all entities (including consumed ones) so the UI can display them
+        // The excludeOnFetch flag only affects GetNext, not GetAll
+        return await _repository.GetAllAsync(entityType, excludeConsumed: false, environment);
     }
 
     public async Task<DynamicEntity?> GetByIdAsync(string entityType, string id)
     {
         _logger.LogInformation("Retrieving entity {EntityType} with ID: {Id}", entityType, id);
         
-        var schema = await _schemaRepository.GetSchemaByNameAsync(entityType);
-        bool markAsConsumed = schema?.ExcludeOnFetch ?? false;
-        
-        return await _repository.GetByIdAsync(entityType, id, markAsConsumed);
+        // GetById should not auto-consume entities - that only happens via GetNext
+        return await _repository.GetByIdAsync(entityType, id, markAsConsumed: false);
     }
 
     public async Task<DynamicEntity?> GetNextAvailableAsync(string entityType, string? environment = null)
@@ -190,6 +187,91 @@ public class DynamicEntityService : IDynamicEntityService
             {
                 _logger.LogWarning("Required field {Field} missing for {EntityType}", field.Name, entityType);
                 return false;
+            }
+        }
+
+        // Collect unique fields from property-level configurations (isUnique = true)
+        var individualUniqueFields = schema.Fields
+            .Where(f => f.IsUnique)
+            .Select(f => f.Name)
+            .ToList();
+
+        _logger.LogInformation("Validating entity {EntityType}. Found {Count} individual unique fields: {Fields}", 
+            entityType, individualUniqueFields.Count, string.Join(", ", individualUniqueFields));
+
+        // Get compound unique fields from schema-level configuration (uniqueFields array)
+        var compoundUniqueFields = schema.UniqueFields ?? new List<string>();
+
+        var existingEntities = await _repository.GetAllAsync(entityType, excludeConsumed: false, entity.Environment);
+
+        // Check individual unique fields - each field must be unique independently
+        foreach (var uniqueField in individualUniqueFields)
+        {
+            if (entity.Fields.ContainsKey(uniqueField))
+            {
+                var newValue = entity.Fields[uniqueField]?.ToString();
+                
+                foreach (var existingEntity in existingEntities)
+                {
+                    // Skip checking against the entity being updated (if it has an ID)
+                    if (!string.IsNullOrEmpty(entity.Id) && existingEntity.Id == entity.Id)
+                    {
+                        continue;
+                    }
+
+                    if (existingEntity.Fields.ContainsKey(uniqueField))
+                    {
+                        var existingValue = existingEntity.Fields[uniqueField]?.ToString();
+                        
+                        if (newValue == existingValue)
+                        {
+                            _logger.LogWarning("Duplicate value found for unique field '{Field}' in {EntityType} (environment: '{Environment}'). Value: {Value}",
+                                uniqueField, entityType, entity.Environment ?? "default", newValue);
+                            return false;
+                        }
+                    }
+                }
+            }
+        }
+
+        // Check compound unique fields - all fields in the list must match together
+        if (compoundUniqueFields.Any() && schema.UseCompoundUnique)
+        {
+            foreach (var existingEntity in existingEntities)
+            {
+                // Skip checking against the entity being updated (if it has an ID)
+                if (!string.IsNullOrEmpty(entity.Id) && existingEntity.Id == entity.Id)
+                {
+                    continue;
+                }
+
+                // Check if all compound unique fields match
+                bool allFieldsMatch = true;
+                foreach (var uniqueField in compoundUniqueFields)
+                {
+                    if (!entity.Fields.ContainsKey(uniqueField) || !existingEntity.Fields.ContainsKey(uniqueField))
+                    {
+                        allFieldsMatch = false;
+                        break;
+                    }
+
+                    var newValue = entity.Fields[uniqueField]?.ToString();
+                    var existingValue = existingEntity.Fields[uniqueField]?.ToString();
+
+                    if (newValue != existingValue)
+                    {
+                        allFieldsMatch = false;
+                        break;
+                    }
+                }
+
+                if (allFieldsMatch)
+                {
+                    var fieldNames = string.Join(", ", compoundUniqueFields);
+                    _logger.LogWarning("Duplicate entity found for {EntityType} in environment '{Environment}'. Compound unique fields ({Fields}) must be unique together.",
+                        entityType, entity.Environment ?? "default", fieldNames);
+                    return false;
+                }
             }
         }
 

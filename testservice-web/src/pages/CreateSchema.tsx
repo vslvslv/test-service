@@ -14,6 +14,7 @@ interface SchemaField {
   name: string;
   type: string;
   required: boolean;
+  isUnique: boolean;
   defaultValue?: string;
 }
 
@@ -31,13 +32,13 @@ const CreateSchema: React.FC = () => {
   const [schemaName, setSchemaName] = useState('');
   const [excludeOnFetch, setExcludeOnFetch] = useState(false);
   const [fields, setFields] = useState<SchemaField[]>([
-    { name: '', type: 'string', required: false, defaultValue: '' }
+    { name: '', type: 'string', required: false, isUnique: false, defaultValue: '' }
   ]);
   const [error, setError] = useState('');
   const [isCreating, setIsCreating] = useState(false);
 
   const addField = () => {
-    setFields([...fields, { name: '', type: 'string', required: false, defaultValue: '' }]);
+    setFields([...fields, { name: '', type: 'string', required: false, isUnique: false, defaultValue: '' }]);
   };
 
   const removeField = (index: number) => {
@@ -106,6 +107,7 @@ const CreateSchema: React.FC = () => {
           name: f.name.trim(),
           type: f.type,
           required: f.required,
+          isUnique: f.isUnique,
           ...(f.defaultValue && { defaultValue: f.defaultValue })
         })),
         excludeOnFetch
@@ -281,8 +283,9 @@ const CreateSchema: React.FC = () => {
                       />
                     </div>
 
-                    {/* Required Checkbox */}
-                    <div className="flex items-center">
+                    {/* Checkboxes Container */}
+                    <div className="flex flex-col gap-2">
+                      {/* Required Checkbox */}
                       <label className="flex items-center gap-2 cursor-pointer">
                         <input
                           type="checkbox"
@@ -291,6 +294,17 @@ const CreateSchema: React.FC = () => {
                           className="w-4 h-4 bg-gray-700 border-gray-600 rounded focus:ring-2 focus:ring-blue-500"
                         />
                         <span className="text-sm text-gray-300">Required field</span>
+                      </label>
+
+                      {/* Unique Checkbox */}
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={field.isUnique}
+                          onChange={(e) => updateField(index, { isUnique: e.target.checked })}
+                          className="w-4 h-4 bg-gray-700 border-gray-600 rounded focus:ring-2 focus:ring-blue-500"
+                        />
+                        <span className="text-sm text-gray-300">Unique field</span>
                       </label>
                     </div>
                   </div>
@@ -346,12 +360,13 @@ const CreateSchema: React.FC = () => {
 
       {/* Help Section */}
       <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
-        <h3 className="text-sm font-semibold text-blue-400 mb-2">?? Tips</h3>
+        <h3 className="text-sm font-semibold text-blue-400 mb-2">ğŸ’¡ Tips</h3>
         <ul className="space-y-1 text-xs text-blue-300">
-          <li>• Schema names should be descriptive and follow a naming convention (e.g., kebab-case)</li>
-          <li>• Required fields must be provided when creating entities</li>
-          <li>• Default values are used when a field is not specified during entity creation</li>
-          <li>• Auto-consume is useful for test data that should only be used once (e.g., unique accounts)</li>
+          <li>ğŸ“ Schema names should be descriptive and follow a naming convention (e.g., kebab-case)</li>
+          <li>âœ… Required fields must be provided when creating entities</li>
+          <li>ğŸ”‘ Unique fields ensure no duplicate values exist (e.g., username, email)</li>
+          <li>ğŸ’¾ Default values are used when a field is not specified during entity creation</li>
+          <li>ğŸ”„ Auto-consume is useful for test data that should only be used once (e.g., unique accounts)</li>
         </ul>
       </div>
     </div>
