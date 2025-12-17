@@ -319,6 +319,7 @@ Returns array of matching entities.
 - All `required` fields must be provided
 - Fields marked as `isUnique` cannot have duplicate values
 - Field values must match their defined types
+- **Environment must exist** if provided (validates against Environments collection)
 - Unknown fields (not in schema) are ignored
 
 #### Response (201 Created):
@@ -343,6 +344,13 @@ Returns array of matching entities.
 ```json
 {
   "error": "Entity does not match schema for type: test-agent"
+}
+```
+
+#### Error (400 Bad Request - Invalid Environment):
+```json
+{
+  "error": "Environment 'qa' does not exist. Please create it first."
 }
 ```
 
@@ -1102,6 +1110,13 @@ public async Task ResetTestData()
 - Check all required fields are provided
 - Verify unique fields don't have duplicates
 - Ensure field types match schema definition
+
+### Issue: "Environment does not exist"
+**Cause:** Referenced environment not found  
+**Solution:**
+- Create the environment first using POST /api/environments
+- Verify environment name spelling
+- Check environment exists in the Environments section
 
 ### Issue: "No available entities found"
 **Cause:** All entities are consumed  

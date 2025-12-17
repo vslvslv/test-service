@@ -21,17 +21,20 @@ public class DynamicEntityService : IDynamicEntityService
     private readonly IDynamicEntityRepository _repository;
     private readonly IEntitySchemaRepository _schemaRepository;
     private readonly IMessageBusService _messageBus;
+    private readonly IEnvironmentService _environmentService;
     private readonly ILogger<DynamicEntityService> _logger;
 
     public DynamicEntityService(
         IDynamicEntityRepository repository,
         IEntitySchemaRepository schemaRepository,
         IMessageBusService messageBus,
+        IEnvironmentService environmentService,
         ILogger<DynamicEntityService> logger)
     {
         _repository = repository;
         _schemaRepository = schemaRepository;
         _messageBus = messageBus;
+        _environmentService = environmentService;
         _logger = logger;
     }
 
@@ -103,6 +106,17 @@ public class DynamicEntityService : IDynamicEntityService
     {
         _logger.LogInformation("Creating new entity of type: {EntityType}", entityType);
         
+        // Validate environment exists if provided
+        if (!string.IsNullOrEmpty(entity.Environment))
+        {
+            var environment = await _environmentService.GetByNameAsync(entity.Environment);
+            if (environment == null)
+            {
+                _logger.LogWarning("Environment '{Environment}' not found", entity.Environment);
+                throw new ArgumentException($"Environment '{entity.Environment}' does not exist. Please create it first.");
+            }
+        }
+        
         // Validate against schema
         if (!await ValidateEntityAsync(entityType, entity))
         {
@@ -121,6 +135,17 @@ public class DynamicEntityService : IDynamicEntityService
     public async Task<bool> UpdateAsync(string entityType, string id, DynamicEntity entity)
     {
         _logger.LogInformation("Updating entity {EntityType} with ID: {Id}", entityType, id);
+        
+        // Validate environment exists if provided
+        if (!string.IsNullOrEmpty(entity.Environment))
+        {
+            var environment = await _environmentService.GetByNameAsync(entity.Environment);
+            if (environment == null)
+            {
+                _logger.LogWarning("Environment '{Environment}' not found", entity.Environment);
+                throw new ArgumentException($"Environment '{entity.Environment}' does not exist. Please create it first.");
+            }
+        }
         
         // Validate against schema
         if (!await ValidateEntityAsync(entityType, entity))

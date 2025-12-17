@@ -11,9 +11,16 @@ import {
 import { apiService } from '../services/api';
 
 interface Environment {
+  id: string;
   name: string;
+  displayName?: string;
   description?: string;
+  url?: string;
+  color?: string;
+  isActive?: boolean;
+  order?: number;
   createdAt?: string;
+  updatedAt?: string;
 }
 
 const Environments: React.FC = () => {
@@ -66,7 +73,7 @@ const Environments: React.FC = () => {
     }
   };
 
-  const handleDelete = async (envName: string) => {
+  const handleDelete = async (envId: string, envName: string) => {
     if (!confirm(`Are you sure you want to delete the environment "${envName}"?`)) {
       return;
     }
@@ -74,7 +81,7 @@ const Environments: React.FC = () => {
     try {
       await apiService.request({
         method: 'DELETE',
-        url: `/api/environments/${envName}`
+        url: `/api/environments/${envId}`
       });
       
       await loadEnvironments();
@@ -153,9 +160,9 @@ const Environments: React.FC = () => {
       {/* Environment List */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {filteredEnvironments.length > 0 ? (
-          filteredEnvironments.map((env, index) => (
+          filteredEnvironments.map((env) => (
             <div
-              key={index}
+              key={env.id}
               className="bg-gray-800 rounded-lg border border-gray-700 p-6 hover:border-gray-600 transition-colors"
             >
               <div className="flex items-start justify-between mb-4">
@@ -171,7 +178,7 @@ const Environments: React.FC = () => {
                     <Edit className="w-4 h-4 text-gray-400 hover:text-white" />
                   </button>
                   <button
-                    onClick={() => handleDelete(env.name)}
+                    onClick={() => handleDelete(env.id, env.displayName || env.name)}
                     className="p-2 hover:bg-red-500/10 rounded-lg transition-colors"
                     title="Delete"
                   >
@@ -179,9 +186,17 @@ const Environments: React.FC = () => {
                   </button>
                 </div>
               </div>
-              <h3 className="text-lg font-semibold text-white mb-2">{env.name}</h3>
+              <h3 className="text-lg font-semibold text-white mb-2">
+                {env.displayName || env.name}
+              </h3>
               {env.description && (
                 <p className="text-sm text-gray-400">{env.description}</p>
+              )}
+              {env.url && (
+                <p className="text-xs text-gray-500 mt-2 flex items-center gap-1">
+                  <Globe className="w-3 h-3" />
+                  {env.url}
+                </p>
               )}
             </div>
           ))
