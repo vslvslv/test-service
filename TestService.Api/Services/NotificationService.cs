@@ -134,4 +134,27 @@ public class NotificationService : INotificationService
             _logger.LogError(ex, "Failed to send entity deleted notification for {EntityType}/{EntityId}", entityType, entityId);
         }
     }
+
+    public async Task NotifyBulkAction(string entityType, string action, int count, string? environment = null)
+    {
+        try
+        {
+            await _hubContext.Clients.All.SendAsync("BulkAction", new
+            {
+                type = "bulk_action",
+                entityType,
+                action,
+                count,
+                environment,
+                timestamp = DateTime.UtcNow
+            });
+
+            _logger.LogInformation("Notification sent: Bulk {Action} - {Count} entities of type {EntityType} (environment: {Environment})", 
+                action, count, entityType, environment ?? "all");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to send bulk action notification for {EntityType}", entityType);
+        }
+    }
 }

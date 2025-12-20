@@ -8,4 +8,5 @@ public interface INotificationService
     Task NotifyEntityCreated(string entityType, string entityId);
     Task NotifyEntityUpdated(string entityType, string entityId);
     Task NotifyEntityDeleted(string entityType, string entityId);
+    Task NotifyBulkAction(string entityType, string action, int count, string? environment = null);
 }

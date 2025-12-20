@@ -11,6 +11,7 @@ public interface IDynamicEntityService
     Task<DynamicEntity> CreateAsync(string entityType, DynamicEntity entity);
     Task<bool> UpdateAsync(string entityType, string id, DynamicEntity entity);
     Task<bool> DeleteAsync(string entityType, string id);
+    Task<int> DeleteAllAsync(string entityType, string? environment = null);
     Task<bool> ResetConsumedAsync(string entityType, string id);
     Task<int> ResetAllConsumedAsync(string entityType, string? environment = null);
     Task<bool> ValidateEntityAsync(string entityType, DynamicEntity entity);
@@ -179,6 +180,31 @@ public class DynamicEntityService : IDynamicEntityService
         }
         
         return result;
+    }
+
+    public async Task<int> DeleteAllAsync(string entityType, string? environment = null)
+    {
+        _logger.LogInformation("Deleting all entities of type: {EntityType}, environment: {Environment}", 
+            entityType, environment ?? "all");
+        
+        // Get all entities first so we can count them
+        var entities = await _repository.GetAllAsync(entityType, excludeConsumed: false, environment);
+        var entityList = entities.ToList();
+        var count = entityList.Count;
+        
+        // Delete each entity
+        foreach (var entity in entityList)
+        {
+            if (!string.IsNullOrEmpty(entity.Id))
+            {
+                await _repository.DeleteAsync(entityType, entity.Id);
+                await _messageBus.PublishAsync(new { EntityType = entityType, Id = entity.Id }, 
+                    $"{entityType.ToLower()}.deleted");
+            }
+        }
+        
+        _logger.LogInformation("Deleted {Count} entities of type {EntityType}", count, entityType);
+        return count;
     }
 
     public async Task<bool> ResetConsumedAsync(string entityType, string id)

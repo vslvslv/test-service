@@ -103,6 +103,12 @@ class ApiService {
     return response.data;
   }
 
+  async deleteAllSchemaEntities(schemaName: string, environment?: string) {
+    const params = environment ? { environment } : {};
+    const response = await this.api.delete(`/api/schemas/${schemaName}/entities`, { params });
+    return response.data;
+  }
+
   // Dynamic Entities
   async getEntities(entityType: string, environment?: string): Promise<Entity[]> {
     const params = environment ? { environment } : {};

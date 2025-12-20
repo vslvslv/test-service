@@ -15,7 +15,8 @@ import {
   Type,
   Hash,
   CheckSquare,
-  Calendar
+  Calendar,
+  Database
 } from 'lucide-react';
 import { apiService } from '../services/api';
 import { getErrorMessage, type Schema } from '../types';
@@ -75,6 +76,22 @@ const Schemas: React.FC = () => {
       });
       
       await loadSchemas();
+    } catch (err) {
+      alert(getErrorMessage(err));
+    }
+  };
+
+  const handleDeleteAllEntities = async (schemaEntityName: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    if (!confirm(`Are you sure you want to delete ALL entities of type "${schemaEntityName}"?\n\nThis will permanently delete all entities, but the schema will remain intact.\n\nThis action cannot be undone!`)) {
+      return;
+    }
+
+    try {
+      const result = await apiService.deleteAllSchemaEntities(schemaEntityName);
+      alert(`Successfully deleted ${result.deletedCount} entities from ${schemaEntityName}`);
+      // No need to reload schemas, just show success
     } catch (err) {
       alert(getErrorMessage(err));
     }
@@ -293,11 +310,18 @@ const Schemas: React.FC = () => {
                           )}
                         </div>
                         <p className="text-sm text-gray-400">
-                          {schema.fields?.length || 0} fields • {schema.fields?.filter(f => f.required).length || 0} required
+                          {schema.fields?.length || 0} fields ï¿½ {schema.fields?.filter(f => f.required).length || 0} required
                         </p>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
+                      <button
+                        onClick={(e) => handleDeleteAllEntities(schema.entityName, e)}
+                        className="p-2 hover:bg-orange-500/10 rounded-lg transition-colors"
+                        title="Delete All Entities"
+                      >
+                        <Database className="w-5 h-5 text-gray-400 hover:text-orange-400" />
+                      </button>
                       <button
                         onClick={() => handleSchemaClick(schema.entityName)}
                         className="p-2 hover:bg-gray-600 rounded-lg transition-colors"
@@ -308,7 +332,7 @@ const Schemas: React.FC = () => {
                       <button
                         onClick={(e) => handleDelete(schema.entityName, e)}
                         className="p-2 hover:bg-red-500/10 rounded-lg transition-colors"
-                        title="Delete"
+                        title="Delete Schema"
                       >
                         <Trash2 className="w-5 h-5 text-gray-400 hover:text-red-400" />
                       </button>
@@ -362,6 +386,13 @@ const Schemas: React.FC = () => {
                   </div>
                   <div className="flex gap-1">
                     <button
+                      onClick={(e) => handleDeleteAllEntities(schema.entityName, e)}
+                      className="p-1.5 hover:bg-orange-500/10 rounded transition-colors"
+                      title="Delete All Entities"
+                    >
+                      <Database className="w-4 h-4 text-gray-400 hover:text-orange-400" />
+                    </button>
+                    <button
                       onClick={(e) => {
                         e.stopPropagation();
                         handleSchemaClick(schema.entityName);
@@ -374,7 +405,7 @@ const Schemas: React.FC = () => {
                     <button
                       onClick={(e) => handleDelete(schema.entityName, e)}
                       className="p-1.5 hover:bg-red-500/10 rounded transition-colors"
-                      title="Delete"
+                      title="Delete Schema"
                     >
                       <Trash2 className="w-4 h-4 text-gray-400 hover:text-red-400" />
                     </button>

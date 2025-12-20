@@ -170,4 +170,64 @@ public class SchemasController : ControllerBase
             return StatusCode(500, "Internal server error");
         }
     }
+
+    /// <summary>
+    /// Delete all entities for a specific schema
+    /// </summary>
+    /// <param name="entityName">The entity type/schema name</param>
+    /// <param name="environment">Optional: Only delete entities in this environment</param>
+    /// <remarks>
+    /// This will delete all entities of the specified type, but the schema itself will remain intact.
+    /// Use this for bulk cleanup operations.
+    /// 
+    /// Example: DELETE /api/schemas/Agent/entities?environment=dev
+    /// </remarks>
+    [HttpDelete("{entityName}/entities")]
+    public async Task<ActionResult> DeleteAllEntities(
+        string entityName,
+        [FromQuery] string? environment = null)
+    {
+        try
+        {
+            // Check if schema exists
+            var schema = await _schemaRepository.GetSchemaByNameAsync(entityName);
+            if (schema == null)
+            {
+                return NotFound($"Schema for entity '{entityName}' not found");
+            }
+
+            // Delete all entities using the entity service (requires injection)
+            var entityService = HttpContext.RequestServices.GetRequiredService<IDynamicEntityService>();
+            var activityService = HttpContext.RequestServices.GetRequiredService<IActivityService>();
+            
+            var count = await entityService.DeleteAllAsync(entityName, environment);
+            
+            // Log activity - bulk delete
+            var user = User?.Identity?.Name ?? "anonymous";
+            await activityService.LogActivityAsync(
+                ActivityType.Entity,
+                ActivityAction.BulkDeleted,
+                user,
+                $"Bulk delete: {count} entities deleted from {entityName}",
+                entityName,
+                null,
+                environment,
+                new ActivityDetails { Count = count }
+            );
+            
+            // Send notification
+            await _notificationService.NotifyBulkAction(
+                entityName, 
+                "deleted", 
+                count, 
+                environment);
+            
+            return Ok(new { deletedCount = count, message = $"Deleted {count} entities from {entityName}" });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error deleting all entities for {EntityName}", entityName);
+            return StatusCode(500, "Internal server error");
+        }
+    }
 }

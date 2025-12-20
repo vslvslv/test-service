@@ -129,6 +129,7 @@ public static class ActivityAction
     public const string Created = "created";
     public const string Updated = "updated";
     public const string Deleted = "deleted";
+    public const string BulkDeleted = "bulk-deleted";
     public const string Consumed = "consumed";
     public const string Reset = "reset";
     public const string BulkReset = "bulk-reset";
