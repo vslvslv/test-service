@@ -87,6 +87,20 @@ const Dashboard: React.FC = () => {
     }
   };
 
+  // Calculate functional percentages
+  const availablePercentage = stats.totalEntities > 0 
+    ? Math.round((stats.availableEntities / stats.totalEntities) * 100)
+    : 0;
+  
+  const consumedPercentage = stats.totalEntities > 0
+    ? Math.round((stats.consumedEntities / stats.totalEntities) * 100)
+    : 0;
+
+  // Calculate schema utilization (schemas with entities vs total schemas)
+  const schemaUtilization = stats.totalSchemas > 0
+    ? Math.round((recentSchemas.filter(s => s.fields && s.fields.length > 0).length / stats.totalSchemas) * 100)
+    : 0;
+
   const handleCreateSchema = () => {
     navigate('/schemas/new');
   };
@@ -113,7 +127,7 @@ const Dashboard: React.FC = () => {
       value: stats.totalSchemas,
       icon: Layers,
       color: 'blue',
-      trend: '+12%',
+      trend: stats.totalSchemas > 0 ? `${schemaUtilization}% active` : 'No data',
       onClick: () => navigate('/schemas'),
     },
     {
@@ -121,7 +135,7 @@ const Dashboard: React.FC = () => {
       value: stats.totalEnvironments,
       icon: Server,
       color: 'green',
-      trend: '+5%',
+      trend: stats.totalEnvironments > 0 ? `${stats.totalEnvironments} active` : 'None',
       onClick: () => navigate('/environments'),
     },
     {
@@ -129,7 +143,7 @@ const Dashboard: React.FC = () => {
       value: stats.availableEntities,
       icon: CheckCircle,
       color: 'purple',
-      trend: '87%',
+      trend: `${availablePercentage}%`,
       onClick: () => navigate('/entities'),
     },
     {
@@ -137,7 +151,7 @@ const Dashboard: React.FC = () => {
       value: stats.consumedEntities,
       icon: Activity,
       color: 'orange',
-      trend: '13%',
+      trend: `${consumedPercentage}%`,
       onClick: () => navigate('/entities'),
     },
   ];
