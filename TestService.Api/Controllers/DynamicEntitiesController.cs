@@ -10,15 +10,18 @@ public class DynamicEntitiesController : ControllerBase
 {
     private readonly IDynamicEntityService _entityService;
     private readonly IEntitySchemaRepository _schemaRepository;
+    private readonly IActivityService _activityService;
     private readonly ILogger<DynamicEntitiesController> _logger;
 
     public DynamicEntitiesController(
         IDynamicEntityService entityService,
         IEntitySchemaRepository schemaRepository,
+        IActivityService activityService,
         ILogger<DynamicEntitiesController> logger)
     {
         _entityService = entityService;
         _schemaRepository = schemaRepository;
+        _activityService = activityService;
         _logger = logger;
     }
 
@@ -122,6 +125,18 @@ public class DynamicEntitiesController : ControllerBase
                 return NotFound("No available entities found");
             }
 
+            // Log activity - entity consumed
+            var user = User?.Identity?.Name ?? "anonymous";
+            await _activityService.LogActivityAsync(
+                ActivityType.Entity,
+                ActivityAction.Consumed,
+                user,
+                $"Entity {entity.Id} consumed from {entityType}",
+                entityType,
+                entity.Id,
+                environment
+            );
+
             return Ok(entity);
         }
         catch (Exception ex)
@@ -206,6 +221,19 @@ public class DynamicEntitiesController : ControllerBase
             }
 
             var created = await _entityService.CreateAsync(entityType, entity);
+            
+            // Log activity - entity created
+            var user = User?.Identity?.Name ?? "anonymous";
+            await _activityService.LogActivityAsync(
+                ActivityType.Entity,
+                ActivityAction.Created,
+                user,
+                $"New {entityType} entity created: {created.Id}",
+                entityType,
+                created.Id,
+                entity.Environment
+            );
+            
             return CreatedAtAction(nameof(GetById), 
                 new { entityType = entityType, id = created.Id }, created);
         }
@@ -238,6 +266,19 @@ public class DynamicEntitiesController : ControllerBase
             {
                 return NotFound();
             }
+            
+            // Log activity - entity updated
+            var user = User?.Identity?.Name ?? "anonymous";
+            await _activityService.LogActivityAsync(
+                ActivityType.Entity,
+                ActivityAction.Updated,
+                user,
+                $"Entity {id} updated in {entityType}",
+                entityType,
+                id,
+                entity.Environment
+            );
+            
             return NoContent();
         }
         catch (ArgumentException ex)
@@ -269,6 +310,18 @@ public class DynamicEntitiesController : ControllerBase
             {
                 return NotFound();
             }
+            
+            // Log activity - entity deleted
+            var user = User?.Identity?.Name ?? "anonymous";
+            await _activityService.LogActivityAsync(
+                ActivityType.Entity,
+                ActivityAction.Deleted,
+                user,
+                $"Entity {id} deleted from {entityType}",
+                entityType,
+                id
+            );
+            
             return NoContent();
         }
         catch (Exception ex)
@@ -299,6 +352,18 @@ public class DynamicEntitiesController : ControllerBase
             {
                 return NotFound();
             }
+            
+            // Log activity - entity reset
+            var user = User?.Identity?.Name ?? "anonymous";
+            await _activityService.LogActivityAsync(
+                ActivityType.Entity,
+                ActivityAction.Reset,
+                user,
+                $"Entity {id} reset (made available) in {entityType}",
+                entityType,
+                id
+            );
+            
             return NoContent();
         }
         catch (Exception ex)
@@ -331,6 +396,20 @@ public class DynamicEntitiesController : ControllerBase
             }
 
             var count = await _entityService.ResetAllConsumedAsync(entityType, environment);
+            
+            // Log activity - bulk reset
+            var user = User?.Identity?.Name ?? "anonymous";
+            await _activityService.LogActivityAsync(
+                ActivityType.Entity,
+                ActivityAction.BulkReset,
+                user,
+                $"Bulk reset: {count} entities made available in {entityType}",
+                entityType,
+                null,
+                environment,
+                new ActivityDetails { Count = count }
+            );
+            
             return Ok(new { resetCount = count, message = $"Reset {count} consumed entities" });
         }
         catch (Exception ex)

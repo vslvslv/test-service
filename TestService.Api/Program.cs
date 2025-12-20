@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using MongoDB.Bson.Serialization;
 using MongoDB.Bson.Serialization.Conventions;
+using MongoDB.Driver;
 using TestService.Api.Configuration;
 using TestService.Api.Services;
 using TestService.Api.Hubs;
@@ -41,6 +42,14 @@ builder.Services.AddSignalR();
 var mongoDbSettings = new MongoDbSettings();
 builder.Configuration.GetSection("MongoDbSettings").Bind(mongoDbSettings);
 builder.Services.AddSingleton(mongoDbSettings);
+
+// Register MongoDB database
+builder.Services.AddSingleton<IMongoDatabase>(sp =>
+{
+    var settings = sp.GetRequiredService<MongoDbSettings>();
+    var client = new MongoClient(settings.ConnectionString);
+    return client.GetDatabase(settings.DatabaseName);
+});
 
 var rabbitMqSettings = new RabbitMqSettings();
 builder.Configuration.GetSection("RabbitMqSettings").Bind(rabbitMqSettings);
@@ -138,8 +147,13 @@ builder.Services.AddSingleton<INotificationService, NotificationService>();
 // Register Settings services
 builder.Services.AddSingleton<ISettingsRepository, SettingsRepository>();
 
+// Register Activity services
+builder.Services.AddSingleton<IActivityRepository, ActivityRepository>();
+builder.Services.AddScoped<IActivityService, ActivityService>();
+
 // Register background services
 builder.Services.AddHostedService<TestService.Api.BackgroundServices.DataCleanupService>();
+builder.Services.AddHostedService<TestService.Api.BackgroundServices.ActivityCleanupService>();
 
 var app = builder.Build();
 

@@ -58,6 +58,56 @@ export interface ApiError {
   };
 }
 
+// Activity types
+export interface Activity {
+  id: string;
+  timestamp: string;
+  type: 'entity' | 'schema' | 'user' | 'environment' | 'system';
+  action: 'created' | 'updated' | 'deleted' | 'consumed' | 'reset' | 'bulk-reset' | 'logged-in' | 'logged-out';
+  entityType?: string;
+  entityId?: string;
+  user: string;
+  environment?: string;
+  details?: ActivityDetails;
+  description: string;
+}
+
+export interface ActivityDetails {
+  count?: number;
+  fields?: string[];
+  oldValue?: string;
+  newValue?: string;
+  ipAddress?: string;
+  userAgent?: string;
+}
+
+export interface ActivityListResponse {
+  activities: Activity[];
+  totalCount: number;
+  skip: number;
+  limit: number;
+  hasMore: boolean;
+}
+
+export interface ActivityStats {
+  totalActivities: number;
+  startDate: string;
+  endDate: string;
+  byType: Record<string, number>;
+  byAction: Record<string, number>;
+  byEntityType: Record<string, number>;
+  byUser: Record<string, number>;
+}
+
+export interface ActivityFilters {
+  startDate?: string;
+  endDate?: string;
+  entityType?: string;
+  type?: string;
+  action?: string;
+  user?: string;
+}
+
 // Type guard to check if error is ApiError
 export function isApiError(error: unknown): error is ApiError {
   return typeof error === 'object' && error !== null && 'message' in error;

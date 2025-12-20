@@ -1,5 +1,5 @@
 import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
-import type { Schema, Environment, Entity, User } from '../types';
+import type { Schema, Environment, Entity, User, Activity, ActivityListResponse, ActivityStats, ActivityFilters } from '../types';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
 
@@ -160,6 +160,26 @@ class ApiService {
 
   async deleteApiKey(id: string) {
     const response = await this.api.delete(`/api/settings/api-keys/${id}`);
+    return response.data;
+  }
+
+  // Activities
+  async getActivities(filters: ActivityFilters & { skip?: number; limit?: number } = {}): Promise<ActivityListResponse> {
+    const response = await this.api.get<ActivityListResponse>('/api/activities', { params: filters });
+    return response.data;
+  }
+
+  async getRecentActivities(hours: number = 24, limit: number = 100): Promise<Activity[]> {
+    const response = await this.api.get<Activity[]>('/api/activities/recent', { 
+      params: { hours, limit } 
+    });
+    return response.data;
+  }
+
+  async getActivityStats(startDate?: string, endDate?: string): Promise<ActivityStats> {
+    const response = await this.api.get<ActivityStats>('/api/activities/stats', {
+      params: { startDate, endDate }
+    });
     return response.data;
   }
 
