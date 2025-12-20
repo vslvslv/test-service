@@ -50,13 +50,35 @@ const Dashboard: React.FC = () => {
       // Load environments
       const environments = await apiService.getEnvironments();
 
-      // Calculate stats (simplified for now)
+      // Calculate entity statistics across all schemas
+      let totalEntities = 0;
+      let availableEntities = 0;
+      let consumedEntities = 0;
+
+      for (const schema of schemas) {
+        try {
+          const entities = await apiService.getEntities(schema.entityName);
+          totalEntities += entities.length;
+          
+          // Count available vs consumed
+          entities.forEach((entity: any) => {
+            if (entity.isConsumed) {
+              consumedEntities++;
+            } else {
+              availableEntities++;
+            }
+          });
+        } catch (err) {
+          console.error(`Failed to load entities for ${schema.entityName}:`, err);
+        }
+      }
+
       setStats({
         totalSchemas: schemas.length,
-        totalEntities: 0, // Will need to aggregate from all entity types
+        totalEntities,
         totalEnvironments: environments.length,
-        availableEntities: 0,
-        consumedEntities: 0,
+        availableEntities,
+        consumedEntities,
       });
     } catch (error) {
       console.error('Failed to load dashboard data:', error);

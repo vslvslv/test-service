@@ -11,7 +11,9 @@ import {
   CheckCircle,
   XCircle,
   Download,
-  Filter
+  Filter,
+  Settings,
+  ChevronDown
 } from 'lucide-react';
 import { apiService } from '../services/api';
 import EntityViewDialog from '../components/EntityViewDialog';
@@ -47,12 +49,30 @@ const EntityList: React.FC = () => {
   const [selectedEntity, setSelectedEntity] = useState<Entity | null>(null);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  
+  // Column visibility state
+  const [showColumnMenu, setShowColumnMenu] = useState(false);
+  const [visibleColumns, setVisibleColumns] = useState<Set<string>>(new Set(['status']));
 
   useEffect(() => {
     if (entityType) {
       loadData();
     }
   }, [entityType]);
+
+  useEffect(() => {
+    // Initialize visible columns when schema loads
+    if (schema) {
+      const defaultColumns = new Set(['status']);
+      // Show first 3 fields by default
+      schema.fields.slice(0, 3).forEach(field => defaultColumns.add(field.name));
+      // Always show environment if present
+      if (entities.some(e => e.environment)) {
+        defaultColumns.add('environment');
+      }
+      setVisibleColumns(defaultColumns);
+    }
+  }, [schema, entities]);
 
   const loadData = async () => {
     setIsLoading(true);
@@ -180,6 +200,33 @@ const EntityList: React.FC = () => {
       handleCloseDialog();
       navigate(`/entities/${entityType}/${selectedEntity.id}/edit`);
     }
+  };
+
+  const toggleColumn = (columnName: string) => {
+    setVisibleColumns(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(columnName)) {
+        // Don't allow hiding status column
+        if (columnName !== 'status') {
+          newSet.delete(columnName);
+        }
+      } else {
+        newSet.add(columnName);
+      }
+      return newSet;
+    });
+  };
+
+  const selectAllColumns = () => {
+    if (schema) {
+      const allColumns = new Set(['status', 'environment']);
+      schema.fields.forEach(field => allColumns.add(field.name));
+      setVisibleColumns(allColumns);
+    }
+  };
+
+  const deselectAllColumns = () => {
+    setVisibleColumns(new Set(['status'])); // Keep status always visible
   };
 
   // Filter entities
@@ -331,6 +378,100 @@ const EntityList: React.FC = () => {
               ))}
             </select>
           )}
+
+          {/* Column Visibility Menu */}
+          <div className="relative">
+            <button
+              onClick={() => setShowColumnMenu(!showColumnMenu)}
+              className="flex items-center gap-2 px-3 py-2 bg-gray-700 hover:bg-gray-600 border border-gray-600 rounded-lg text-white text-sm transition-colors"
+              title="Column settings"
+            >
+              <Settings className="w-4 h-4" />
+              <span className="hidden sm:inline">Columns</span>
+              <ChevronDown className="w-4 h-4" />
+            </button>
+
+            {/* Column Selection Dropdown */}
+            {showColumnMenu && (
+              <>
+                {/* Backdrop */}
+                <div 
+                  className="fixed inset-0 z-10"
+                  onClick={() => setShowColumnMenu(false)}
+                />
+                
+                {/* Menu */}
+                <div className="absolute right-0 mt-2 w-64 bg-gray-800 border border-gray-700 rounded-lg shadow-xl z-20">
+                  <div className="p-3 border-b border-gray-700">
+                    <p className="text-sm font-medium text-white mb-2">Show/Hide Columns</p>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={selectAllColumns}
+                        className="flex-1 px-2 py-1 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors"
+                      >
+                        Select All
+                      </button>
+                      <button
+                        onClick={deselectAllColumns}
+                        className="flex-1 px-2 py-1 text-xs bg-gray-700 hover:bg-gray-600 text-white rounded transition-colors"
+                      >
+                        Deselect All
+                      </button>
+                    </div>
+                  </div>
+                  
+                  <div className="p-2 max-h-64 overflow-y-auto">
+                    {/* Status Column (always visible) */}
+                    <label className="flex items-center gap-2 p-2 hover:bg-gray-700 rounded cursor-not-allowed opacity-50">
+                      <input
+                        type="checkbox"
+                        checked={true}
+                        disabled
+                        className="w-4 h-4 bg-gray-700 border-gray-600 rounded"
+                      />
+                      <span className="text-sm text-gray-300">Status (required)</span>
+                    </label>
+
+                    {/* Schema Fields */}
+                    {schema?.fields.map((field, idx) => (
+                      <label 
+                        key={idx}
+                        className="flex items-center gap-2 p-2 hover:bg-gray-700 rounded cursor-pointer"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={visibleColumns.has(field.name)}
+                          onChange={() => toggleColumn(field.name)}
+                          className="w-4 h-4 bg-gray-700 border-gray-600 rounded focus:ring-2 focus:ring-blue-500"
+                        />
+                        <span className="text-sm text-gray-300">{field.name}</span>
+                        <span className="text-xs text-gray-500 ml-auto">
+                          {field.type}
+                        </span>
+                      </label>
+                    ))}
+
+                    {/* Environment Column */}
+                    {entities.some(e => e.environment) && (
+                      <label className="flex items-center gap-2 p-2 hover:bg-gray-700 rounded cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={visibleColumns.has('environment')}
+                          onChange={() => toggleColumn('environment')}
+                          className="w-4 h-4 bg-gray-700 border-gray-600 rounded focus:ring-2 focus:ring-blue-500"
+                        />
+                        <span className="text-sm text-gray-300">Environment</span>
+                      </label>
+                    )}
+                  </div>
+
+                  <div className="p-3 border-t border-gray-700 text-xs text-gray-400">
+                    {visibleColumns.size} of {schema?.fields.length || 0} columns visible
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
         </div>
 
         {/* Consumed filter */}
@@ -381,15 +522,19 @@ const EntityList: React.FC = () => {
             <table className="w-full">
               <thead className="bg-gray-700/50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                    Status
-                  </th>
-                  {schema.fields.slice(0, 3).map((field, idx) => (
-                    <th key={idx} className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                      {field.name}
+                  {visibleColumns.has('status') && (
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                      Status
                     </th>
+                  )}
+                  {schema.fields.map((field, idx) => (
+                    visibleColumns.has(field.name) && (
+                      <th key={idx} className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                        {field.name}
+                      </th>
+                    )
                   ))}
-                  {entities.some(e => e.environment) && (
+                  {entities.some(e => e.environment) && visibleColumns.has('environment') && (
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
                       Environment
                     </th>
@@ -406,25 +551,29 @@ const EntityList: React.FC = () => {
                     className="hover:bg-gray-700/30 cursor-pointer"
                     onClick={() => handleViewEntity(entity)}
                   >
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {entity.isConsumed ? (
-                        <span className="flex items-center gap-1 text-orange-400 text-sm">
-                          <XCircle className="w-4 h-4" />
-                          Consumed
-                        </span>
-                      ) : (
-                        <span className="flex items-center gap-1 text-green-400 text-sm">
-                          <CheckCircle className="w-4 h-4" />
-                          Available
-                        </span>
-                      )}
-                    </td>
-                    {schema.fields.slice(0, 3).map((field, idx) => (
-                      <td key={idx} className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                        {String(entity.fields[field.name] || '-')}
+                    {visibleColumns.has('status') && (
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {entity.isConsumed ? (
+                          <span className="flex items-center gap-1 text-orange-400 text-sm">
+                            <XCircle className="w-4 h-4" />
+                            Consumed
+                          </span>
+                        ) : (
+                          <span className="flex items-center gap-1 text-green-400 text-sm">
+                            <CheckCircle className="w-4 h-4" />
+                            Available
+                          </span>
+                        )}
                       </td>
+                    )}
+                    {schema.fields.map((field, idx) => (
+                      visibleColumns.has(field.name) && (
+                        <td key={idx} className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                          {String(entity.fields[field.name] || '-')}
+                        </td>
+                      )
                     ))}
-                    {entities.some(e => e.environment) && (
+                    {entities.some(e => e.environment) && visibleColumns.has('environment') && (
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
                         {entity.environment || '-'}
                       </td>
