@@ -28,7 +28,10 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowWebUI", policy =>
     {
-        policy.WithOrigins("http://localhost:3000", "http://localhost:5173")
+        policy.WithOrigins(
+                "http://localhost:3000", 
+                "http://localhost:5173",
+                "http://qa2-env01.cloudad.local")
               .AllowAnyHeader()
               .AllowAnyMethod()
               .AllowCredentials();
@@ -178,7 +181,8 @@ if (app.Environment.IsDevelopment())
 // Enable CORS
 app.UseCors("AllowWebUI");
 
-app.UseHttpsRedirection();
+// Don't use HTTPS redirection in containerized environment behind nginx
+// app.UseHttpsRedirection();
 
 // Add authentication and authorization middleware
 app.UseAuthentication();

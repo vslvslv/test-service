@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ToastProvider, useToast } from './contexts/ToastContext';
 import { useCallback, useEffect } from 'react';
@@ -16,6 +16,21 @@ import EntityList from './pages/EntityList';
 import Activity from './pages/Activity';
 import Settings from './pages/Settings';
 import './App.css';
+
+function AuthHandler() {
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const handleAuthError = () => {
+      navigate('login', { replace: true });
+    };
+
+    window.addEventListener('auth-401', handleAuthError);
+    return () => window.removeEventListener('auth-401', handleAuthError);
+  }, [navigate]);
+
+  return null;
+}
 
 function NotificationHandler() {
   const { success, info, warning, notifyBell } = useToast();
@@ -87,10 +102,11 @@ function AppRoutes() {
 
   return (
     <>
+      <AuthHandler />
       <NotificationHandler />
       <Routes>
         <Route
-          path="/login"
+          path="login"
           element={isAuthenticated ? <Navigate to="/" replace /> : <Login />}
         />
         
@@ -113,7 +129,8 @@ function AppRoutes() {
           <Route path="entities" element={<Entities />} />
           <Route path="entities/:entityType" element={<EntityList />} />
           <Route path="entities/:entityType/new" element={<div className="text-white">Create Entity - Coming Soon</div>} />
-          <Route path="entities/:entityType/:id" element={<div className="text-white">Entity Details - Coming Soon</div>} />
+          <Route path="entities/:entityType/:id" element={<EntityList />} />
+          <Route path="entities/:entityType/:id/edit" element={<EntityList />} />
           
           <Route path="users" element={<div className="text-white">Users Page - Coming Soon</div>} />
           <Route path="settings" element={<Settings />} />
@@ -127,8 +144,11 @@ function AppRoutes() {
 }
 
 function App() {
+  // Always use base path to match vite config
+  const basename = '/testservice/ui';
+  
   return (
-    <BrowserRouter>
+    <BrowserRouter basename={basename}>
       <AuthProvider>
         <ToastProvider>
           <AppRoutes />

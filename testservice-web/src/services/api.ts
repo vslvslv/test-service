@@ -1,7 +1,8 @@
 import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
 import type { Schema, Environment, Entity, User, Activity, ActivityListResponse, ActivityStats, ActivityFilters } from '../types';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+// For development: use /api (proxied), for production: use env variable
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? '/api' : '/testservice');
 
 class ApiService {
   private api: AxiosInstance;
@@ -32,7 +33,8 @@ class ApiService {
       (error) => {
         if (error.response?.status === 401) {
           localStorage.removeItem('token');
-          window.location.href = '/login';
+          // Dispatch custom event for navigation - components will handle the redirect
+          window.dispatchEvent(new CustomEvent('auth-401'));
         }
         return Promise.reject(error);
       }

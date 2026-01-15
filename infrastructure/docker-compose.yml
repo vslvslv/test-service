@@ -87,9 +87,7 @@ services:
 
   # Web UI
   web:
-    build:
-      context: ../testservice-web
-      dockerfile: Dockerfile
+    image: testservice-web:latest
     container_name: testservice-web
     restart: unless-stopped
     ports:
