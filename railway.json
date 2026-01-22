@@ -1,7 +1,9 @@
 {
   "build": {
     "builder": "dockerfile",
-    "dockerfile": "TestService.Api/Dockerfile"
+    "dockerfile": "TestService.Api/Dockerfile",
+    "context": "."
   }
 }
+
 
