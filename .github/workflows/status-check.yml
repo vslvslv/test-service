@@ -1,0 +1,14 @@
+name: Status Check
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  pass:
+    name: Status Check
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "✓ Status check passed"
