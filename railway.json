@@ -1,0 +1,7 @@
+{
+  "build": {
+    "builder": "dockerfile",
+    "dockerfile": "TestService.Api/Dockerfile"
+  }
+}
+
