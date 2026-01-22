@@ -1,0 +1,13 @@
+{
+  "build": {
+    "builder": "dockerfile",
+    "dockerfilePath": "TestService.Api/Dockerfile",
+    "context": "."
+  },
+  "deploy": {
+    "healthcheckPath": "/health"
+  }
+}
+
+
+

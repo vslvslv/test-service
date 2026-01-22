@@ -45,6 +45,26 @@ builder.Services.AddSignalR();
 // Add configuration
 var mongoDbSettings = new MongoDbSettings();
 builder.Configuration.GetSection("MongoDbSettings").Bind(mongoDbSettings);
+
+// Allow platform-provided env vars (e.g., Railway) to override the connection string
+var mongoConnFromEnv = Environment.GetEnvironmentVariable("MONGODB_URL")
+    ?? Environment.GetEnvironmentVariable("MONGODB_CONNECTION_STRING")
+    ?? Environment.GetEnvironmentVariable("MONGO_CONNECTION_STRING")
+    ?? Environment.GetEnvironmentVariable("MongoDbSettings__ConnectionString");
+if (!string.IsNullOrWhiteSpace(mongoConnFromEnv))
+{
+    mongoDbSettings.ConnectionString = mongoConnFromEnv;
+}
+
+// Allow platform env vars for database name
+var mongoDbNameFromEnv = Environment.GetEnvironmentVariable("MONGODB_DATABASE")
+    ?? Environment.GetEnvironmentVariable("MONGO_INITDB_DATABASE")
+    ?? Environment.GetEnvironmentVariable("MongoDbSettings__DatabaseName");
+if (!string.IsNullOrWhiteSpace(mongoDbNameFromEnv))
+{
+    mongoDbSettings.DatabaseName = mongoDbNameFromEnv;
+}
+
 builder.Services.AddSingleton(mongoDbSettings);
 
 // Register MongoDB database
