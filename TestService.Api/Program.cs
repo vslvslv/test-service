@@ -31,7 +31,8 @@ builder.Services.AddCors(options =>
         policy.WithOrigins(
                 "http://localhost:3000", 
                 "http://localhost:5173",
-                "http://qa2-env01.cloudad.local")
+                "http://qa2-env01.cloudad.local",
+                "https://vslvslv.github.io")
               .AllowAnyHeader()
               .AllowAnyMethod()
               .AllowCredentials();
