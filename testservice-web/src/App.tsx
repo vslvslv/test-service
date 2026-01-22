@@ -144,8 +144,10 @@ function AppRoutes() {
 }
 
 function App() {
-  // Always use base path to match vite config
-  const basename = '/testservice/ui';
+  // Use base path from import.meta to match vite config
+  // On GitHub Pages: /test-service/
+  // On other deployments: /testservice/ui/
+  const basename = import.meta.env.BASE_URL.replace(/\/$/, ''); // Remove trailing slash
   
   return (
     <BrowserRouter basename={basename}>
