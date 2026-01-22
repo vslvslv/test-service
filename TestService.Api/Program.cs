@@ -57,14 +57,30 @@ builder.Services.AddSignalR();
 var mongoDbSettings = new MongoDbSettings();
 builder.Configuration.GetSection("MongoDbSettings").Bind(mongoDbSettings);
 
+// Log environment for debugging
+Console.WriteLine("[INFO] MongoDB Configuration:");
+Console.WriteLine($"[INFO]   Default ConnectionString: {(mongoDbSettings.ConnectionString?.Substring(0, 20) ?? "null")}...");
+Console.WriteLine($"[INFO]   Database: {mongoDbSettings.DatabaseName}");
+
 // Allow platform-provided env vars (e.g., Railway) to override the connection string
 var mongoConnFromEnv = System.Environment.GetEnvironmentVariable("MONGODB_URL")
     ?? System.Environment.GetEnvironmentVariable("MONGODB_CONNECTION_STRING")
     ?? System.Environment.GetEnvironmentVariable("MONGO_CONNECTION_STRING")
+    ?? System.Environment.GetEnvironmentVariable("MONGO_URL")
     ?? System.Environment.GetEnvironmentVariable("MongoDbSettings__ConnectionString");
+
+Console.WriteLine($"[INFO]   Env var MONGODB_URL: {(System.Environment.GetEnvironmentVariable("MONGODB_URL") != null ? "SET" : "NOT SET")}");
+Console.WriteLine($"[INFO]   Env var MONGO_URL: {(System.Environment.GetEnvironmentVariable("MONGO_URL") != null ? "SET" : "NOT SET")}");
+Console.WriteLine($"[INFO]   Env var MONGO_CONNECTION_STRING: {(System.Environment.GetEnvironmentVariable("MONGO_CONNECTION_STRING") != null ? "SET" : "NOT SET")}");
+
 if (!string.IsNullOrWhiteSpace(mongoConnFromEnv))
 {
     mongoDbSettings.ConnectionString = mongoConnFromEnv;
+    Console.WriteLine("[INFO]   ✓ Using environment variable for MongoDB connection");
+}
+else
+{
+    Console.WriteLine("[WARN]   ✗ No MongoDB connection env var found - using appsettings default (localhost)");
 }
 
 // Allow platform env vars for database name
