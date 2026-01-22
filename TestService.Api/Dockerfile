@@ -21,6 +21,10 @@ WORKDIR /app
 EXPOSE 80
 EXPOSE 443
 
+# Set IPv4 binding for Kubernetes compatibility
+# This ensures the app listens on 0.0.0.0:80 instead of [::]:80 (IPv6 only)
+ENV ASPNETCORE_URLS=http://0.0.0.0:80
+
 # Copy published app
 COPY --from=publish /app/publish .
 
