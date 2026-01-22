@@ -7,20 +7,30 @@ on:
     branches: [ main, develop ]
 
 jobs:
-  test-api:
-    name: Test API
-    uses: ./.github/workflows/api-ci.yml
-  
-  test-web:
-    name: Test Web
-    uses: ./.github/workflows/web-ci.yml
+  # Temporarily disabled - keeping only GitHub Pages deployment
+  # Uncomment below to re-enable API/Web CI and Docker builds
 
-  build-docker:
-    name: Build & Push Docker Images
-    needs: [test-api, test-web]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    uses: ./.github/workflows/docker-build-and-push.yml
-    secrets: inherit
+  # test-api:
+  #   name: Test API
+  #   uses: ./.github/workflows/api-ci.yml
+  # 
+  # test-web:
+  #   name: Test Web
+  #   uses: ./.github/workflows/web-ci.yml
+  #
+  # build-docker:
+  #   name: Build & Push Docker Images
+  #   needs: [test-api, test-web]
+  #   if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+  #   uses: ./.github/workflows/docker-build-and-push.yml
+  #   secrets: inherit
+
+  # Placeholder job so workflow doesn't fail
+  skip-ci:
+    name: Skipping CI (GitHub Pages only mode)
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Running in GitHub Pages only mode. CI jobs disabled."
 
   # Uncomment the deployment you want to use:
   
