@@ -53,6 +53,9 @@ builder.Services.AddCors(options =>
 // Add SignalR
 builder.Services.AddSignalR();
 
+// Add health checks
+builder.Services.AddHealthChecks();
+
 // Add configuration
 var mongoDbSettings = new MongoDbSettings();
 builder.Configuration.GetSection("MongoDbSettings").Bind(mongoDbSettings);
@@ -267,11 +270,8 @@ app.UseCors("AllowWebUI");
 app.UseAuthentication();
 app.UseAuthorization();
 
-// Add health check endpoint
-app.MapGet("/health", () => Results.Ok(new { status = "healthy", timestamp = DateTime.UtcNow }))
-    .WithName("HealthCheck")
-    .WithTags("Health")
-    .AllowAnonymous();
+// Add built-in health check endpoint (more reliable for Railway)
+app.MapHealthChecks("/health");
 
 app.MapControllers();
 
