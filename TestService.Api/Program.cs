@@ -192,16 +192,47 @@ builder.Services.AddHostedService<TestService.Api.BackgroundServices.ActivityCle
 
 var app = builder.Build();
 
-// Initialize default admin user
-using (var scope = app.Services.CreateScope())
+// Initialize default admin user and environments in background to avoid blocking startup
+// If initialization fails, the app will still start and can be accessed via API
+_ = Task.Run(async () =>
 {
-    var userService = scope.ServiceProvider.GetRequiredService<IUserService>();
-    await userService.InitializeDefaultAdminAsync();
-    
-    // Initialize default environments
-    var environmentService = scope.ServiceProvider.GetRequiredService<IEnvironmentService>();
-    await environmentService.InitializeDefaultEnvironmentsAsync();
-}
+    try
+    {
+        using (var scope = app.Services.CreateScope())
+        {
+            var userService = scope.ServiceProvider.GetRequiredService<IUserService>();
+            await userService.InitializeDefaultAdminAsync();
+            
+            // Initialize default environments
+            var environmentService = scope.ServiceProvider.GetRequiredService<IEnvironmentService>();
+            await environmentService.InitializeDefaultEnvironmentsAsync();
+        }
+    }
+    catch (Exception ex)
+    {
+        // Log initialization errors but don't crash the app
+        Console.WriteLine($"[WARN] Database initialization failed: {ex.Message}");
+        Console.WriteLine($"[WARN] Retrying in 10 seconds...");
+        // Retry after delay
+        await Task.Delay(TimeSpan.FromSeconds(10));
+        try
+        {
+            using (var scope = app.Services.CreateScope())
+            {
+                var userService = scope.ServiceProvider.GetRequiredService<IUserService>();
+                await userService.InitializeDefaultAdminAsync();
+                
+                var environmentService = scope.ServiceProvider.GetRequiredService<IEnvironmentService>();
+                await environmentService.InitializeDefaultEnvironmentsAsync();
+                Console.WriteLine("[INFO] Database initialization succeeded on retry");
+            }
+        }
+        catch (Exception retryEx)
+        {
+            Console.WriteLine($"[ERROR] Database initialization failed after retry: {retryEx.Message}");
+        }
+    }
+});
 
 // Configure the HTTP request pipeline
 if (app.Environment.IsDevelopment())
