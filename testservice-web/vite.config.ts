@@ -3,7 +3,8 @@ import react from '@vitejs/plugin-react'
 
 // https://vite.dev/config/
 export default defineConfig({
-  base: '/testservice/ui/',
+  // Use repo name for GitHub Pages, or '/testservice/ui/' for other deployments
+  base: process.env.GITHUB_PAGES === 'true' ? '/test-service/' : '/testservice/ui/',
   plugins: [react()],
   server: {
     port: 5173,

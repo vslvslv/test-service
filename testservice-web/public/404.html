@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Redirecting...</title>
+  <script>
+    // GitHub Pages SPA redirect handler
+    // This script handles client-side routing for single-page applications
+    const pathSegmentsToKeep = 1; // Keep '/test-service/' in the path
+    
+    const path = window.location.pathname.split('/').slice(pathSegmentsToKeep).join('/');
+    const search = window.location.search;
+    const hash = window.location.hash;
+    
+    // Redirect to index.html with the path as a query parameter
+    window.location.replace(
+      window.location.origin + 
+      window.location.pathname.split('/').slice(0, pathSegmentsToKeep + 1).join('/') +
+      '/?p=/' + path + search + hash
+    );
+  </script>
+</head>
+<body>
+  <p>Redirecting...</p>
+</body>
+</html>

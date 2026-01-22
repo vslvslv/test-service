@@ -3,6 +3,19 @@
 ##
 ## Get latest from https://github.com/github/gitignore/blob/main/VisualStudio.gitignore
 
+# Kubernetes secrets - DO NOT commit!
+k8s/secrets.yaml
+k8s/*.bak
+
+# Environment files
+.env
+.env.local
+.env.production
+
+# kubeconfig files
+kubeconfig
+*.kubeconfig
+
 # User-specific files
 *.rsuser
 *.suo

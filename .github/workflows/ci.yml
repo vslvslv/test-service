@@ -1,19 +1,46 @@
-name: Test & Deploy
+name: CI/CD Pipeline
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, develop ]
   pull_request:
     branches: [ main, develop ]
 
 jobs:
-  test:
+  test-api:
+    name: Test API
     uses: ./.github/workflows/api-ci.yml
   
   test-web:
+    name: Test Web
     uses: ./.github/workflows/web-ci.yml
 
   build-docker:
-    needs: [test, test-web]
+    name: Build & Push Docker Images
+    needs: [test-api, test-web]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     uses: ./.github/workflows/docker-build-and-push.yml
+    secrets: inherit
+
+  # Uncomment the deployment you want to use:
+  
+  # deploy-kubernetes:
+  #   name: Deploy to Kubernetes
+  #   needs: [build-docker]
+  #   if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+  #   uses: ./.github/workflows/deploy-k8s.yml
+  #   secrets: inherit
+  
+  # deploy-azure:
+  #   name: Deploy to Azure
+  #   needs: [build-docker]
+  #   if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+  #   uses: ./.github/workflows/deploy-azure.yml
+  #   secrets: inherit
+  
+  # deploy-aws:
+  #   name: Deploy to AWS
+  #   needs: [build-docker]
+  #   if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+  #   uses: ./.github/workflows/deploy-aws.yml
+  #   secrets: inherit

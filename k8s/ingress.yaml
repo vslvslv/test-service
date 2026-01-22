@@ -1,0 +1,44 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: testservice-ingress
+  namespace: testservice
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+spec:
+  ingressClassName: nginx
+  tls:
+  - hosts:
+    - your-domain.com
+    secretName: testservice-tls
+  rules:
+  - host: your-domain.com
+    http:
+      paths:
+      # Web UI
+      - path: /testservice/ui(/|$)(.*)
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: web
+            port:
+              number: 80
+      # API
+      - path: /testservice/api(/|$)(.*)
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: api
+            port:
+              number: 80
+      # SignalR Hub
+      - path: /testservice/notificationHub
+        pathType: Prefix
+        backend:
+          service:
+            name: api
+            port:
+              number: 80
