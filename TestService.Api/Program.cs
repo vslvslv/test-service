@@ -28,11 +28,22 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowWebUI", policy =>
     {
-        policy.WithOrigins(
-                "http://localhost:3000", 
-                "http://localhost:5173",
+        var allowedOrigins = new List<string>
+        {
+            "http://localhost:3000", 
+            "http://localhost:5173",
             "http://qa2-env01.cloudad.local",
-            "https://vslvslv.github.io")
+            "https://vslvslv.github.io"
+        };
+        
+        // Allow custom origin from env var (e.g., other GitHub Pages or custom domains)
+        var customOrigin = Environment.GetEnvironmentVariable("ALLOWED_ORIGIN");
+        if (!string.IsNullOrWhiteSpace(customOrigin))
+        {
+            allowedOrigins.Add(customOrigin);
+        }
+        
+        policy.WithOrigins(allowedOrigins.ToArray())
               .AllowAnyHeader()
               .AllowAnyMethod()
               .AllowCredentials();
