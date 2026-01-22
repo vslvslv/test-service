@@ -4,6 +4,16 @@ import type { Schema, Environment, Entity, User, Activity, ActivityListResponse,
 // For development: use /api (proxied), for production: use env variable
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? '/api' : '/testservice');
 
+// Log API configuration for debugging
+if (typeof window !== 'undefined') {
+  console.log('🔧 API Configuration:', {
+    BASE_URL: API_BASE_URL,
+    DEV: import.meta.env.DEV,
+    MODE: import.meta.env.MODE,
+    VITE_API_BASE_URL: import.meta.env.VITE_API_BASE_URL,
+  });
+}
+
 class ApiService {
   private api: AxiosInstance;
 
