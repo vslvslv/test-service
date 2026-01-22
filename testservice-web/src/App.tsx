@@ -144,8 +144,10 @@ function AppRoutes() {
 }
 
 function App() {
-  // Always use base path to match vite config
-  const basename = '/testservice/ui';
+  // Use Vite's BASE_URL which matches the configured base path
+  // For GitHub Pages: '/test-service/'
+  // For other deployments: '/testservice/ui/'
+  const basename = import.meta.env.BASE_URL.replace(/\/$/, '');
   
   return (
     <BrowserRouter basename={basename}>
