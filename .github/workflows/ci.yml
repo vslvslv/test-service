@@ -1,0 +1,19 @@
+name: Test & Deploy
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  test:
+    uses: ./.github/workflows/api-ci.yml
+  
+  test-web:
+    uses: ./.github/workflows/web-ci.yml
+
+  build-docker:
+    needs: [test, test-web]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    uses: ./.github/workflows/docker-build-and-push.yml
