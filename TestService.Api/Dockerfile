@@ -18,12 +18,8 @@ RUN dotnet publish "TestService.Api.csproj" -c Release -o /app/publish /p:UseApp
 # Runtime stage
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
 WORKDIR /app
-EXPOSE 80
+EXPOSE 8080
 EXPOSE 443
-
-# Set IPv4 binding for Kubernetes compatibility
-# This ensures the app listens on 0.0.0.0:80 instead of [::]:80 (IPv6 only)
-ENV ASPNETCORE_URLS=http://0.0.0.0:80
 
 # Copy published app
 COPY --from=publish /app/publish .

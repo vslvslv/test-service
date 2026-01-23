@@ -11,6 +11,10 @@ using TestService.Api.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Honor platform-provided PORT (Railway uses this) and fall back to 8080
+var port = System.Environment.GetEnvironmentVariable("PORT") ?? "8080";
+builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
+
 // Configure MongoDB serialization to always serialize boolean fields
 if (!BsonClassMap.IsClassMapRegistered(typeof(FieldDefinition)))
 {
