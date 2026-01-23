@@ -209,6 +209,8 @@ builder.Services.AddHostedService<TestService.Api.BackgroundServices.DataCleanup
 builder.Services.AddHostedService<TestService.Api.BackgroundServices.ActivityCleanupService>();
 
 var app = builder.Build();
+Console.WriteLine("[INFO] App built successfully, starting configuration...");
+
 
 // Initialize default admin user and environments in background to avoid blocking startup
 // If initialization fails, the app will still start and can be accessed via API
@@ -290,6 +292,16 @@ app.MapControllers();
 // Map SignalR hub
 app.MapHub<NotificationHub>("/notificationHub");
 
-app.Run();
+try
+{
+    Console.WriteLine("[INFO] Application is starting...");
+    app.Run();
+}
+catch (Exception ex)
+{
+    Console.WriteLine($"[ERROR] Application failed: {ex.Message}");
+    Console.WriteLine($"[ERROR] Stack trace: {ex.StackTrace}");
+    throw;
+}
 
 public partial class Program { }
