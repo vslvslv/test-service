@@ -13,7 +13,17 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Honor platform-provided PORT (Railway uses this) and fall back to 8080
 var port = System.Environment.GetEnvironmentVariable("PORT") ?? "8080";
-builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
+builder.WebHost.ConfigureKestrel(options =>
+{
+    if (int.TryParse(port, out var parsedPort))
+    {
+        options.ListenAnyIP(parsedPort);
+    }
+    else
+    {
+        options.ListenAnyIP(8080);
+    }
+});
 
 // Configure MongoDB serialization to always serialize boolean fields
 if (!BsonClassMap.IsClassMapRegistered(typeof(FieldDefinition)))
