@@ -33,7 +33,8 @@ builder.Services.AddCors(options =>
             "http://localhost:3000", 
             "http://localhost:5173",
             "http://qa2-env01.cloudad.local",
-            "https://vslvslv.github.io"
+            "https://vslvslv.github.io",
+            "https://vslvslv.github.io/" // Also allow with trailing slash
         };
         
         // Allow custom origin from env var (e.g., other GitHub Pages or custom domains)
@@ -46,7 +47,8 @@ builder.Services.AddCors(options =>
         policy.WithOrigins(allowedOrigins.ToArray())
               .AllowAnyHeader()
               .AllowAnyMethod()
-              .AllowCredentials();
+              .AllowCredentials()
+              .WithExposedHeaders("*");
     });
 });
 

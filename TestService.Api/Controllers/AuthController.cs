@@ -7,6 +7,7 @@ namespace TestService.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[EnableCors("AllowWebUI")]
 public class AuthController : ControllerBase
 {
     private readonly IUserService _userService;
