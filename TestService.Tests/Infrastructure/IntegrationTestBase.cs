@@ -1,4 +1,6 @@
+using System.Collections.Generic;
 using System.Net;
+using Microsoft.Extensions.Configuration;
 using TestService.Api.Models;
 
 namespace TestService.Tests.Infrastructure;
@@ -14,7 +16,20 @@ public abstract class IntegrationTestBase
     [OneTimeSetUp]
     public void OneTimeSetUp()
     {
-        Factory = new WebApplicationFactory<Program>();
+        Factory = new WebApplicationFactory<Program>()
+            .WithWebHostBuilder(builder =>
+            {
+                // Override MongoDB config so in-process API uses localhost (e.g. Docker dev stack).
+                // Add after default config so it overrides appsettings.json (which may point at Railway).
+                builder.ConfigureAppConfiguration((_, config) =>
+                {
+                    config.AddInMemoryCollection(new Dictionary<string, string?>
+                    {
+                        ["MongoDbSettings:ConnectionString"] = "mongodb://admin:password123@localhost:27017/TestServiceDb?authSource=admin",
+                        ["MongoDbSettings:DatabaseName"] = "TestServiceDb"
+                    });
+                });
+            });
         Client = Factory.CreateClient();
         OnOneTimeSetUp();
     }
