@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { 
   X,
   Calendar,
@@ -17,7 +17,7 @@ interface EntityViewDialogProps {
   entity: any;
   schema: any;
   onReset?: () => void;
-  onEdit?: () => void;
+  onEdit?: (updatedEntity: { fields: Record<string, any>; environment?: string }) => Promise<void> | void;
 }
 
 const EntityViewDialog: React.FC<EntityViewDialogProps> = ({
@@ -28,6 +28,18 @@ const EntityViewDialog: React.FC<EntityViewDialogProps> = ({
   onReset,
   onEdit
 }) => {
+  const [isEditing, setIsEditing] = useState(false);
+  const [draftFields, setDraftFields] = useState<Record<string, any>>({});
+  const [draftEnvironment, setDraftEnvironment] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    if (!isOpen || !entity) return;
+    setIsEditing(false);
+    setDraftFields({ ...(entity.fields || {}) });
+    setDraftEnvironment(entity.environment || '');
+  }, [isOpen, entity]);
+
   if (!isOpen || !entity) return null;
 
   const handleCopyField = (value: string) => {
@@ -49,6 +61,47 @@ const EntityViewDialog: React.FC<EntityViewDialogProps> = ({
     link.download = `${entity.entityType}_${entity.id}.json`;
     link.click();
     URL.revokeObjectURL(url);
+  };
+
+  const handleFieldChange = (fieldName: string, value: string, fieldType?: string) => {
+    let parsedValue: any = value;
+
+    if (fieldType === 'number') {
+      parsedValue = value === '' ? '' : Number(value);
+    } else if (fieldType === 'boolean') {
+      parsedValue = value === 'true';
+    } else if (fieldType === 'array' || fieldType === 'object') {
+      try {
+        parsedValue = value === '' ? '' : JSON.parse(value);
+      } catch {
+        parsedValue = value;
+      }
+    }
+
+    setDraftFields((prev) => ({
+      ...prev,
+      [fieldName]: parsedValue
+    }));
+  };
+
+  const handleSave = async () => {
+    if (!onEdit) return;
+    setIsSaving(true);
+    try {
+      await onEdit({
+        fields: draftFields,
+        environment: draftEnvironment || undefined
+      });
+      setIsEditing(false);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setDraftFields({ ...(entity.fields || {}) });
+    setDraftEnvironment(entity.environment || '');
+    setIsEditing(false);
   };
 
   return (
@@ -105,12 +158,20 @@ const EntityViewDialog: React.FC<EntityViewDialogProps> = ({
               </div>
 
               {/* Environment */}
-              {entity.environment && (
-                <div className="bg-gray-700/50 rounded-lg border border-gray-600 p-4">
-                  <p className="text-xs text-gray-400 mb-2">Environment</p>
-                  <p className="text-white font-medium">{entity.environment}</p>
-                </div>
-              )}
+              <div className="bg-gray-700/50 rounded-lg border border-gray-600 p-4">
+                <p className="text-xs text-gray-400 mb-2">Environment</p>
+                {isEditing ? (
+                  <input
+                    type="text"
+                    value={draftEnvironment}
+                    onChange={(e) => setDraftEnvironment(e.target.value)}
+                    placeholder="e.g. dev, qa, staging"
+                    className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                ) : (
+                  <p className="text-white font-medium">{entity.environment || '-'}</p>
+                )}
+              </div>
 
               {/* Created At */}
               {entity.createdAt && (
@@ -154,7 +215,7 @@ const EntityViewDialog: React.FC<EntityViewDialogProps> = ({
 
               <div className="space-y-3">
                 {schema?.fields?.map((field: any, index: number) => {
-                  const value = entity.fields[field.name];
+                  const value = isEditing ? draftFields[field.name] : entity.fields[field.name];
                   const hasValue = value !== undefined && value !== null && value !== '';
 
                   return (
@@ -178,7 +239,25 @@ const EntityViewDialog: React.FC<EntityViewDialogProps> = ({
                           <p className="text-xs text-gray-500 mb-2">{field.description}</p>
                         )}
                         <div className="flex items-center gap-2">
-                          {hasValue ? (
+                          {isEditing ? (
+                            field.type === 'boolean' ? (
+                              <select
+                                value={String(Boolean(value))}
+                                onChange={(e) => handleFieldChange(field.name, e.target.value, field.type)}
+                                className="w-full px-3 py-2 bg-gray-900 border border-gray-600 rounded text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              >
+                                <option value="false">false</option>
+                                <option value="true">true</option>
+                              </select>
+                            ) : (
+                              <input
+                                type={field.type === 'number' ? 'number' : 'text'}
+                                value={typeof value === 'object' ? JSON.stringify(value) : (value ?? '')}
+                                onChange={(e) => handleFieldChange(field.name, e.target.value, field.type)}
+                                className="w-full px-3 py-2 bg-gray-900 border border-gray-600 rounded text-sm text-white font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              />
+                            )
+                          ) : hasValue ? (
                             <p className="text-white font-mono text-sm break-all">
                               {typeof value === 'object' 
                                 ? JSON.stringify(value) 
@@ -191,7 +270,7 @@ const EntityViewDialog: React.FC<EntityViewDialogProps> = ({
                           )}
                         </div>
                       </div>
-                      {hasValue && (
+                      {!isEditing && hasValue && (
                         <button
                           onClick={() => handleCopyField(String(value))}
                           className="p-1.5 opacity-0 group-hover:opacity-100 hover:bg-gray-700 rounded transition-all ml-2"
@@ -213,7 +292,11 @@ const EntityViewDialog: React.FC<EntityViewDialogProps> = ({
               </summary>
               <div className="p-4 pt-0">
                 <pre className="bg-gray-900 rounded p-4 overflow-x-auto text-xs text-gray-300 border border-gray-700">
-                  {JSON.stringify(entity, null, 2)}
+                  {JSON.stringify({
+                    ...entity,
+                    fields: isEditing ? draftFields : entity.fields,
+                    environment: isEditing ? (draftEnvironment || undefined) : entity.environment
+                  }, null, 2)}
                 </pre>
               </div>
             </details>
@@ -240,14 +323,32 @@ const EntityViewDialog: React.FC<EntityViewDialogProps> = ({
                   Reset
                 </button>
               )}
-              {onEdit && (
+              {onEdit && !isEditing && (
                 <button
-                  onClick={onEdit}
+                  onClick={() => setIsEditing(true)}
                   className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
                 >
                   <Edit className="w-4 h-4" />
                   Edit
                 </button>
+              )}
+              {onEdit && isEditing && (
+                <>
+                  <button
+                    onClick={handleCancelEdit}
+                    disabled={isSaving}
+                    className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors disabled:opacity-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleSave}
+                    disabled={isSaving}
+                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors disabled:opacity-50"
+                  >
+                    {isSaving ? 'Saving...' : 'Save'}
+                  </button>
+                </>
               )}
               <button
                 onClick={onClose}

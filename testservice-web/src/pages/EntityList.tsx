@@ -210,11 +210,16 @@ const EntityList: React.FC = () => {
     }
   };
 
-  const handleEditFromDialog = () => {
-    if (selectedEntity) {
-      handleCloseDialog();
-      navigate(`/entities/${entityType}/${selectedEntity.id}/edit`);
-    }
+  const handleEditFromDialog = async (updatedEntity: { fields: Record<string, any>; environment?: string }) => {
+    if (!selectedEntity || !entityType) return;
+
+    await apiService.updateEntity(entityType, selectedEntity.id, updatedEntity);
+    setSuccessMessage('Entity updated successfully.');
+    setTimeout(() => setSuccessMessage(''), 4000);
+    await loadData();
+
+    const refreshedEntity = await apiService.getEntity(entityType, selectedEntity.id);
+    setSelectedEntity(refreshedEntity as Entity);
   };
 
   const toggleColumn = (columnName: string) => {
