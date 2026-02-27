@@ -113,13 +113,21 @@ export function isApiError(error: unknown): error is ApiError {
   return typeof error === 'object' && error !== null && 'message' in error;
 }
 
-// Helper to get error message from unknown error
+// Helper to get error message from unknown error (supports Axios and API { message } responses)
 export function getErrorMessage(error: unknown): string {
   if (isApiError(error)) {
-    return error.response?.data?.message || error.message || 'An error occurred';
+    const msg = error.response?.data?.message ?? error.message;
+    if (typeof msg === 'string' && msg) return msg;
   }
-  if (error instanceof Error) {
-    return error.message;
+  // Axios: error.response.data may be { message: string } or a plain string
+  const err = error as { response?: { data?: unknown }; message?: string };
+  if (err?.response?.data != null) {
+    const data = err.response.data;
+    if (typeof data === 'object' && data !== null && 'message' in data && typeof (data as { message: unknown }).message === 'string') {
+      return (data as { message: string }).message;
+    }
+    if (typeof data === 'string' && data) return data;
   }
+  if (err?.message) return err.message;
   return 'An unknown error occurred';
 }

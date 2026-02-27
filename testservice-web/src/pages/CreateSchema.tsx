@@ -9,6 +9,7 @@ import {
   GripVertical
 } from 'lucide-react';
 import { apiService } from '../services/api';
+import { getErrorMessage } from '../types';
 
 interface SchemaField {
   name: string;
@@ -118,7 +119,7 @@ const CreateSchema: React.FC = () => {
       // Navigate to schemas list on success
       navigate('/schemas');
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to create schema');
+      setError(getErrorMessage(err));
       console.error('Failed to create schema:', err);
     } finally {
       setIsCreating(false);

@@ -89,6 +89,11 @@ class ApiService {
     return response.data;
   }
 
+  async updateEnvironment(id: string, envData: { displayName?: string; description?: string; url?: string; color?: string; isActive?: boolean; order?: number }) {
+    const response = await this.api.put(`/api/environments/${id}`, envData);
+    return response.data;
+  }
+
   // Schemas
   async getSchemas(): Promise<Schema[]> {
     const response = await this.api.get<Schema[]>('/api/schemas');

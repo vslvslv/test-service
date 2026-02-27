@@ -37,6 +37,43 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setIsLoading(false);
   }, []);
 
+  // Sync session invalidation: when any tab gets 401 or token is removed in another tab, clear auth state
+  useEffect(() => {
+    const clearSession = () => {
+      setUser(null);
+      setToken(null);
+      localStorage.removeItem('user');
+      localStorage.removeItem('token');
+    };
+
+    const handleAuth401 = () => {
+      clearSession();
+    };
+
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === 'token' && e.newValue === null) {
+        clearSession();
+        window.dispatchEvent(new CustomEvent('auth-401'));
+      }
+    };
+
+    // Detect same-tab token removal (e.g. user deleted in DevTools) - storage event only fires in other tabs
+    const syncTokenWithStorage = () => {
+      if (token !== null && typeof localStorage !== 'undefined' && localStorage.getItem('token') === null) {
+        clearSession();
+      }
+    };
+    const intervalId = setInterval(syncTokenWithStorage, 1000);
+
+    window.addEventListener('auth-401', handleAuth401);
+    window.addEventListener('storage', handleStorage);
+    return () => {
+      window.removeEventListener('auth-401', handleAuth401);
+      window.removeEventListener('storage', handleStorage);
+      clearInterval(intervalId);
+    };
+  }, [token]);
+
   const login = async (username: string, password: string) => {
     try {
       const response = await apiService.login(username, password);

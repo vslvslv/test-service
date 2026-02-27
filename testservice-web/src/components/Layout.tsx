@@ -3,6 +3,7 @@ import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import NotificationBell, { NotificationBellRef } from './NotificationBell';
+import { apiService } from '../services/api';
 import {
   Home,
   Database,
@@ -14,16 +15,94 @@ import {
   Menu,
   X,
   Search,
-  User as UserIcon
+  User as UserIcon,
+  ChevronRight
 } from 'lucide-react';
+
+interface SearchSchema {
+  entityName: string;
+}
+
+interface SearchEnvironment {
+  id: string;
+  name: string;
+  displayName?: string;
+  description?: string;
+}
 
 const Layout: React.FC = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showSearchResults, setShowSearchResults] = useState(false);
+  const [schemas, setSchemas] = useState<SearchSchema[]>([]);
+  const [environments, setEnvironments] = useState<SearchEnvironment[]>([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const searchContainerRef = useRef<HTMLDivElement>(null);
   const { user, logout } = useAuth();
   const { setBellCallback } = useToast();
   const location = useLocation();
   const navigate = useNavigate();
   const bellRef = useRef<NotificationBellRef>(null);
+
+  // Load data for global search
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      setSearchLoading(true);
+      try {
+        const [schemasData, envsData] = await Promise.all([
+          apiService.getSchemas(),
+          apiService.getEnvironments()
+        ]);
+        if (!cancelled) {
+          setSchemas(schemasData as SearchSchema[]);
+          setEnvironments(envsData as SearchEnvironment[]);
+        }
+      } catch {
+        if (!cancelled) {
+          setSchemas([]);
+          setEnvironments([]);
+        }
+      } finally {
+        if (!cancelled) setSearchLoading(false);
+      }
+    };
+    load();
+    return () => { cancelled = true; };
+  }, []);
+
+  // Click outside to close search results
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (searchContainerRef.current && !searchContainerRef.current.contains(e.target as Node)) {
+        setShowSearchResults(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Reset global search when navigating (sidebar, or after create/edit actions that navigate)
+  useEffect(() => {
+    setSearchQuery('');
+    setShowSearchResults(false);
+  }, [location.pathname]);
+
+  const query = searchQuery.trim().toLowerCase();
+  const hasQuery = query.length > 0;
+  const matchedSchemas = hasQuery
+    ? schemas.filter(s => s.entityName.toLowerCase().includes(query))
+    : [];
+  const matchedEnvironments = hasQuery
+    ? environments.filter(env => {
+        const name = (env.name || '').toLowerCase();
+        const displayName = (env.displayName || '').toLowerCase();
+        const description = (env.description || '').toLowerCase();
+        return name.includes(query) || displayName.includes(query) || description.includes(query);
+      })
+    : [];
+  const hasResults = matchedSchemas.length > 0 || matchedEnvironments.length > 0;
+  const showDropdown = showSearchResults && hasQuery;
 
   // Use useLayoutEffect to register callback synchronously after render
   useLayoutEffect(() => {
@@ -101,14 +180,92 @@ const Layout: React.FC = () => {
           </div>
 
           {/* Search Bar */}
-          <div className="hidden md:flex flex-1 max-w-2xl mx-8">
+          <div className="hidden md:flex flex-1 max-w-2xl mx-8" ref={searchContainerRef}>
             <div className="relative w-full">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-500" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-500 pointer-events-none" />
               <input
                 type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onFocus={() => setShowSearchResults(true)}
                 placeholder="Search schemas, entities, environments..."
                 className="w-full pl-10 pr-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
+              {showDropdown && (
+                <div className="absolute top-full left-0 right-0 mt-1 py-2 bg-gray-800 border border-gray-700 rounded-lg shadow-xl z-50 max-h-80 overflow-y-auto">
+                  {hasResults ? (
+                    <>
+                      {matchedSchemas.length > 0 && (
+                        <div className="px-3 py-1.5">
+                          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Schemas</p>
+                          {matchedSchemas.map((s) => (
+                            <button
+                              key={s.entityName}
+                              type="button"
+                              onClick={() => {
+                                navigate(`/schemas/${s.entityName}`);
+                                setSearchQuery('');
+                                setShowSearchResults(false);
+                              }}
+                              className="w-full flex items-center gap-2 px-2 py-2 text-left text-white hover:bg-gray-700 rounded-lg transition-colors"
+                            >
+                              <Layers className="w-4 h-4 text-blue-400 flex-shrink-0" />
+                              <span>{s.entityName}</span>
+                              <ChevronRight className="w-4 h-4 text-gray-500 ml-auto" />
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                      {matchedEnvironments.length > 0 && (
+                        <div className="px-3 py-1.5 border-t border-gray-700">
+                          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Environments</p>
+                          {matchedEnvironments.map((env) => (
+                            <button
+                              key={env.id}
+                              type="button"
+                              onClick={() => {
+                                navigate('/environments');
+                                setSearchQuery('');
+                                setShowSearchResults(false);
+                              }}
+                              className="w-full flex items-center gap-2 px-2 py-2 text-left text-white hover:bg-gray-700 rounded-lg transition-colors"
+                            >
+                              <Server className="w-4 h-4 text-green-400 flex-shrink-0" />
+                              <span>{env.displayName || env.name}</span>
+                              <ChevronRight className="w-4 h-4 text-gray-500 ml-auto" />
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                      {matchedSchemas.length > 0 && (
+                        <div className="px-3 py-1.5 border-t border-gray-700">
+                          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Entity types</p>
+                          {matchedSchemas.map((s) => (
+                            <button
+                              key={`entity-${s.entityName}`}
+                              type="button"
+                              onClick={() => {
+                                navigate(`/entities/${s.entityName}`);
+                                setSearchQuery('');
+                                setShowSearchResults(false);
+                              }}
+                              className="w-full flex items-center gap-2 px-2 py-2 text-left text-white hover:bg-gray-700 rounded-lg transition-colors"
+                            >
+                              <Database className="w-4 h-4 text-purple-400 flex-shrink-0" />
+                              <span>{s.entityName}</span>
+                              <ChevronRight className="w-4 h-4 text-gray-500 ml-auto" />
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <div className="px-4 py-4 text-center text-gray-400 text-sm">
+                      No results found for &quot;{searchQuery.trim()}&quot;
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 

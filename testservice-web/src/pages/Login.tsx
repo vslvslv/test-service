@@ -17,8 +17,16 @@ const Login: React.FC = () => {
     setError('');
     setIsLoading(true);
 
+    const trimmedUsername = username.trim();
+    const trimmedPassword = password.trim();
+    if (!trimmedUsername || !trimmedPassword) {
+      setError('Username or password cannot be empty.');
+      setIsLoading(false);
+      return;
+    }
+
     try {
-      await login(username, password);
+      await login(trimmedUsername, trimmedPassword);
       navigate('/');
     } catch (err) {
       setError(getErrorMessage(err));
@@ -69,6 +77,7 @@ const Login: React.FC = () => {
                   type="text"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
+                  onBlur={(e) => setUsername(e.target.value.trim())}
                   className="block w-full pl-10 pr-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   placeholder="Enter your username"
                   required
@@ -93,6 +102,7 @@ const Login: React.FC = () => {
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  onBlur={(e) => setPassword(e.target.value.trim())}
                   className="block w-full pl-10 pr-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   placeholder="Enter your password"
                   required

@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ToastProvider, useToast } from './contexts/ToastContext';
 import { useCallback, useEffect } from 'react';
@@ -18,17 +18,7 @@ import Settings from './pages/Settings';
 import './App.css';
 
 function AuthHandler() {
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    const handleAuthError = () => {
-      navigate('login', { replace: true });
-    };
-
-    window.addEventListener('auth-401', handleAuthError);
-    return () => window.removeEventListener('auth-401', handleAuthError);
-  }, [navigate]);
-
+  // No-op: redirect is handled by ProtectedRoute when isAuthenticated becomes false after auth-401 or token sync
   return null;
 }
 

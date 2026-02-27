@@ -49,6 +49,7 @@ const EntityList: React.FC = () => {
   const [selectedEntity, setSelectedEntity] = useState<Entity | null>(null);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
   
   // Column visibility state
   const [showColumnMenu, setShowColumnMenu] = useState(false);
@@ -105,7 +106,14 @@ const EntityList: React.FC = () => {
   };
 
   const handleCreateSuccess = async () => {
-    await loadData();
+    setSuccessMessage('Entity created successfully.');
+    setTimeout(() => setSuccessMessage(''), 4000);
+    try {
+      await loadData();
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Entity was created but the list could not be refreshed.');
+      console.error('Failed to refresh list after create:', err);
+    }
   };
 
   const handleViewEntity = (entity: Entity) => {
@@ -127,9 +135,16 @@ const EntityList: React.FC = () => {
 
     try {
       await apiService.deleteEntity(entityType!, id);
-      await loadData();
       if (selectedEntity?.id === id) {
         handleCloseDialog();
+      }
+      setSuccessMessage('Entity deleted successfully.');
+      setTimeout(() => setSuccessMessage(''), 4000);
+      setEntities(prev => prev.filter(entity => entity.id !== id));
+      try {
+        await loadData();
+      } catch (refreshErr: any) {
+        setError(refreshErr.response?.data?.message || 'Entity was deleted but the list could not be refreshed.');
       }
     } catch (err: any) {
       alert(err.response?.data?.message || 'Failed to delete entity');
@@ -347,6 +362,14 @@ const EntityList: React.FC = () => {
         <div className="p-4 bg-red-500/10 border border-red-500/50 rounded-lg flex items-center gap-2 text-red-400">
           <AlertCircle className="w-5 h-5 flex-shrink-0" />
           <span>{error}</span>
+        </div>
+      )}
+
+      {/* Success Message (e.g. after create) */}
+      {successMessage && (
+        <div className="p-4 bg-green-500/10 border border-green-500/50 rounded-lg flex items-center gap-2 text-green-400">
+          <CheckCircle className="w-5 h-5 flex-shrink-0" />
+          <span>{successMessage}</span>
         </div>
       )}
 

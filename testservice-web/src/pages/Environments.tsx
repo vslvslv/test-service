@@ -9,6 +9,7 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { apiService } from '../services/api';
+import { getErrorMessage } from '../types';
 
 interface Environment {
   id: string;
@@ -28,10 +29,15 @@ const Environments: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingEnvironment, setEditingEnvironment] = useState<Environment | null>(null);
+  const [editDisplayName, setEditDisplayName] = useState('');
+  const [editDescription, setEditDescription] = useState('');
   const [newEnvName, setNewEnvName] = useState('');
   const [newEnvDescription, setNewEnvDescription] = useState('');
   const [error, setError] = useState('');
   const [isCreating, setIsCreating] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
 
   useEffect(() => {
     loadEnvironments();
@@ -44,7 +50,7 @@ const Environments: React.FC = () => {
       const data = await apiService.getEnvironments();
       setEnvironments(data);
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to load environments');
+      setError(getErrorMessage(err));
       console.error('Failed to load environments:', err);
     } finally {
       setIsLoading(false);
@@ -67,7 +73,7 @@ const Environments: React.FC = () => {
       setNewEnvDescription('');
       await loadEnvironments();
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to create environment');
+      setError(getErrorMessage(err));
     } finally {
       setIsCreating(false);
     }
@@ -86,7 +92,43 @@ const Environments: React.FC = () => {
       
       await loadEnvironments();
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Failed to delete environment');
+      alert(getErrorMessage(err));
+    }
+  };
+
+  const handleEditClick = (env: Environment) => {
+    setEditingEnvironment(env);
+    setEditDisplayName(env.displayName || env.name);
+    setEditDescription(env.description ?? '');
+    setError('');
+    setShowEditModal(true);
+  };
+
+  const handleCloseEditModal = () => {
+    setShowEditModal(false);
+    setEditingEnvironment(null);
+    setEditDisplayName('');
+    setEditDescription('');
+    setError('');
+  };
+
+  const handleUpdateEnvironment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingEnvironment) return;
+    setIsUpdating(true);
+    setError('');
+
+    try {
+      await apiService.updateEnvironment(editingEnvironment.id, {
+        displayName: editDisplayName.trim() || undefined,
+        description: editDescription.trim() || undefined
+      });
+      handleCloseEditModal();
+      await loadEnvironments();
+    } catch (err: any) {
+      setError(getErrorMessage(err));
+    } finally {
+      setIsUpdating(false);
     }
   };
 
@@ -171,7 +213,7 @@ const Environments: React.FC = () => {
                 </div>
                 <div className="flex gap-2">
                   <button
-                    onClick={() => {/* TODO: Edit functionality */}}
+                    onClick={() => handleEditClick(env)}
                     className="p-2 hover:bg-gray-700 rounded-lg transition-colors"
                     title="Edit"
                   >
@@ -223,6 +265,71 @@ const Environments: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Edit Modal */}
+      {showEditModal && editingEnvironment && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-800 rounded-lg border border-gray-700 w-full max-w-md">
+            <div className="p-6 border-b border-gray-700">
+              <h2 className="text-xl font-semibold text-white">Edit Environment</h2>
+            </div>
+            <form onSubmit={handleUpdateEnvironment} className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Name
+                </label>
+                <input
+                  type="text"
+                  value={editingEnvironment.name}
+                  readOnly
+                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-gray-400 cursor-not-allowed"
+                />
+                <p className="text-xs text-gray-500 mt-1">Environment name cannot be changed</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Display Name
+                </label>
+                <input
+                  type="text"
+                  value={editDisplayName}
+                  onChange={(e) => setEditDisplayName(e.target.value)}
+                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="e.g., Development, Staging"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Description (Optional)
+                </label>
+                <textarea
+                  value={editDescription}
+                  onChange={(e) => setEditDescription(e.target.value)}
+                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                  placeholder="Brief description of this environment"
+                  rows={3}
+                />
+              </div>
+              <div className="flex gap-3 pt-4">
+                <button
+                  type="button"
+                  onClick={handleCloseEditModal}
+                  className="flex-1 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isUpdating}
+                  className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isUpdating ? 'Saving...' : 'Save'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Create Modal */}
       {showCreateModal && (
