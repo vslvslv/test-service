@@ -61,6 +61,7 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_URLS=http://+:80
+      - PORT=80
       - MongoDbSettings__ConnectionString=mongodb://admin:password123@mongodb:27017/TestServiceDb?authSource=admin
       - MongoDbSettings__DatabaseName=TestServiceDb
       - RabbitMqSettings__HostName=rabbitmq
