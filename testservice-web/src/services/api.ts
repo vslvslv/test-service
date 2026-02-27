@@ -1,5 +1,5 @@
 import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
-import type { Schema, Environment, Entity, User, Activity, ActivityListResponse, ActivityStats, ActivityFilters } from '../types';
+import type { Schema, Environment, Entity, User, Activity, ActivityListResponse, ActivityStats, ActivityFilters, PermissionDescriptor } from '../types';
 
 // For development: use /api (proxied), for production: use env variable
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? '/api' : '/testservice');
@@ -75,6 +75,21 @@ class ApiService {
 
   async createUser(userData: Partial<User>) {
     const response = await this.api.post('/api/users', userData);
+    return response.data;
+  }
+
+  async updateUser(id: string, userData: Partial<User>) {
+    const response = await this.api.put(`/api/users/${id}`, userData);
+    return response.data;
+  }
+
+  async deleteUser(id: string) {
+    const response = await this.api.delete(`/api/users/${id}`);
+    return response.data;
+  }
+
+  async getPermissionsCatalog(): Promise<{ permissions: PermissionDescriptor[]; roleDefaults: Record<string, string[]> }> {
+    const response = await this.api.get('/api/users/permissions/catalog');
     return response.data;
   }
 

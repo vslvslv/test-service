@@ -23,7 +23,7 @@ public class UsersController : ControllerBase
     /// Get all users (Admin only)
     /// </summary>
     [HttpGet]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Policy = PermissionDefinitions.UsersRead)]
     public async Task<ActionResult<IEnumerable<UserResponse>>> GetAll()
     {
         try
@@ -42,7 +42,7 @@ public class UsersController : ControllerBase
     /// Get user by ID (Admin only)
     /// </summary>
     [HttpGet("{id}")]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Policy = PermissionDefinitions.UsersRead)]
     public async Task<ActionResult<UserResponse>> GetById(string id)
     {
         try
@@ -65,7 +65,7 @@ public class UsersController : ControllerBase
     /// Get user by username (Admin only)
     /// </summary>
     [HttpGet("username/{username}")]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Policy = PermissionDefinitions.UsersRead)]
     public async Task<ActionResult<UserResponse>> GetByUsername(string username)
     {
         try
@@ -110,7 +110,7 @@ public class UsersController : ControllerBase
     /// - At least one special character
     /// </remarks>
     [HttpPost]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Policy = PermissionDefinitions.UsersCreate)]
     public async Task<ActionResult<UserResponse>> Create([FromBody] CreateUserRequest request)
     {
         try
@@ -150,7 +150,7 @@ public class UsersController : ControllerBase
     /// All fields are optional. Only provided fields will be updated.
     /// </remarks>
     [HttpPut("{id}")]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Policy = PermissionDefinitions.UsersUpdate)]
     public async Task<ActionResult> Update(string id, [FromBody] UpdateUserRequest request)
     {
         try
@@ -180,7 +180,7 @@ public class UsersController : ControllerBase
     /// Cannot delete the last admin user
     /// </remarks>
     [HttpDelete("{id}")]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Policy = PermissionDefinitions.UsersDelete)]
     public async Task<ActionResult> Delete(string id)
     {
         try
@@ -201,5 +201,25 @@ public class UsersController : ControllerBase
             _logger.LogError(ex, "Error deleting user {Id}", id);
             return StatusCode(500, "Internal server error");
         }
+    }
+
+    /// <summary>
+    /// Get permissions catalog and role defaults (Admin only)
+    /// </summary>
+    [HttpGet("permissions/catalog")]
+    [Authorize(Policy = PermissionDefinitions.UsersRead)]
+    public ActionResult<object> GetPermissionsCatalog()
+    {
+        var roleDefaults = new Dictionary<string, IEnumerable<string>>
+        {
+            [UserRole.Contributor.ToString()] = PermissionDefinitions.GetRolePermissions(UserRole.Contributor),
+            [UserRole.Admin.ToString()] = PermissionDefinitions.GetRolePermissions(UserRole.Admin)
+        };
+
+        return Ok(new
+        {
+            permissions = PermissionDefinitions.GetCatalog(),
+            roleDefaults
+        });
     }
 }

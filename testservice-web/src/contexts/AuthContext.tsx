@@ -1,11 +1,13 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { apiService } from '../services/api';
+import { normalizePermissions, normalizeRole } from '../utils/permissions';
 
 interface User {
   id: string;
   username: string;
   email: string;
   role: string;
+  permissions: string[];
 }
 
 interface AuthContextType {
@@ -13,6 +15,7 @@ interface AuthContextType {
   token: string | null;
   login: (username: string, password: string) => Promise<void>;
   logout: () => void;
+  hasPermission: (permission: string) => boolean;
   isAuthenticated: boolean;
   isLoading: boolean;
 }
@@ -31,7 +34,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     
     if (storedToken && storedUser) {
       setToken(storedToken);
-      setUser(JSON.parse(storedUser));
+      const parsed = JSON.parse(storedUser);
+      setUser({
+        ...parsed,
+        role: normalizeRole(parsed.role),
+        permissions: normalizePermissions(parsed.permissions, parsed.role),
+      });
     }
     
     setIsLoading(false);
@@ -83,7 +91,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         id: '', // We don't get ID from login response
         username: response.username,
         email: response.email,
-        role: response.role,
+        role: normalizeRole(response.role),
+        permissions: normalizePermissions(response.permissions, response.role),
       };
       
       setToken(response.token);
@@ -105,6 +114,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     apiService.logout();
   };
 
+  const hasPermission = (permission: string) => {
+    if (!user) return false;
+    return user.permissions.includes(permission);
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -112,6 +126,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         token,
         login,
         logout,
+        hasPermission,
         isAuthenticated: !!token,
         isLoading,
       }}

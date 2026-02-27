@@ -164,7 +164,13 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
-builder.Services.AddAuthorization();
+builder.Services.AddAuthorization(options =>
+{
+    foreach (var permission in PermissionDefinitions.GetCatalog().Select(x => x.Key))
+    {
+        options.AddPolicy(permission, policy => policy.RequireClaim("permission", permission));
+    }
+});
 
 // Add services to the container
 builder.Services.AddControllers();

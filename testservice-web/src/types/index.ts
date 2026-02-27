@@ -40,6 +40,19 @@ export interface User {
   username: string;
   email?: string;
   role?: string;
+  isActive?: boolean;
+  permissions?: string[];
+  customPermissions?: string[];
+  firstName?: string;
+  lastName?: string;
+  createdAt?: string;
+  lastLoginAt?: string;
+}
+
+export interface PermissionDescriptor {
+  key: string;
+  description: string;
+  group: string;
 }
 
 export interface LoginCredentials {

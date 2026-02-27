@@ -80,6 +80,7 @@ public class UserService : IUserService
             FirstName = request.FirstName,
             LastName = request.LastName,
             Role = request.Role,
+            CustomPermissions = PermissionDefinitions.SanitizeCustomPermissions(request.CustomPermissions).ToList(),
             IsActive = true
         };
 
@@ -111,6 +112,10 @@ public class UserService : IUserService
         if (request.LastName != null) user.LastName = request.LastName;
         if (request.Role.HasValue) user.Role = request.Role.Value;
         if (request.IsActive.HasValue) user.IsActive = request.IsActive.Value;
+        if (request.CustomPermissions != null)
+        {
+            user.CustomPermissions = PermissionDefinitions.SanitizeCustomPermissions(request.CustomPermissions).ToList();
+        }
 
         var result = await _repository.UpdateAsync(id, user);
         
@@ -215,6 +220,7 @@ public class UserService : IUserService
             Username = user.Username,
             Email = user.Email,
             Role = user.Role,
+            Permissions = PermissionDefinitions.GetEffectivePermissions(user).ToList(),
             ExpiresAt = DateTime.UtcNow.AddMinutes(_jwtSettings.ExpirationMinutes)
         });
     }

@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import NotificationBell, { NotificationBellRef } from './NotificationBell';
 import { apiService } from '../services/api';
+import { Permissions } from '../utils/permissions';
 import {
   Home,
   Database,
@@ -70,11 +71,14 @@ const Layout: React.FC = () => {
   const [apiKeys, setApiKeys] = useState<SearchApiKey[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
   const searchContainerRef = useRef<HTMLDivElement>(null);
-  const { user, logout } = useAuth();
+  const { user, logout, hasPermission } = useAuth();
   const { setBellCallback } = useToast();
   const location = useLocation();
   const navigate = useNavigate();
   const bellRef = useRef<NotificationBellRef>(null);
+  const canSearchUsers = hasPermission(Permissions.UsersRead);
+  const canSearchApiKeys = hasPermission(Permissions.ApiKeysRead);
+  const canReadSettings = hasPermission(Permissions.SettingsRead);
 
   // Load data for global search index
   useEffect(() => {
@@ -85,8 +89,8 @@ const Layout: React.FC = () => {
         const [schemasResult, envsResult, usersResult, apiKeysResult] = await Promise.allSettled([
           apiService.getSchemas(),
           apiService.getEnvironments(),
-          user?.role === 'Admin' ? apiService.getUsers() : Promise.resolve([]),
-          user?.role === 'Admin' ? apiService.getApiKeys() : Promise.resolve([])
+          canSearchUsers ? apiService.getUsers() : Promise.resolve([]),
+          canSearchApiKeys ? apiService.getApiKeys() : Promise.resolve([])
         ]);
 
         const schemasData = schemasResult.status === 'fulfilled' ? schemasResult.value : [];
@@ -113,7 +117,7 @@ const Layout: React.FC = () => {
     };
     load();
     return () => { cancelled = true; };
-  }, [user?.role]);
+  }, [canSearchUsers, canSearchApiKeys]);
 
   // Click outside to close search results
   useEffect(() => {
@@ -177,7 +181,10 @@ const Layout: React.FC = () => {
         icon: Server,
         iconClass: 'text-emerald-400'
       },
-      {
+    ];
+
+    if (canReadSettings) {
+      navigationItems.push({
         id: 'nav-settings',
         category: 'settings',
         label: 'Settings',
@@ -186,10 +193,10 @@ const Layout: React.FC = () => {
         path: '/settings',
         icon: Settings,
         iconClass: 'text-amber-400'
-      }
-    ];
+      });
+    }
 
-    if (user?.role === 'Admin') {
+    if (canSearchUsers) {
       navigationItems.push({
         id: 'nav-users',
         category: 'navigation',
@@ -200,6 +207,8 @@ const Layout: React.FC = () => {
         icon: Users,
         iconClass: 'text-indigo-400'
       });
+    }
+    if (canSearchApiKeys) {
       navigationItems.push({
         id: 'settings-api-keys',
         category: 'settings',
@@ -277,7 +286,7 @@ const Layout: React.FC = () => {
     }));
 
     return [...navigationItems, ...schemaItems, ...entityTypeItems, ...environmentItems, ...userItems, ...apiKeyItems];
-  }, [schemas, environments, users, apiKeys, user?.role]);
+  }, [schemas, environments, users, apiKeys, canSearchUsers, canSearchApiKeys, canReadSettings]);
 
   const filteredItems = useMemo(() => {
     if (!hasQuery) return [];
@@ -386,7 +395,7 @@ const Layout: React.FC = () => {
     { icon: Database, label: 'Entities', path: '/entities' },
     { icon: Layers, label: 'Schemas', path: '/schemas' },
     { icon: Server, label: 'Environments', path: '/environments' },
-    { icon: Users, label: 'Users', path: '/users', adminOnly: true },
+    { icon: Users, label: 'Users', path: '/users', requiredPermission: Permissions.UsersRead },
   ];
 
   const isActive = (path: string) => {
@@ -530,7 +539,7 @@ const Layout: React.FC = () => {
       >
         <nav className="p-4 space-y-1">
           {menuItems.map((item) => {
-            if (item.adminOnly && user?.role !== 'Admin') return null;
+            if (item.requiredPermission && !hasPermission(item.requiredPermission)) return null;
             
             const Icon = item.icon;
             const active = isActive(item.path);
@@ -553,17 +562,19 @@ const Layout: React.FC = () => {
 
           {/* Bottom Section */}
           <div className="absolute bottom-4 left-4 right-4 space-y-1 pt-4 border-t border-gray-700">
-            <Link
-              to="/settings"
-              className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                isActive('/settings')
-                  ? 'bg-blue-600 text-white'
-                  : 'text-gray-400 hover:bg-gray-700 hover:text-white'
-              }`}
-            >
-              <Settings className="w-5 h-5 flex-shrink-0" />
-              <span className="font-medium">Settings</span>
-            </Link>
+            {hasPermission(Permissions.SettingsRead) && (
+              <Link
+                to="/settings"
+                className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                  isActive('/settings')
+                    ? 'bg-blue-600 text-white'
+                    : 'text-gray-400 hover:bg-gray-700 hover:text-white'
+                }`}
+              >
+                <Settings className="w-5 h-5 flex-shrink-0" />
+                <span className="font-medium">Settings</span>
+              </Link>
+            )}
 
             <button
               onClick={handleLogout}
