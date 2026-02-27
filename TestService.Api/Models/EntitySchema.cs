@@ -76,6 +76,9 @@ public class FieldDefinition
     [BsonRepresentation(MongoDB.Bson.BsonType.Boolean)]
     public bool IsUnique { get; set; } = false;
 
+    [BsonElement("defaultValue")]
+    public string? DefaultValue { get; set; }
+
     [BsonElement("description")]
     public string? Description { get; set; }
 }

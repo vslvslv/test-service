@@ -108,6 +108,33 @@ public class LoginResponse
 }
 
 /// <summary>
+/// Reason for login failure when credentials are invalid
+/// </summary>
+public enum LoginFailureReason
+{
+    /// <summary>User not found or account is inactive</summary>
+    UserNotFoundOrInactive,
+    /// <summary>User exists but password is wrong</summary>
+    InvalidPassword
+}
+
+/// <summary>
+/// Result of a login attempt; either success with response or failure with reason
+/// </summary>
+public class LoginResult
+{
+    public bool IsSuccess => Response != null;
+    public LoginResponse? Response { get; set; }
+    public LoginFailureReason? FailureReason { get; set; }
+
+    public static LoginResult Success(LoginResponse response) =>
+        new() { Response = response };
+
+    public static LoginResult Fail(LoginFailureReason reason) =>
+        new() { FailureReason = reason };
+}
+
+/// <summary>
 /// DTO for user response (without sensitive data)
 /// </summary>
 public class UserResponse

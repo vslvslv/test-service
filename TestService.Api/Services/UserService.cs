@@ -12,7 +12,7 @@ public interface IUserService
     Task<bool> UpdateAsync(string id, UpdateUserRequest request);
     Task<bool> DeleteAsync(string id);
     Task<bool> ChangePasswordAsync(string id, ChangePasswordRequest request);
-    Task<LoginResponse?> LoginAsync(LoginRequest request);
+    Task<LoginResult> LoginAsync(LoginRequest request);
     Task InitializeDefaultAdminAsync();
 }
 
@@ -180,25 +180,25 @@ public class UserService : IUserService
         return result;
     }
 
-    public async Task<LoginResponse?> LoginAsync(LoginRequest request)
+    public async Task<LoginResult> LoginAsync(LoginRequest request)
     {
         var user = await _repository.GetByUsernameAsync(request.Username);
         if (user == null)
         {
             _logger.LogWarning("Login attempt for non-existent user: {Username}", request.Username);
-            return null;
+            return LoginResult.Fail(LoginFailureReason.UserNotFoundOrInactive);
         }
 
         if (!user.IsActive)
         {
-            _logger.LogWarning("Login attempt for inactive user: {Username}", request.Username);
-            return null;
+            _logger.LogWarning("Login attempt for inactive user: {Username}", user.Username);
+            return LoginResult.Fail(LoginFailureReason.UserNotFoundOrInactive);
         }
 
         if (!_passwordHasher.VerifyPassword(request.Password, user.PasswordHash))
         {
-            _logger.LogWarning("Failed login attempt for user: {Username}", request.Username);
-            return null;
+            _logger.LogWarning("Failed login attempt for user: {Username}", user.Username);
+            return LoginResult.Fail(LoginFailureReason.InvalidPassword);
         }
 
         // Update last login
@@ -209,14 +209,14 @@ public class UserService : IUserService
 
         _logger.LogInformation("User logged in: {Username}", user.Username);
 
-        return new LoginResponse
+        return LoginResult.Success(new LoginResponse
         {
             Token = token,
             Username = user.Username,
             Email = user.Email,
             Role = user.Role,
             ExpiresAt = DateTime.UtcNow.AddMinutes(_jwtSettings.ExpirationMinutes)
-        };
+        });
     }
 
     public async Task InitializeDefaultAdminAsync()

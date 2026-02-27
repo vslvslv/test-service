@@ -222,17 +222,24 @@ public class DynamicEntitiesController : ControllerBase
 
             var created = await _entityService.CreateAsync(entityType, entity);
             
-            // Log activity - entity created
-            var user = User?.Identity?.Name ?? "anonymous";
-            await _activityService.LogActivityAsync(
-                ActivityType.Entity,
-                ActivityAction.Created,
-                user,
-                $"New {entityType} entity created: {created.Id}",
-                entityType,
-                created.Id,
-                entity.Environment
-            );
+            // Log activity - entity created (don't fail the request if logging fails)
+            try
+            {
+                var user = User?.Identity?.Name ?? "anonymous";
+                await _activityService.LogActivityAsync(
+                    ActivityType.Entity,
+                    ActivityAction.Created,
+                    user,
+                    $"New {entityType} entity created: {created.Id}",
+                    entityType,
+                    created.Id,
+                    entity.Environment
+                );
+            }
+            catch (Exception logEx)
+            {
+                _logger.LogWarning(logEx, "Activity logging failed after creating entity {EntityType}/{Id}", entityType, created.Id);
+            }
             
             return CreatedAtAction(nameof(GetById), 
                 new { entityType = entityType, id = created.Id }, created);
@@ -311,16 +318,23 @@ public class DynamicEntitiesController : ControllerBase
                 return NotFound();
             }
             
-            // Log activity - entity deleted
-            var user = User?.Identity?.Name ?? "anonymous";
-            await _activityService.LogActivityAsync(
-                ActivityType.Entity,
-                ActivityAction.Deleted,
-                user,
-                $"Entity {id} deleted from {entityType}",
-                entityType,
-                id
-            );
+            // Log activity - entity deleted (don't fail the request if logging fails)
+            try
+            {
+                var user = User?.Identity?.Name ?? "anonymous";
+                await _activityService.LogActivityAsync(
+                    ActivityType.Entity,
+                    ActivityAction.Deleted,
+                    user,
+                    $"Entity {id} deleted from {entityType}",
+                    entityType,
+                    id
+                );
+            }
+            catch (Exception logEx)
+            {
+                _logger.LogWarning(logEx, "Activity logging failed after deleting entity {EntityType}/{Id}", entityType, id);
+            }
             
             return NoContent();
         }

@@ -148,13 +148,13 @@ public class EnvironmentsController : ControllerBase
             var environment = await _environmentService.CreateAsync(request, username);
             return CreatedAtAction(nameof(GetById), new { id = environment.Id }, environment);
         }
-        catch (InvalidOperationException ex)
+        catch (InvalidOperationException)
         {
-            return Conflict(ex.Message);
+            return Conflict(new { message = $"An environment with the name '{request.Name}' already exists. Please choose a different name." });
         }
         catch (ArgumentException ex)
         {
-            return BadRequest(ex.Message);
+            return BadRequest(new { message = ex.Message });
         }
         catch (Exception ex)
         {

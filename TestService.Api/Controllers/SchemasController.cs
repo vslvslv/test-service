@@ -101,7 +101,7 @@ public class SchemasController : ControllerBase
 
             if (await _schemaRepository.SchemaExistsAsync(schema.EntityName))
             {
-                return Conflict($"Schema for entity '{schema.EntityName}' already exists");
+                return Conflict(new { message = $"A schema with the name '{schema.EntityName}' already exists. Please choose a different name." });
             }
 
             var created = await _schemaRepository.CreateSchemaAsync(schema);
@@ -201,28 +201,34 @@ public class SchemasController : ControllerBase
             var activityService = HttpContext.RequestServices.GetRequiredService<IActivityService>();
             
             var count = await entityService.DeleteAllAsync(entityName, environment);
-            
-            // Log activity - bulk delete
-            var user = User?.Identity?.Name ?? "anonymous";
-            await activityService.LogActivityAsync(
-                ActivityType.Entity,
-                ActivityAction.BulkDeleted,
-                user,
-                $"Bulk delete: {count} entities deleted from {entityName}",
-                entityName,
-                null,
-                environment,
-                new ActivityDetails { Count = count }
-            );
-            
-            // Send notification
-            await _notificationService.NotifyBulkAction(
-                entityName, 
-                "deleted", 
-                count, 
-                environment);
-            
-            return Ok(new { deletedCount = count, message = $"Deleted {count} entities from {entityName}" });
+
+            // Log activity and notify (don't fail the request if these fail)
+            try
+            {
+                var user = User?.Identity?.Name ?? "anonymous";
+                await activityService.LogActivityAsync(
+                    ActivityType.Entity,
+                    ActivityAction.BulkDeleted,
+                    user,
+                    $"Bulk delete: {count} entities deleted from {entityName}",
+                    entityName,
+                    null,
+                    environment,
+                    new ActivityDetails { Count = count }
+                );
+                await _notificationService.NotifyBulkAction(
+                    entityName,
+                    "deleted",
+                    count,
+                    environment
+                );
+            }
+            catch (Exception logEx)
+            {
+                _logger.LogWarning(logEx, "Activity or notification failed after deleting all entities for {EntityName}", entityName);
+            }
+
+            return Ok(new { deletedCount = count, message = $"Successfully deleted {count} entities from {entityName}" });
         }
         catch (Exception ex)
         {
