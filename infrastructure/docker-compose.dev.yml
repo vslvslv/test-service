@@ -1,13 +1,22 @@
-version: '3.8'
-
-# Development docker-compose - infrastructure only
-# Use this for local development when running API and Web from IDE
+# =============================================================================
+# Docker Compose - Local development / pre-deploy verification
+# =============================================================================
+# Full stack (MongoDB, RabbitMQ, API, Web) for testing changes locally before
+# deploying to Kubernetes. Uses the same service layout and config as production.
+#
+# Usage (from repo root):
+#   docker compose -f infrastructure/docker-compose.dev.yml up -d --build
+#   docker compose -f infrastructure/docker-compose.dev.yml down
+#
+# Or use scripts (after updating them to use this file):
+#   ./infrastructure/start-dev.sh   (if you add one)
+# =============================================================================
 
 services:
   # MongoDB Database
   mongodb:
-    image: mongo:latest
-    container_name: testservice-mongodb
+    image: mongo:7
+    container_name: testservice-mongodb-dev
     restart: unless-stopped
     ports:
       - "27017:27017"
@@ -16,10 +25,10 @@ services:
       MONGO_INITDB_ROOT_PASSWORD: password123
       MONGO_INITDB_DATABASE: TestServiceDb
     volumes:
-      - mongodb_data:/data/db
-      - mongodb_config:/data/configdb
+      - mongodb_data_dev:/data/db
+      - mongodb_config_dev:/data/configdb
     networks:
-      - testservice-network
+      - testservice-dev
     healthcheck:
       test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/TestServiceDb --quiet
       interval: 10s
@@ -30,20 +39,20 @@ services:
   # RabbitMQ Message Bus
   rabbitmq:
     image: rabbitmq:3-management
-    container_name: testservice-rabbitmq
+    container_name: testservice-rabbitmq-dev
     restart: unless-stopped
     ports:
-      - "5672:5672"   # AMQP port
-      - "15672:15672" # Management UI
+      - "5672:5672"
+      - "15672:15672"
     environment:
       RABBITMQ_DEFAULT_USER: guest
       RABBITMQ_DEFAULT_PASS: guest
       RABBITMQ_DEFAULT_VHOST: /
     volumes:
-      - rabbitmq_data:/var/lib/rabbitmq
-      - rabbitmq_logs:/var/log/rabbitmq
+      - rabbitmq_data_dev:/var/lib/rabbitmq
+      - rabbitmq_logs_dev:/var/log/rabbitmq
     networks:
-      - testservice-network
+      - testservice-dev
     healthcheck:
       test: rabbitmq-diagnostics -q ping
       interval: 10s
@@ -51,17 +60,70 @@ services:
       retries: 5
       start_period: 20s
 
+  # API Service (built from source for local verification)
+  api:
+    build:
+      context: ..
+      dockerfile: TestService.Api/Dockerfile
+    image: testservice-api:dev
+    container_name: testservice-api-dev
+    restart: unless-stopped
+    ports:
+      - "5000:80"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Docker
+      ASPNETCORE_URLS: http://+:80
+      PORT: "80"
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - testservice-dev
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f -s -o /dev/null http://localhost:80/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # Web UI (built from source; API URL set at build time for browser)
+  web:
+    build:
+      context: ../testservice-web
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: http://localhost:5000
+        VITE_BASE_PATH: /
+    image: testservice-web:dev
+    container_name: testservice-web-dev
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    depends_on:
+      api:
+        condition: service_healthy
+    networks:
+      - testservice-dev
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1:80/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
 volumes:
-  mongodb_data:
-    name: testservice_mongodb_data
-  mongodb_config:
-    name: testservice_mongodb_config
-  rabbitmq_data:
-    name: testservice_rabbitmq_data
-  rabbitmq_logs:
-    name: testservice_rabbitmq_logs
+  mongodb_data_dev:
+    name: testservice_dev_mongodb_data
+  mongodb_config_dev:
+    name: testservice_dev_mongodb_config
+  rabbitmq_data_dev:
+    name: testservice_dev_rabbitmq_data
+  rabbitmq_logs_dev:
+    name: testservice_dev_rabbitmq_logs
 
 networks:
-  testservice-network:
-    name: testservice-network
+  testservice-dev:
+    name: testservice-dev
     driver: bridge

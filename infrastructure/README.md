@@ -8,7 +8,7 @@ This folder contains all infrastructure management scripts for the Test Service 
 | File | Description | Platform |
 |------|-------------|----------|
 | `docker-compose.yml` | **Full Stack** - All services (MongoDB, RabbitMQ, API, Web) | All |
-| `docker-compose.dev.yml` | **Development** - Infrastructure only (MongoDB, RabbitMQ) | All |
+| `docker-compose.dev.yml` | **Local verification** - Full stack for testing changes before Kubernetes deploy (builds API + Web from source) | All |
 
 ### Infrastructure Only Scripts
 | File | Description | Platform |
@@ -22,6 +22,8 @@ This folder contains all infrastructure management scripts for the Test Service 
 | File | Description | Platform |
 |------|-------------|----------|
 | `start-full.bat` / `start-full.sh` | Start all services (MongoDB, RabbitMQ, API, Web) | Windows / Linux/macOS |
+| `start-dev.sh` | Start **dev stack** from docker-compose.dev.yml (build from source, verify before K8s) | Linux/macOS |
+| `stop-dev.sh` | Stop dev stack | Linux/macOS |
 | `stop-full.bat` / `stop-full.sh` | Stop all services | Windows / Linux/macOS |
 | `logs-full.bat` / `logs-full.sh` | View all service logs | Windows / Linux/macOS |
 
@@ -71,6 +73,27 @@ infrastructure\start-full.bat
 ```bash
 chmod +x infrastructure/*.sh  # First time only
 ./infrastructure/start-full.sh
+```
+
+### Local dev stack (verify before Kubernetes deploy)
+
+Build and run API + Web from source with MongoDB and RabbitMQ. Use this to verify changes locally before deploying to Kubernetes.
+
+**Linux/macOS:**
+```bash
+./infrastructure/start-dev.sh
+```
+
+Then open http://localhost:3000 (Web) and http://localhost:5000/swagger (API). Stop with:
+
+```bash
+./infrastructure/stop-dev.sh
+```
+
+**Or with Docker Compose directly (any OS):**
+```bash
+docker compose -f infrastructure/docker-compose.dev.yml up -d --build
+docker compose -f infrastructure/docker-compose.dev.yml down
 ```
 
 ## ?? Services
