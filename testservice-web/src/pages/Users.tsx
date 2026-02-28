@@ -201,15 +201,15 @@ const Users: React.FC = () => {
         </div>
       )}
 
-      <div className="bg-gray-800 border border-gray-700 rounded-lg overflow-hidden">
-        <table className="w-full">
+      <div className="bg-gray-800 border border-gray-700 rounded-lg overflow-x-auto">
+        <table className="w-full min-w-[760px]">
           <thead className="bg-gray-700/50">
             <tr>
               <th className="text-left px-4 py-3 text-xs uppercase tracking-wider text-gray-400">User</th>
-              <th className="text-left px-4 py-3 text-xs uppercase tracking-wider text-gray-400">Role</th>
-              <th className="text-left px-4 py-3 text-xs uppercase tracking-wider text-gray-400">Status</th>
-              <th className="text-left px-4 py-3 text-xs uppercase tracking-wider text-gray-400">Permissions</th>
-              <th className="text-right px-4 py-3 text-xs uppercase tracking-wider text-gray-400">Actions</th>
+              <th className="text-center px-4 py-3 text-xs uppercase tracking-wider text-gray-400">Role</th>
+              <th className="text-center px-4 py-3 text-xs uppercase tracking-wider text-gray-400">Status</th>
+              <th className="text-center px-4 py-3 text-xs uppercase tracking-wider text-gray-400">Permissions</th>
+              <th className="text-center px-4 py-3 text-xs uppercase tracking-wider text-gray-400">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-700">
@@ -219,20 +219,20 @@ const Users: React.FC = () => {
                   <div>{user.username}</div>
                   <div className="text-xs text-gray-400">{user.email}</div>
                 </td>
-                <td className="px-4 py-3 text-sm text-gray-200">{normalizeRole(user.role)}</td>
-                <td className="px-4 py-3 text-sm">
-                  <span className={`px-2 py-1 rounded text-xs border ${user.isActive !== false ? 'bg-green-500/15 text-green-300 border-green-500/30' : 'bg-red-500/15 text-red-300 border-red-500/30'}`}>
+                <td className="px-4 py-3 text-sm text-gray-200 text-center">{normalizeRole(user.role)}</td>
+                <td className="px-4 py-3 text-sm text-center">
+                  <span className={`inline-flex px-2 py-1 rounded text-xs border ${user.isActive !== false ? 'bg-green-500/15 text-green-300 border-green-500/30' : 'bg-red-500/15 text-red-300 border-red-500/30'}`}>
                     {user.isActive !== false ? 'Active' : 'Inactive'}
                   </span>
                 </td>
-                <td className="px-4 py-3 text-xs text-gray-300">
+                <td className="px-4 py-3 text-xs text-gray-300 text-center">
                   {(user.permissions || []).length} effective
                   {(user.customPermissions || []).length > 0 && (
                     <span className="text-blue-300"> • {(user.customPermissions || []).length} custom</span>
                   )}
                 </td>
                 <td className="px-4 py-3">
-                  <div className="flex items-center justify-end gap-2">
+                  <div className="flex items-center justify-center gap-2">
                     <button
                       onClick={() => openEdit(user)}
                       className="p-1.5 rounded hover:bg-gray-600"
@@ -251,6 +251,13 @@ const Users: React.FC = () => {
                 </td>
               </tr>
             ))}
+            {users.length === 0 && (
+              <tr>
+                <td colSpan={5} className="px-4 py-8 text-center text-sm text-gray-400">
+                  No users found.
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
@@ -344,29 +351,46 @@ const Users: React.FC = () => {
               </div>
 
               <div className="bg-gray-900/40 border border-gray-700 rounded-lg p-4">
-                <h3 className="text-white font-medium flex items-center gap-2 mb-3">
-                  <Shield className="w-4 h-4" />
-                  Custom Permission Overrides
-                </h3>
-                <p className="text-xs text-gray-400 mb-4">
-                  Role defaults are always applied. Choose additional explicit permissions for this user.
-                </p>
+                <div className="flex items-start justify-between gap-4 mb-4">
+                  <div>
+                    <h3 className="text-white font-medium flex items-center gap-2">
+                      <Shield className="w-4 h-4" />
+                      Custom Permission Overrides
+                    </h3>
+                    <p className="text-xs text-gray-400 mt-1">
+                      Role defaults are always applied. Choose additional explicit permissions for this user.
+                    </p>
+                  </div>
+                  <span className="text-xs px-2.5 py-1 rounded-full border border-blue-500/40 bg-blue-500/10 text-blue-300 whitespace-nowrap">
+                    {form.customPermissions.length} selected
+                  </span>
+                </div>
                 <div className="space-y-4">
                   {groupedPermissions.map(([group, groupPermissions]) => (
-                    <div key={group}>
-                      <p className="text-xs uppercase tracking-wider text-gray-500 mb-2">{group}</p>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                    <div key={group} className="bg-gray-800/50 border border-gray-700 rounded-lg p-3">
+                      <div className="flex items-center justify-between mb-3">
+                        <p className="text-xs uppercase tracking-wider text-gray-500">{group}</p>
+                        <span className="text-[11px] text-gray-500">{groupPermissions.length} permissions</span>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
                         {groupPermissions.map((permission) => (
-                          <label key={permission.key} className="flex items-start gap-2 p-2 rounded hover:bg-gray-700/40 cursor-pointer">
+                          <label
+                            key={permission.key}
+                            className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                              form.customPermissions.includes(permission.key)
+                                ? 'bg-blue-500/10 border-blue-500/40'
+                                : 'bg-gray-900/40 border-gray-700 hover:bg-gray-700/40 hover:border-gray-600'
+                            }`}
+                          >
                             <input
                               type="checkbox"
                               checked={form.customPermissions.includes(permission.key)}
                               onChange={() => togglePermission(permission.key)}
                               className="mt-0.5"
                             />
-                            <span>
-                              <span className="text-sm text-gray-200">{permission.key}</span>
-                              <span className="block text-xs text-gray-400">{permission.description}</span>
+                            <span className="min-w-0">
+                              <span className="text-xs text-blue-300 font-mono break-all">{permission.key}</span>
+                              <span className="block text-xs text-gray-400 mt-1">{permission.description}</span>
                             </span>
                           </label>
                         ))}

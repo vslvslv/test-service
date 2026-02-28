@@ -66,7 +66,29 @@ public static class ApiHelpers
         var result = await response.Content.ReadFromJsonAsync<Dictionary<string, object>>();
         if (result != null && result.TryGetValue("resetCount", out var count))
         {
-            return Convert.ToInt32(count);
+            if (count is System.Text.Json.JsonElement jsonElement)
+            {
+                if (jsonElement.ValueKind == System.Text.Json.JsonValueKind.Number && jsonElement.TryGetInt32(out var number))
+                {
+                    return number;
+                }
+
+                if (jsonElement.ValueKind == System.Text.Json.JsonValueKind.String &&
+                    int.TryParse(jsonElement.GetString(), out var parsed))
+                {
+                    return parsed;
+                }
+            }
+
+            if (count is int typedInt)
+            {
+                return typedInt;
+            }
+
+            if (int.TryParse(count?.ToString(), out var fallback))
+            {
+                return fallback;
+            }
         }
         return 0;
     }

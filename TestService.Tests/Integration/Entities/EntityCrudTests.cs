@@ -13,7 +13,7 @@ public class EntityCreationPositiveTests : IntegrationTestBase
 {
     private const string TestEntityType = "CreationTest";
 
-    protected override async void OnOneTimeSetUp()
+    protected override async Task OnOneTimeSetUp()
     {
         var schema = new EntitySchemaBuilder()
             .WithEntityName(TestEntityType)
@@ -135,7 +135,7 @@ public class EntityCreationNegativeTests : IntegrationTestBase
 {
     private const string TestEntityType = "CreationNegativeTest";
 
-    protected override async void OnOneTimeSetUp()
+    protected override async Task OnOneTimeSetUp()
     {
         var schema = new EntitySchemaBuilder()
             .WithEntityName(TestEntityType)
@@ -212,7 +212,7 @@ public class EntityRetrievalTests : IntegrationTestBase
     private const string TestEntityType = "RetrievalTest";
     private List<DynamicEntity> _testEntities = new();
 
-    protected override async void OnOneTimeSetUp()
+    protected override async Task OnOneTimeSetUp()
     {
         var schema = new EntitySchemaBuilder()
             .WithEntityName(TestEntityType)
@@ -337,7 +337,7 @@ public class EntityUpdateTests : IntegrationTestBase
 {
     private const string TestEntityType = "UpdateTest";
 
-    protected override async void OnOneTimeSetUp()
+    protected override async Task OnOneTimeSetUp()
     {
         var schema = new EntitySchemaBuilder()
             .WithEntityName(TestEntityType)
@@ -463,7 +463,7 @@ public class EntityDeletionTests : IntegrationTestBase
 {
     private const string TestEntityType = "DeletionTest";
 
-    protected override async void OnOneTimeSetUp()
+    protected override async Task OnOneTimeSetUp()
     {
         var schema = EntitySchemaBuilder.CreateMinimalSchema(TestEntityType);
         await ApiHelpers.CreateSchemaAsync(Client, schema);

@@ -21,6 +21,11 @@ export const Permissions = {
   UsersUpdate: 'users.update',
   UsersDelete: 'users.delete',
   UsersPermissionsManage: 'users.permissions.manage',
+  MocksRead: 'mocks.read',
+  MocksWrite: 'mocks.write',
+  MocksVerify: 'mocks.verify',
+  MocksLogsRead: 'mocks.logs.read',
+  MocksLogsDelete: 'mocks.logs.delete',
 } as const;
 
 export type PermissionKey = (typeof Permissions)[keyof typeof Permissions];
@@ -28,7 +33,8 @@ export type PermissionKey = (typeof Permissions)[keyof typeof Permissions];
 export type RoleName = 'Contributor' | 'Admin';
 
 export const normalizeRole = (role: unknown): RoleName => {
-  if (role === 1 || role === '1' || role === 'Admin') return 'Admin';
+  if (role === 1 || role === '1') return 'Admin';
+  if (typeof role === 'string' && role.trim().toLowerCase() === 'admin') return 'Admin';
   return 'Contributor';
 };
 

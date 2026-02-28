@@ -11,6 +11,32 @@ namespace TestService.Tests.Integration.Schemas;
 [TestFixture]
 public class SchemaCreationPositiveTests : IntegrationTestBase
 {
+    private readonly List<string> _createdSchemas = new();
+
+    protected override async Task OnTearDown()
+    {
+        foreach (var schema in _createdSchemas.ToList())
+        {
+            try
+            {
+                await ApiHelpers.DeleteSchemaIfExistsAsync(Client, schema);
+            }
+            catch
+            {
+                // Ignore teardown cleanup errors.
+            }
+        }
+        _createdSchemas.Clear();
+    }
+
+    private void TrackSchema(string name)
+    {
+        if (!_createdSchemas.Contains(name))
+        {
+            _createdSchemas.Add(name);
+        }
+    }
+
     [Test]
     public async Task CreateSchema_WithValidData_ReturnsCreated()
     {
@@ -29,6 +55,7 @@ public class SchemaCreationPositiveTests : IntegrationTestBase
         Assert.That(created!.EntityName, Is.EqualTo(uniqueName));
         Assert.That(created.Id, Is.Not.Null);
         Assert.That(created.CreatedAt, Is.Not.EqualTo(default(DateTime)));
+        TrackSchema(uniqueName);
     }
 
     [Test]
@@ -57,6 +84,7 @@ public class SchemaCreationPositiveTests : IntegrationTestBase
         Assert.That(created.FilterableFields.Count, Is.EqualTo(3));
         Assert.That(created.ExcludeOnFetch, Is.True);
         Assert.That(created.Fields.First(f => f.Name == "username").Description, Is.EqualTo("User's unique username"));
+        TrackSchema(uniqueName);
     }
 
     [Test]
@@ -78,6 +106,7 @@ public class SchemaCreationPositiveTests : IntegrationTestBase
         
         var created = await response.Content.ReadFromJsonAsync<EntitySchema>();
         Assert.That(created!.ExcludeOnFetch, Is.True);
+        TrackSchema(uniqueName);
     }
 
     [Test]
@@ -102,6 +131,7 @@ public class SchemaCreationPositiveTests : IntegrationTestBase
         
         var created = await response.Content.ReadFromJsonAsync<EntitySchema>();
         Assert.That(created!.Fields.Count(f => f.Required), Is.EqualTo(3));
+        TrackSchema(uniqueName);
     }
 
     [Test]
@@ -122,6 +152,7 @@ public class SchemaCreationPositiveTests : IntegrationTestBase
         
         var created = await response.Content.ReadFromJsonAsync<EntitySchema>();
         Assert.That(created!.FilterableFields, Is.Empty);
+        TrackSchema(uniqueName);
     }
 }
 
@@ -131,6 +162,32 @@ public class SchemaCreationPositiveTests : IntegrationTestBase
 [TestFixture]
 public class SchemaCreationNegativeTests : IntegrationTestBase
 {
+    private readonly List<string> _createdSchemas = new();
+
+    protected override async Task OnTearDown()
+    {
+        foreach (var schema in _createdSchemas.ToList())
+        {
+            try
+            {
+                await ApiHelpers.DeleteSchemaIfExistsAsync(Client, schema);
+            }
+            catch
+            {
+                // Ignore teardown cleanup errors.
+            }
+        }
+        _createdSchemas.Clear();
+    }
+
+    private void TrackSchema(string name)
+    {
+        if (!_createdSchemas.Contains(name))
+        {
+            _createdSchemas.Add(name);
+        }
+    }
+
     [Test]
     public async Task CreateSchema_WithEmptyEntityName_ReturnsBadRequest()
     {
@@ -156,6 +213,7 @@ public class SchemaCreationNegativeTests : IntegrationTestBase
         var schema = EntitySchemaBuilder.CreateMinimalSchema(uniqueName);
         
         await Client.PostAsJsonAsync("/api/schemas", schema);
+        TrackSchema(uniqueName);
 
         // Act - Try to create again
         var response = await Client.PostAsJsonAsync("/api/schemas", schema);
@@ -180,6 +238,7 @@ public class SchemaCreationNegativeTests : IntegrationTestBase
 
         // Assert - Should create successfully (business decision)
         AssertStatusCode(response, HttpStatusCode.Created);
+        TrackSchema(uniqueName);
     }
 
     [Test]
@@ -215,6 +274,7 @@ public class SchemaCreationNegativeTests : IntegrationTestBase
 
         // Assert - Should succeed but filtering on that field won't work
         AssertStatusCode(response, HttpStatusCode.Created);
+        TrackSchema(uniqueName);
     }
 }
 
@@ -226,11 +286,26 @@ public class SchemaRetrievalTests : IntegrationTestBase
 {
     private string _testSchemaName = null!;
 
-    protected override async void OnSetUp()
+    protected override async Task OnSetUp()
     {
         _testSchemaName = CreateUniqueName("Retrieval");
         var schema = EntitySchemaBuilder.CreateMinimalSchema(_testSchemaName);
         await ApiHelpers.CreateSchemaAsync(Client, schema);
+    }
+
+    protected override async Task OnTearDown()
+    {
+        if (!string.IsNullOrWhiteSpace(_testSchemaName))
+        {
+            try
+            {
+                await ApiHelpers.DeleteSchemaIfExistsAsync(Client, _testSchemaName);
+            }
+            catch
+            {
+                // Ignore teardown cleanup errors.
+            }
+        }
     }
 
     [Test]
@@ -291,6 +366,32 @@ public class SchemaRetrievalTests : IntegrationTestBase
 [TestFixture]
 public class SchemaUpdateTests : IntegrationTestBase
 {
+    private readonly List<string> _createdSchemas = new();
+
+    protected override async Task OnTearDown()
+    {
+        foreach (var schema in _createdSchemas.ToList())
+        {
+            try
+            {
+                await ApiHelpers.DeleteSchemaIfExistsAsync(Client, schema);
+            }
+            catch
+            {
+                // Ignore teardown cleanup errors.
+            }
+        }
+        _createdSchemas.Clear();
+    }
+
+    private void TrackSchema(string name)
+    {
+        if (!_createdSchemas.Contains(name))
+        {
+            _createdSchemas.Add(name);
+        }
+    }
+
     [Test]
     public async Task UpdateSchema_WithValidChanges_ReturnsNoContent()
     {
@@ -298,6 +399,7 @@ public class SchemaUpdateTests : IntegrationTestBase
         var uniqueName = CreateUniqueName("Update");
         var schema = EntitySchemaBuilder.CreateMinimalSchema(uniqueName);
         await ApiHelpers.CreateSchemaAsync(Client, schema);
+        TrackSchema(uniqueName);
 
         // Modify schema
         schema.Fields.Add(new FieldDefinition { Name = "newField", Type = "string" });
@@ -334,6 +436,7 @@ public class SchemaUpdateTests : IntegrationTestBase
         var uniqueName = CreateUniqueName("ExcludeUpdate");
         var schema = EntitySchemaBuilder.CreateMinimalSchema(uniqueName);
         await ApiHelpers.CreateSchemaAsync(Client, schema);
+        TrackSchema(uniqueName);
 
         // Modify
         schema.ExcludeOnFetch = true;
@@ -355,6 +458,32 @@ public class SchemaUpdateTests : IntegrationTestBase
 [TestFixture]
 public class SchemaDeletionTests : IntegrationTestBase
 {
+    private readonly List<string> _createdSchemas = new();
+
+    protected override async Task OnTearDown()
+    {
+        foreach (var schema in _createdSchemas.ToList())
+        {
+            try
+            {
+                await ApiHelpers.DeleteSchemaIfExistsAsync(Client, schema);
+            }
+            catch
+            {
+                // Ignore teardown cleanup errors.
+            }
+        }
+        _createdSchemas.Clear();
+    }
+
+    private void TrackSchema(string name)
+    {
+        if (!_createdSchemas.Contains(name))
+        {
+            _createdSchemas.Add(name);
+        }
+    }
+
     [Test]
     public async Task DeleteSchema_WithExistingSchema_ReturnsNoContent()
     {
@@ -362,6 +491,7 @@ public class SchemaDeletionTests : IntegrationTestBase
         var uniqueName = CreateUniqueName("Delete");
         var schema = EntitySchemaBuilder.CreateMinimalSchema(uniqueName);
         await ApiHelpers.CreateSchemaAsync(Client, schema);
+        TrackSchema(uniqueName);
 
         // Act
         var response = await Client.DeleteAsync($"/api/schemas/{uniqueName}");
@@ -391,6 +521,7 @@ public class SchemaDeletionTests : IntegrationTestBase
         var uniqueName = CreateUniqueName("DeleteRecreate");
         var schema = EntitySchemaBuilder.CreateMinimalSchema(uniqueName);
         await ApiHelpers.CreateSchemaAsync(Client, schema);
+        TrackSchema(uniqueName);
 
         // Act - Delete
         var deleteResponse = await Client.DeleteAsync($"/api/schemas/{uniqueName}");

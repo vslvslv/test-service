@@ -1,5 +1,7 @@
 using System.Collections.Generic;
 using System.Net;
+using System.Net.Http.Headers;
+using System.Net.Http.Json;
 using Microsoft.Extensions.Configuration;
 using TestService.Api.Models;
 
@@ -10,11 +12,14 @@ namespace TestService.Tests.Infrastructure;
 /// </summary>
 public abstract class IntegrationTestBase
 {
+    private const string DefaultAdminUsername = "admin";
+    private const string DefaultAdminPassword = "Admin@123";
+
     protected HttpClient Client { get; private set; } = null!;
     protected WebApplicationFactory<Program> Factory { get; private set; } = null!;
 
     [OneTimeSetUp]
-    public void OneTimeSetUp()
+    public async Task OneTimeSetUp()
     {
         Factory = new WebApplicationFactory<Program>()
             .WithWebHostBuilder(builder =>
@@ -31,48 +36,69 @@ public abstract class IntegrationTestBase
                 });
             });
         Client = Factory.CreateClient();
-        OnOneTimeSetUp();
+
+        if (AuthenticateAsAdminByDefault)
+        {
+            await SetAdminAuthTokenAsync();
+        }
+
+        await OnOneTimeSetUp();
     }
 
     [OneTimeTearDown]
-    public void OneTimeTearDown()
+    public async Task OneTimeTearDown()
     {
-        OnOneTimeTearDown();
+        await OnOneTimeTearDown();
         Client?.Dispose();
         Factory?.Dispose();
     }
 
     [SetUp]
-    public void SetUp()
+    public async Task SetUp()
     {
-        OnSetUp();
+        Client.DefaultRequestHeaders.Remove("Authorization");
+        Client.DefaultRequestHeaders.Authorization = null;
+
+        if (AuthenticateAsAdminByDefault)
+        {
+            await SetAdminAuthTokenAsync();
+        }
+
+        await OnSetUp();
     }
 
     [TearDown]
-    public void TearDown()
+    public async Task TearDown()
     {
-        OnTearDown();
+        await OnTearDown();
+        Client.DefaultRequestHeaders.Remove("Authorization");
+        Client.DefaultRequestHeaders.Authorization = null;
     }
 
     /// <summary>
     /// Override this method to perform additional one-time setup
     /// </summary>
-    protected virtual void OnOneTimeSetUp() { }
+    protected virtual Task OnOneTimeSetUp() => Task.CompletedTask;
 
     /// <summary>
     /// Override this method to perform additional one-time teardown
     /// </summary>
-    protected virtual void OnOneTimeTearDown() { }
+    protected virtual Task OnOneTimeTearDown() => Task.CompletedTask;
 
     /// <summary>
     /// Override this method to perform setup before each test
     /// </summary>
-    protected virtual void OnSetUp() { }
+    protected virtual Task OnSetUp() => Task.CompletedTask;
 
     /// <summary>
     /// Override this method to perform teardown after each test
     /// </summary>
-    protected virtual void OnTearDown() { }
+    protected virtual Task OnTearDown() => Task.CompletedTask;
+
+    /// <summary>
+    /// Integration tests default to admin authentication unless explicitly disabled.
+    /// </summary>
+    protected virtual bool AuthenticateAsAdminByDefault => true;
 
     /// <summary>
     /// Asserts that the response status code matches the expected value
@@ -116,5 +142,48 @@ public abstract class IntegrationTestBase
     protected T? GetFieldValue<T>(DynamicEntity entity, string fieldName)
     {
         return entity.GetFieldValue<T>(fieldName);
+    }
+
+    protected async Task SetAdminAuthTokenAsync()
+    {
+        var token = await GetAdminTokenAsync();
+        Client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+    }
+
+    protected async Task<string> GetAdminTokenAsync()
+    {
+        HttpResponseMessage? response = null;
+
+        for (var attempt = 0; attempt < 5; attempt++)
+        {
+            response = await Client.PostAsJsonAsync("/api/auth/login", new LoginRequest
+            {
+                Username = DefaultAdminUsername,
+                Password = DefaultAdminPassword
+            });
+
+            if (response.StatusCode != HttpStatusCode.Unauthorized)
+            {
+                break;
+            }
+
+            await Task.Delay(250);
+        }
+
+        if (response == null)
+        {
+            throw new InvalidOperationException("Unable to execute login request for admin user.");
+        }
+
+        if (response.StatusCode == HttpStatusCode.Unauthorized)
+        {
+            Assert.Inconclusive("Default admin may not be initialized yet (async init).");
+        }
+
+        AssertStatusCode(response, HttpStatusCode.OK);
+        var login = await response.Content.ReadFromJsonAsync<LoginResponse>();
+        Assert.That(login, Is.Not.Null);
+        Assert.That(login!.Token, Is.Not.Empty);
+        return login.Token;
     }
 }

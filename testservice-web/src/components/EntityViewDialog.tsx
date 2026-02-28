@@ -10,6 +10,8 @@ import {
   Edit,
   RefreshCw
 } from 'lucide-react';
+import { apiService } from '../services/api';
+import type { Environment } from '../types';
 
 interface EntityViewDialogProps {
   isOpen: boolean;
@@ -31,6 +33,7 @@ const EntityViewDialog: React.FC<EntityViewDialogProps> = ({
   const [isEditing, setIsEditing] = useState(false);
   const [draftFields, setDraftFields] = useState<Record<string, any>>({});
   const [draftEnvironment, setDraftEnvironment] = useState('');
+  const [availableEnvironments, setAvailableEnvironments] = useState<Environment[]>([]);
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
@@ -39,6 +42,23 @@ const EntityViewDialog: React.FC<EntityViewDialogProps> = ({
     setDraftFields({ ...(entity.fields || {}) });
     setDraftEnvironment(entity.environment || '');
   }, [isOpen, entity]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    let cancelled = false;
+    const loadEnvironments = async () => {
+      try {
+        const data = await apiService.getEnvironments();
+        if (!cancelled) setAvailableEnvironments(data || []);
+      } catch {
+        if (!cancelled) setAvailableEnvironments([]);
+      }
+    };
+    loadEnvironments();
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen]);
 
   if (!isOpen || !entity) return null;
 
@@ -161,13 +181,21 @@ const EntityViewDialog: React.FC<EntityViewDialogProps> = ({
               <div className="bg-gray-700/50 rounded-lg border border-gray-600 p-4">
                 <p className="text-xs text-gray-400 mb-2">Environment</p>
                 {isEditing ? (
-                  <input
-                    type="text"
+                  <select
                     value={draftEnvironment}
                     onChange={(e) => setDraftEnvironment(e.target.value)}
-                    placeholder="e.g. dev, qa, staging"
                     className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
+                  >
+                    <option value="">No environment</option>
+                    {Array.from(new Set([
+                      ...availableEnvironments
+                        .map((env) => env.name)
+                        .filter((name): name is string => !!name && name.trim().length > 0),
+                      ...(draftEnvironment.trim() ? [draftEnvironment] : [])
+                    ])).map((envName) => (
+                      <option key={envName} value={envName}>{envName}</option>
+                    ))}
+                  </select>
                 ) : (
                   <p className="text-white font-medium">{entity.environment || '-'}</p>
                 )}

@@ -3,7 +3,7 @@ using System.Net.Http.Json;
 using Microsoft.AspNetCore.Mvc.Testing;
 using TestService.Api.Models;
 
-namespace TestService.Tests;
+namespace TestService.Tests.Integration.TestDataFeature;
 
 [TestFixture]
 public class TestDataApiTests

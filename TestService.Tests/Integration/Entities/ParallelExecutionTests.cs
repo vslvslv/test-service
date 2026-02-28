@@ -13,8 +13,10 @@ public class ParallelExecutionTests : IntegrationTestBase
 {
     private const string TestEntityType = "ParallelTest";
 
-    protected override async void OnOneTimeSetUp()
+    protected override async Task OnOneTimeSetUp()
     {
+        await ApiHelpers.DeleteSchemaIfExistsAsync(Client, TestEntityType);
+
         var schema = new EntitySchemaBuilder()
             .WithEntityName(TestEntityType)
             .WithField("name", "string", required: true)
@@ -24,12 +26,12 @@ public class ParallelExecutionTests : IntegrationTestBase
             .Build();
         
         await ApiHelpers.CreateSchemaAsync(Client, schema);
+        await Client.DeleteAsync($"/api/schemas/{TestEntityType}/entities");
     }
 
-    protected override async void OnSetUp()
+    protected override async Task OnSetUp()
     {
-        // Reset all consumed entities before each test
-        await ApiHelpers.ResetAllConsumedAsync(Client, TestEntityType);
+        await Client.DeleteAsync($"/api/schemas/{TestEntityType}/entities");
     }
 
     [Test]
@@ -130,9 +132,10 @@ public class ParallelExecutionTests : IntegrationTestBase
         var response = await Client.GetAsync($"/api/entities/{TestEntityType}");
         var entities = await response.Content.ReadFromJsonAsync<List<DynamicEntity>>();
 
-        // Assert - Should return only non-consumed entities
-        Assert.That(entities!.Count, Is.EqualTo(2));
-        Assert.That(entities.All(e => !e.IsConsumed), Is.True);
+        // Assert - GetAll returns all entities (consumed and non-consumed).
+        Assert.That(entities!.Count, Is.EqualTo(3));
+        Assert.That(entities.Count(e => e.IsConsumed), Is.EqualTo(1));
+        Assert.That(entities.Count(e => !e.IsConsumed), Is.EqualTo(2));
     }
 
     [Test]
@@ -147,15 +150,15 @@ public class ParallelExecutionTests : IntegrationTestBase
         // Act - Get by ID
         var response = await Client.GetAsync($"/api/entities/{TestEntityType}/{created!.Id}");
         
-        // Assert
+        // Assert - GetById does not auto-consume.
         AssertStatusCode(response, HttpStatusCode.OK);
         var retrieved = await response.Content.ReadFromJsonAsync<DynamicEntity>();
-        Assert.That(retrieved!.IsConsumed, Is.True);
+        Assert.That(retrieved!.IsConsumed, Is.False);
 
-        // Verify it's excluded from GetAll
+        // Verify it still appears in GetAll.
         var allResponse = await Client.GetAsync($"/api/entities/{TestEntityType}");
         var allEntities = await allResponse.Content.ReadFromJsonAsync<List<DynamicEntity>>();
-        Assert.That(allEntities!.Any(e => e.Id == created.Id), Is.False);
+        Assert.That(allEntities!.Any(e => e.Id == created.Id), Is.True);
     }
 
     [Test]
@@ -231,8 +234,9 @@ public class ParallelExecutionTests : IntegrationTestBase
         // Assert
         AssertStatusCode(response, HttpStatusCode.OK);
         
-        var result = await response.Content.ReadFromJsonAsync<Dictionary<string, object>>();
-        Assert.That(result!["resetCount"], Is.EqualTo(3));
+        var result = await response.Content.ReadFromJsonAsync<Dictionary<string, System.Text.Json.JsonElement>>();
+        Assert.That(result, Is.Not.Null);
+        Assert.That(result!["resetCount"].GetInt32(), Is.EqualTo(3));
 
         // Verify all are available again
         var allResponse = await Client.GetAsync($"/api/entities/{TestEntityType}");
@@ -300,8 +304,8 @@ public class ParallelExecutionTests : IntegrationTestBase
             .Build();
         var created = await ApiHelpers.CreateEntityAsync(Client, TestEntityType, entity);
 
-        // Consume it
-        await Client.GetAsync($"/api/entities/{TestEntityType}/{created!.Id}");
+        // Consume it via next
+        await Client.GetAsync($"/api/entities/{TestEntityType}/next");
 
         // Act - Update
         created.Fields["name"] = "Updated";
@@ -309,7 +313,8 @@ public class ParallelExecutionTests : IntegrationTestBase
 
         // Assert - Should still be consumed
         var updated = await ApiHelpers.GetEntityByIdAsync(Client, TestEntityType, created.Id!);
-        Assert.That(updated, Is.Null); // Because it's consumed and excluded
+        Assert.That(updated, Is.Not.Null);
+        Assert.That(updated!.IsConsumed, Is.True);
     }
 }
 
@@ -322,7 +327,7 @@ public class ParallelExecutionStressTests : IntegrationTestBase
 {
     private const string TestEntityType = "StressTest";
 
-    protected override async void OnOneTimeSetUp()
+    protected override async Task OnOneTimeSetUp()
     {
         var schema = new EntitySchemaBuilder()
             .WithEntityName(TestEntityType)

@@ -16,6 +16,7 @@ import EntityList from './pages/EntityList';
 import Activity from './pages/Activity';
 import Settings from './pages/Settings';
 import Users from './pages/Users';
+import Mocks from './pages/Mocks';
 import { Permissions } from './utils/permissions';
 import './App.css';
 
@@ -129,6 +130,14 @@ function AppRoutes() {
             element={
               <ProtectedRoute requiredPermission={Permissions.UsersRead}>
                 <Users />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="mocks"
+            element={
+              <ProtectedRoute requiredPermission={Permissions.MocksRead}>
+                <Mocks />
               </ProtectedRoute>
             }
           />

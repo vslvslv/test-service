@@ -18,7 +18,8 @@ import {
   Search,
   KeyRound,
   User as UserIcon,
-  ChevronRight
+  ChevronRight,
+  Boxes
 } from 'lucide-react';
 
 interface SearchSchema {
@@ -79,6 +80,7 @@ const Layout: React.FC = () => {
   const canSearchUsers = hasPermission(Permissions.UsersRead);
   const canSearchApiKeys = hasPermission(Permissions.ApiKeysRead);
   const canReadSettings = hasPermission(Permissions.SettingsRead);
+  const canReadMocks = hasPermission(Permissions.MocksRead);
 
   // Load data for global search index
   useEffect(() => {
@@ -208,6 +210,18 @@ const Layout: React.FC = () => {
         iconClass: 'text-indigo-400'
       });
     }
+    if (canReadMocks) {
+      navigationItems.push({
+        id: 'nav-mocks',
+        category: 'navigation',
+        label: 'Mocks',
+        description: 'Manage mock expectations and request matching',
+        keywords: ['mock', 'expectations', 'stub', 'verify'],
+        path: '/mocks',
+        icon: Boxes,
+        iconClass: 'text-cyan-400'
+      });
+    }
     if (canSearchApiKeys) {
       navigationItems.push({
         id: 'settings-api-keys',
@@ -286,7 +300,7 @@ const Layout: React.FC = () => {
     }));
 
     return [...navigationItems, ...schemaItems, ...entityTypeItems, ...environmentItems, ...userItems, ...apiKeyItems];
-  }, [schemas, environments, users, apiKeys, canSearchUsers, canSearchApiKeys, canReadSettings]);
+  }, [schemas, environments, users, apiKeys, canSearchUsers, canSearchApiKeys, canReadSettings, canReadMocks]);
 
   const filteredItems = useMemo(() => {
     if (!hasQuery) return [];
@@ -396,6 +410,7 @@ const Layout: React.FC = () => {
     { icon: Layers, label: 'Schemas', path: '/schemas' },
     { icon: Server, label: 'Environments', path: '/environments' },
     { icon: Users, label: 'Users', path: '/users', requiredPermission: Permissions.UsersRead },
+    { icon: Boxes, label: 'Mocks', path: '/mocks', requiredPermission: Permissions.MocksRead },
   ];
 
   const isActive = (path: string) => {
@@ -431,7 +446,7 @@ const Layout: React.FC = () => {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onFocus={() => setShowSearchResults(true)}
-                placeholder="Search entities, schemas, environments, users, settings..."
+                placeholder="Search entities, schemas, environments, users, mocks, settings..."
                 className="w-full pl-10 pr-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
               {showDropdown && (

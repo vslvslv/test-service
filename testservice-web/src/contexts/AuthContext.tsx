@@ -28,21 +28,56 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Check if user is already logged in
-    const storedToken = localStorage.getItem('token');
-    const storedUser = localStorage.getItem('user');
-    
-    if (storedToken && storedUser) {
+    const restoreSession = async () => {
+      // Check if user is already logged in
+      const storedToken = localStorage.getItem('token');
+      const storedUser = localStorage.getItem('user');
+
+      if (!storedToken) {
+        setIsLoading(false);
+        return;
+      }
+
       setToken(storedToken);
-      const parsed = JSON.parse(storedUser);
-      setUser({
-        ...parsed,
-        role: normalizeRole(parsed.role),
-        permissions: normalizePermissions(parsed.permissions, parsed.role),
-      });
-    }
-    
-    setIsLoading(false);
+
+      // Hydrate from local cache first so UI can render quickly while /me refreshes.
+      if (storedUser) {
+        try {
+          const parsed = JSON.parse(storedUser);
+          setUser({
+            ...parsed,
+            role: normalizeRole(parsed.role),
+            permissions: normalizePermissions(parsed.permissions, parsed.role),
+          });
+        } catch {
+          localStorage.removeItem('user');
+        }
+      }
+
+      // Refresh current user from API to avoid stale role/permission cache after redeploys.
+      try {
+        const currentUser = await apiService.getCurrentUser();
+        const refreshedUser = {
+          id: currentUser.id ?? '',
+          username: currentUser.username ?? '',
+          email: currentUser.email ?? '',
+          role: normalizeRole(currentUser.role),
+          permissions: normalizePermissions(currentUser.permissions, currentUser.role),
+        };
+        setUser(refreshedUser);
+        localStorage.setItem('user', JSON.stringify(refreshedUser));
+      } catch {
+        // Token is no longer valid (or backend unavailable) - clear session.
+        setUser(null);
+        setToken(null);
+        localStorage.removeItem('user');
+        localStorage.removeItem('token');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    restoreSession();
   }, []);
 
   // Sync session invalidation: when any tab gets 401 or token is removed in another tab, clear auth state

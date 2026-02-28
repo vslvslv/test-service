@@ -51,9 +51,19 @@ public class EntitySchemaRepository : IEntitySchemaRepository
 
     public async Task<bool> UpdateSchemaAsync(string entityName, EntitySchema schema)
     {
+        var existing = await _collection.Find(x => x.EntityName == entityName).FirstOrDefaultAsync();
+        if (existing == null)
+        {
+            return false;
+        }
+
+        // Preserve immutable document identity and original creation timestamp.
+        schema.Id = existing.Id;
+        schema.EntityName = entityName;
+        schema.CreatedAt = existing.CreatedAt;
         schema.UpdatedAt = DateTime.UtcNow;
         var result = await _collection.ReplaceOneAsync(x => x.EntityName == entityName, schema);
-        return result.ModifiedCount > 0;
+        return result.MatchedCount > 0;
     }
 
     public async Task<bool> DeleteSchemaAsync(string entityName)

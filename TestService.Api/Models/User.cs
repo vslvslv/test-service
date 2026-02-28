@@ -207,6 +207,11 @@ public static class PermissionDefinitions
     public const string UsersUpdate = "users.update";
     public const string UsersDelete = "users.delete";
     public const string UsersPermissionsManage = "users.permissions.manage";
+    public const string MocksRead = "mocks.read";
+    public const string MocksWrite = "mocks.write";
+    public const string MocksVerify = "mocks.verify";
+    public const string MocksLogsRead = "mocks.logs.read";
+    public const string MocksLogsDelete = "mocks.logs.delete";
 
     private static readonly List<PermissionDescriptor> Catalog =
     [
@@ -231,7 +236,12 @@ public static class PermissionDefinitions
         new() { Key = UsersCreate, Description = "Create users", Group = "Users" },
         new() { Key = UsersUpdate, Description = "Update users", Group = "Users" },
         new() { Key = UsersDelete, Description = "Delete users", Group = "Users" },
-        new() { Key = UsersPermissionsManage, Description = "Manage user custom permissions", Group = "Users" }
+        new() { Key = UsersPermissionsManage, Description = "Manage user custom permissions", Group = "Users" },
+        new() { Key = MocksRead, Description = "View mock expectations", Group = "Mocks" },
+        new() { Key = MocksWrite, Description = "Create/update/delete mock expectations", Group = "Mocks" },
+        new() { Key = MocksVerify, Description = "Verify mock requests", Group = "Mocks" },
+        new() { Key = MocksLogsRead, Description = "View mock request logs", Group = "Mocks" },
+        new() { Key = MocksLogsDelete, Description = "Delete mock request logs", Group = "Mocks" }
     ];
 
     private static readonly HashSet<string> ValidPermissionKeys = Catalog.Select(x => x.Key).ToHashSet();

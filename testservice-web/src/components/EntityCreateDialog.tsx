@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { 
   X,
   Plus,
@@ -7,6 +7,8 @@ import {
   Package,
   CheckCircle
 } from 'lucide-react';
+import { apiService } from '../services/api';
+import type { Environment } from '../types';
 
 interface EntityCreateDialogProps {
   isOpen: boolean;
@@ -25,9 +27,36 @@ const EntityCreateDialog: React.FC<EntityCreateDialogProps> = ({
 }) => {
   const [formData, setFormData] = useState<Record<string, any>>({});
   const [environment, setEnvironment] = useState('');
+  const [availableEnvironments, setAvailableEnvironments] = useState<Environment[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
+
+  useEffect(() => {
+    if (!isOpen) return;
+    let cancelled = false;
+    const loadEnvironments = async () => {
+      try {
+        const data = await apiService.getEnvironments();
+        if (cancelled) return;
+        setAvailableEnvironments(data || []);
+      } catch {
+        if (!cancelled) setAvailableEnvironments([]);
+      }
+    };
+    loadEnvironments();
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen]);
+
+  const environmentOptions = useMemo(() => {
+    const fromDb = availableEnvironments
+      .map((env) => env.name)
+      .filter((name): name is string => !!name && name.trim().length > 0);
+    const extras = environment.trim() ? [environment] : [];
+    return Array.from(new Set([...fromDb, ...extras]));
+  }, [availableEnvironments, environment]);
 
   if (!isOpen || !schema) return null;
 
@@ -75,8 +104,6 @@ const EntityCreateDialog: React.FC<EntityCreateDialogProps> = ({
     setIsSubmitting(true);
 
     try {
-      const { apiService } = await import('../services/api');
-      
       const entityData: any = {
         fields: formData
       };
@@ -307,13 +334,16 @@ const EntityCreateDialog: React.FC<EntityCreateDialogProps> = ({
                     <span className="text-sm font-medium text-gray-300">Environment</span>
                     <span className="text-xs text-gray-500">(Optional)</span>
                   </div>
-                  <input
-                    type="text"
+                  <select
                     value={environment}
                     onChange={(e) => setEnvironment(e.target.value)}
-                    placeholder="e.g., dev, qa, staging, prod"
                     className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
+                  >
+                    <option value="">No environment</option>
+                    {environmentOptions.map((envName) => (
+                      <option key={envName} value={envName}>{envName}</option>
+                    ))}
+                  </select>
                 </label>
               </div>
 

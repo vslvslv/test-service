@@ -3,7 +3,7 @@ using System.Net.Http.Json;
 using TestService.Api.Models;
 using TestService.Tests.Infrastructure;
 
-namespace TestService.Tests;
+namespace TestService.Tests.Integration.Entities;
 
 /// <summary>
 /// End-to-end tests for dynamic entity CRUD using a single schema (Agent-like).
@@ -115,7 +115,7 @@ public class DynamicEntityTests : IntegrationTestBase
         Assert.That(created, Is.Not.Null);
         Assert.That(created!.Id, Is.Not.Null);
         Assert.That(created.EntityType, Is.EqualTo(_entityType));
-        Assert.That(created.Fields["username"], Is.EqualTo("john.doe"));
+        Assert.That(GetFieldString(created, "username"), Is.EqualTo("john.doe"));
     }
 
     [Test, Order(5)]
@@ -274,8 +274,8 @@ public class DynamicEntityTests : IntegrationTestBase
         var getResponse = await Client.GetAsync($"/api/entities/{_entityType}/{created.Id}");
         var updated = await getResponse.Content.ReadFromJsonAsync<DynamicEntity>();
         Assert.That(updated, Is.Not.Null);
-        Assert.That(updated!.Fields["firstName"], Is.EqualTo("Updated"));
-        Assert.That(updated.Fields["agentType"], Is.EqualTo("technical"));
+        Assert.That(GetFieldString(updated!, "firstName"), Is.EqualTo("Updated"));
+        Assert.That(GetFieldString(updated, "agentType"), Is.EqualTo("technical"));
     }
 
     [Test, Order(10)]

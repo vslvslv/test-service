@@ -136,6 +136,12 @@ public class DynamicEntityService : IDynamicEntityService
     public async Task<bool> UpdateAsync(string entityType, string id, DynamicEntity entity)
     {
         _logger.LogInformation("Updating entity {EntityType} with ID: {Id}", entityType, id);
+
+        var existingEntity = await _repository.GetByIdAsync(entityType, id, markAsConsumed: false);
+        if (existingEntity == null)
+        {
+            return false;
+        }
         
         // Validate environment exists if provided
         if (!string.IsNullOrEmpty(entity.Environment))
@@ -154,6 +160,9 @@ public class DynamicEntityService : IDynamicEntityService
             throw new ArgumentException($"Entity does not match schema for type: {entityType}");
         }
 
+        // Preserve immutable runtime metadata.
+        entity.IsConsumed = existingEntity.IsConsumed;
+        entity.CreatedAt = existingEntity.CreatedAt;
         entity.EntityType = entityType;
         var result = await _repository.UpdateAsync(entityType, id, entity);
         

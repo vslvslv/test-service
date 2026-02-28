@@ -55,6 +55,73 @@ export interface PermissionDescriptor {
   group: string;
 }
 
+export type PathMatchType = 'Exact' | 'Prefix' | 'Regex';
+export type BodyMatchType = 'Any' | 'Exact' | 'Contains' | 'Regex';
+
+export interface MockTimes {
+  unlimited: boolean;
+  remaining: number;
+}
+
+export interface MockRequestMatcher {
+  method?: string;
+  path: string;
+  pathMatchType: PathMatchType;
+  query: Record<string, string>;
+  headers: Record<string, string>;
+  body?: string;
+  bodyMatchType: BodyMatchType;
+}
+
+export interface MockResponseTemplate {
+  status: number;
+  headers: Record<string, string>;
+  body?: string;
+  delayMs: number;
+}
+
+export interface MockExpectation {
+  id?: string;
+  environment: string;
+  name: string;
+  priority: number;
+  enabled: boolean;
+  requestMatcher: MockRequestMatcher;
+  responseTemplate: MockResponseTemplate;
+  times: MockTimes;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface MockRequestLog {
+  id: string;
+  environment: string;
+  method: string;
+  path: string;
+  queryString: string;
+  headers: Record<string, string>;
+  body?: string;
+  matched: boolean;
+  matchedExpectationId?: string;
+  matchedExpectationName?: string;
+  responseStatusCode: number;
+  timestamp: string;
+}
+
+export interface MockVerificationRequest {
+  environment: string;
+  matcher: MockRequestMatcher;
+  exactCount?: number;
+  minCount?: number;
+  maxCount?: number;
+}
+
+export interface MockVerificationResponse {
+  success: boolean;
+  matchedCount: number;
+  message: string;
+}
+
 export interface LoginCredentials {
   username: string;
   password: string;
