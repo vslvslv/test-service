@@ -62,7 +62,14 @@ const EditSchema: React.FC = () => {
       const data = await apiService.getSchema(schemaName);
       setSchema(data);
       setExcludeOnFetch(data.excludeOnFetch || false);
-      setFields(data.fields || [{ name: '', type: 'string', required: false, defaultValue: '' }]);
+      const loadedFields = (data.fields || []).map((f: SchemaField) => ({
+        name: f.name || '',
+        type: f.type || 'string',
+        required: !!f.required,
+        defaultValue: f.defaultValue ?? '',
+        description: f.description ?? ''
+      }));
+      setFields(loadedFields.length > 0 ? loadedFields : [{ name: '', type: 'string', required: false, defaultValue: '' }]);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to load schema');
       console.error('Failed to load schema:', err);

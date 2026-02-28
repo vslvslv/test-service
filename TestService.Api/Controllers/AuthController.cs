@@ -38,27 +38,33 @@ public class AuthController : ControllerBase
     /// </remarks>
     [HttpPost("login")]
     [AllowAnonymous]
-    public async Task<ActionResult<LoginResponse>> Login([FromBody] LoginRequest request)
+    public async Task<ActionResult<LoginResponse>> Login([FromBody] LoginRequest? request)
     {
         try
         {
-            if (string.IsNullOrWhiteSpace(request.Username) || string.IsNullOrWhiteSpace(request.Password))
+            if (request == null || string.IsNullOrWhiteSpace(request.Username) || string.IsNullOrWhiteSpace(request.Password))
             {
-                return BadRequest("Username and password are required");
+                return BadRequest(new { message = "Username or password cannot be empty." });
             }
 
-            var response = await _userService.LoginAsync(request);
-            if (response == null)
+            request.Username = request.Username.Trim();
+            request.Password = request.Password.Trim();
+
+            var result = await _userService.LoginAsync(request);
+            if (result.IsSuccess && result.Response != null)
             {
-                return Unauthorized("Invalid username or password");
+                return Ok(result.Response);
             }
 
-            return Ok(response);
+            var errorMessage = result.FailureReason == LoginFailureReason.InvalidPassword
+                ? "Invalid or incorrect password."
+                : "Invalid username or password.";
+            return Unauthorized(new { message = errorMessage });
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error during login");
-            return StatusCode(500, "Internal server error");
+            return StatusCode(500, new { message = "Internal server error" });
         }
     }
 

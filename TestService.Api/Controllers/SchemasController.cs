@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TestService.Api.Models;
 using TestService.Api.Services;
@@ -6,6 +7,7 @@ namespace TestService.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize]
 public class SchemasController : ControllerBase
 {
     private readonly IEntitySchemaRepository _schemaRepository;
@@ -26,6 +28,7 @@ public class SchemasController : ControllerBase
     /// Get all registered entity schemas
     /// </summary>
     [HttpGet]
+    [Authorize(Policy = PermissionDefinitions.SchemasRead)]
     public async Task<ActionResult<IEnumerable<EntitySchema>>> GetAll()
     {
         try
@@ -44,6 +47,7 @@ public class SchemasController : ControllerBase
     /// Get schema by entity name
     /// </summary>
     [HttpGet("{entityName}")]
+    [Authorize(Policy = PermissionDefinitions.SchemasRead)]
     public async Task<ActionResult<EntitySchema>> GetByName(string entityName)
     {
         try
@@ -90,6 +94,7 @@ public class SchemasController : ControllerBase
     /// when fetched, preventing them from being used in multiple parallel tests.
     /// </remarks>
     [HttpPost]
+    [Authorize(Policy = PermissionDefinitions.SchemasWrite)]
     public async Task<ActionResult<EntitySchema>> Create([FromBody] EntitySchema schema)
     {
         try
@@ -101,7 +106,7 @@ public class SchemasController : ControllerBase
 
             if (await _schemaRepository.SchemaExistsAsync(schema.EntityName))
             {
-                return Conflict($"Schema for entity '{schema.EntityName}' already exists");
+                return Conflict(new { message = $"A schema with the name '{schema.EntityName}' already exists. Please choose a different name." });
             }
 
             var created = await _schemaRepository.CreateSchemaAsync(schema);
@@ -122,6 +127,7 @@ public class SchemasController : ControllerBase
     /// Update an existing entity schema
     /// </summary>
     [HttpPut("{entityName}")]
+    [Authorize(Policy = PermissionDefinitions.SchemasWrite)]
     public async Task<ActionResult> Update(string entityName, [FromBody] EntitySchema schema)
     {
         try
@@ -149,6 +155,7 @@ public class SchemasController : ControllerBase
     /// Delete an entity schema
     /// </summary>
     [HttpDelete("{entityName}")]
+    [Authorize(Policy = PermissionDefinitions.SchemasDelete)]
     public async Task<ActionResult> Delete(string entityName)
     {
         try
@@ -183,6 +190,7 @@ public class SchemasController : ControllerBase
     /// Example: DELETE /api/schemas/Agent/entities?environment=dev
     /// </remarks>
     [HttpDelete("{entityName}/entities")]
+    [Authorize(Policy = PermissionDefinitions.SchemasDelete)]
     public async Task<ActionResult> DeleteAllEntities(
         string entityName,
         [FromQuery] string? environment = null)
@@ -201,28 +209,34 @@ public class SchemasController : ControllerBase
             var activityService = HttpContext.RequestServices.GetRequiredService<IActivityService>();
             
             var count = await entityService.DeleteAllAsync(entityName, environment);
-            
-            // Log activity - bulk delete
-            var user = User?.Identity?.Name ?? "anonymous";
-            await activityService.LogActivityAsync(
-                ActivityType.Entity,
-                ActivityAction.BulkDeleted,
-                user,
-                $"Bulk delete: {count} entities deleted from {entityName}",
-                entityName,
-                null,
-                environment,
-                new ActivityDetails { Count = count }
-            );
-            
-            // Send notification
-            await _notificationService.NotifyBulkAction(
-                entityName, 
-                "deleted", 
-                count, 
-                environment);
-            
-            return Ok(new { deletedCount = count, message = $"Deleted {count} entities from {entityName}" });
+
+            // Log activity and notify (don't fail the request if these fail)
+            try
+            {
+                var user = User?.Identity?.Name ?? "anonymous";
+                await activityService.LogActivityAsync(
+                    ActivityType.Entity,
+                    ActivityAction.BulkDeleted,
+                    user,
+                    $"Bulk delete: {count} entities deleted from {entityName}",
+                    entityName,
+                    null,
+                    environment,
+                    new ActivityDetails { Count = count }
+                );
+                await _notificationService.NotifyBulkAction(
+                    entityName,
+                    "deleted",
+                    count,
+                    environment
+                );
+            }
+            catch (Exception logEx)
+            {
+                _logger.LogWarning(logEx, "Activity or notification failed after deleting all entities for {EntityName}", entityName);
+            }
+
+            return Ok(new { deletedCount = count, message = $"Successfully deleted {count} entities from {entityName}" });
         }
         catch (Exception ex)
         {

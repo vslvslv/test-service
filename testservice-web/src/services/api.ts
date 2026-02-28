@@ -1,5 +1,19 @@
 import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
-import type { Schema, Environment, Entity, User, Activity, ActivityListResponse, ActivityStats, ActivityFilters } from '../types';
+import type {
+  Schema,
+  Environment,
+  Entity,
+  User,
+  Activity,
+  ActivityListResponse,
+  ActivityStats,
+  ActivityFilters,
+  PermissionDescriptor,
+  MockExpectation,
+  MockRequestLog,
+  MockVerificationRequest,
+  MockVerificationResponse
+} from '../types';
 
 // For development: use /api (proxied), for production: use env variable
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? '/api' : '/testservice');
@@ -67,6 +81,11 @@ class ApiService {
     localStorage.removeItem('token');
   }
 
+  async getCurrentUser() {
+    const response = await this.api.get('/api/auth/me');
+    return response.data;
+  }
+
   // Users
   async getUsers() {
     const response = await this.api.get('/api/users');
@@ -78,6 +97,61 @@ class ApiService {
     return response.data;
   }
 
+  async updateUser(id: string, userData: Partial<User>) {
+    const response = await this.api.put(`/api/users/${id}`, userData);
+    return response.data;
+  }
+
+  async deleteUser(id: string) {
+    const response = await this.api.delete(`/api/users/${id}`);
+    return response.data;
+  }
+
+  async getPermissionsCatalog(): Promise<{ permissions: PermissionDescriptor[]; roleDefaults: Record<string, string[]> }> {
+    const response = await this.api.get('/api/users/permissions/catalog');
+    return response.data;
+  }
+
+  // Mocks
+  async getMockExpectations(environment?: string, includeDisabled: boolean = false): Promise<MockExpectation[]> {
+    const response = await this.api.get<MockExpectation[]>('/api/mocks/expectations', {
+      params: { environment, includeDisabled }
+    });
+    return response.data;
+  }
+
+  async createMockExpectation(expectation: MockExpectation): Promise<MockExpectation> {
+    const response = await this.api.post<MockExpectation>('/api/mocks/expectations', expectation);
+    return response.data;
+  }
+
+  async updateMockExpectation(id: string, expectation: MockExpectation): Promise<void> {
+    await this.api.put(`/api/mocks/expectations/${id}`, expectation);
+  }
+
+  async deleteMockExpectation(id: string): Promise<void> {
+    await this.api.delete(`/api/mocks/expectations/${id}`);
+  }
+
+  async getMockRequestLogs(environment?: string, path?: string, limit: number = 100, matched?: boolean): Promise<MockRequestLog[]> {
+    const response = await this.api.get<MockRequestLog[]>('/api/mocks/requests', {
+      params: { environment, path, limit, matched }
+    });
+    return response.data;
+  }
+
+  async deleteMockRequestLogs(environment?: string): Promise<{ deletedCount: number }> {
+    const response = await this.api.delete<{ deletedCount: number }>('/api/mocks/requests', {
+      params: { environment }
+    });
+    return response.data;
+  }
+
+  async verifyMockRequests(request: MockVerificationRequest): Promise<MockVerificationResponse> {
+    const response = await this.api.post<MockVerificationResponse>('/api/mocks/verify', request);
+    return response.data;
+  }
+
   // Environments
   async getEnvironments(): Promise<Environment[]> {
     const response = await this.api.get<Environment[]>('/api/environments');
@@ -86,6 +160,11 @@ class ApiService {
 
   async createEnvironment(envData: Partial<Environment>) {
     const response = await this.api.post('/api/environments', envData);
+    return response.data;
+  }
+
+  async updateEnvironment(id: string, envData: { displayName?: string; description?: string; url?: string; color?: string; isActive?: boolean; order?: number }) {
+    const response = await this.api.put(`/api/environments/${id}`, envData);
     return response.data;
   }
 

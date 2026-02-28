@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ToastProvider, useToast } from './contexts/ToastContext';
 import { useCallback, useEffect } from 'react';
@@ -15,20 +15,13 @@ import Entities from './pages/Entities';
 import EntityList from './pages/EntityList';
 import Activity from './pages/Activity';
 import Settings from './pages/Settings';
+import Users from './pages/Users';
+import Mocks from './pages/Mocks';
+import { Permissions } from './utils/permissions';
 import './App.css';
 
 function AuthHandler() {
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    const handleAuthError = () => {
-      navigate('login', { replace: true });
-    };
-
-    window.addEventListener('auth-401', handleAuthError);
-    return () => window.removeEventListener('auth-401', handleAuthError);
-  }, [navigate]);
-
+  // No-op: redirect is handled by ProtectedRoute when isAuthenticated becomes false after auth-401 or token sync
   return null;
 }
 
@@ -132,8 +125,30 @@ function AppRoutes() {
           <Route path="entities/:entityType/:id" element={<EntityList />} />
           <Route path="entities/:entityType/:id/edit" element={<EntityList />} />
           
-          <Route path="users" element={<div className="text-white">Users Page - Coming Soon</div>} />
-          <Route path="settings" element={<Settings />} />
+          <Route
+            path="users"
+            element={
+              <ProtectedRoute requiredPermission={Permissions.UsersRead}>
+                <Users />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="mocks"
+            element={
+              <ProtectedRoute requiredPermission={Permissions.MocksRead}>
+                <Mocks />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="settings"
+            element={
+              <ProtectedRoute requiredPermission={Permissions.SettingsRead}>
+                <Settings />
+              </ProtectedRoute>
+            }
+          />
           <Route path="activity" element={<Activity />} />
         </Route>
         

@@ -21,6 +21,10 @@ WORKDIR /app
 EXPOSE 8080
 EXPOSE 443
 
+# Install curl for healthcheck (runtime image has no wget)
+RUN apt-get update && apt-get install -y --no-install-recommends curl \
+    && rm -rf /var/lib/apt/lists/*
+
 # Copy published app
 COPY --from=publish /app/publish .
 

@@ -26,7 +26,7 @@ public class TokenService : ITokenService
 
     public string GenerateToken(User user)
     {
-        var claims = new[]
+        var claims = new List<Claim>
         {
             new Claim(ClaimTypes.NameIdentifier, user.Id ?? string.Empty),
             new Claim(ClaimTypes.Name, user.Username),
@@ -34,6 +34,11 @@ public class TokenService : ITokenService
             new Claim(ClaimTypes.Role, user.Role.ToString()),
             new Claim("userId", user.Id ?? string.Empty)
         };
+
+        foreach (var permission in PermissionDefinitions.GetEffectivePermissions(user))
+        {
+            claims.Add(new Claim("permission", permission));
+        }
 
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtSettings.SecretKey));
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);

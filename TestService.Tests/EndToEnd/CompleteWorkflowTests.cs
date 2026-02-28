@@ -318,6 +318,7 @@ public class CompleteWorkflowTests : IntegrationTestBase
 
         // Step 6: Verify All Entities Are V2
         var allEntities = await ApiHelpers.GetAllEntitiesAsync(Client, entityType);
+        Assert.That(allEntities, Is.Not.Null);
         Assert.That(allEntities!.All(e => GetFieldValue<int>(e, "version") == 2), Is.True);
         Assert.That(allEntities.All(e => e.Fields.ContainsKey("description")), Is.True);
 

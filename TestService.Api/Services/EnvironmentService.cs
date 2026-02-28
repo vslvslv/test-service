@@ -90,21 +90,36 @@ public class EnvironmentService : IEnvironmentService
 
     public async Task<EnvironmentResponse> CreateAsync(CreateEnvironmentRequest request, string? createdBy = null)
     {
+        var nameLower = request.Name?.Trim().ToLowerInvariant() ?? string.Empty;
+
         // Validate name uniqueness
-        if (await _repository.NameExistsAsync(request.Name))
+        if (await _repository.NameExistsAsync(nameLower))
         {
             throw new InvalidOperationException($"Environment '{request.Name}' already exists");
         }
 
-        // Validate name format (lowercase, alphanumeric, hyphens)
-        if (!System.Text.RegularExpressions.Regex.IsMatch(request.Name, "^[a-z0-9-]+$"))
+        // Reserved names: block names based on Development, Staging, Production (with extra characters)
+        // Exact "development", "staging", "production" are allowed for system defaults
+        var reserved = new[] { "development", "staging", "production" };
+        foreach (var reservedName in reserved)
         {
-            throw new ArgumentException("Environment name must be lowercase alphanumeric with hyphens only");
+            if (nameLower.StartsWith(reservedName) && nameLower.Length > reservedName.Length)
+            {
+                throw new ArgumentException(
+                    $"The name is reserved. Environment names based on '{reservedName}' (e.g. Development, Staging, Production) are not allowed. Please choose a different name.");
+            }
+        }
+
+        // Validate name format (lowercase, alphanumeric, hyphens)
+        if (!System.Text.RegularExpressions.Regex.IsMatch(nameLower, "^[a-z0-9-]+$"))
+        {
+            throw new ArgumentException(
+                "Environment name must be lowercase and contain only letters, numbers, and hyphens (e.g. dev, qa, my-env).");
         }
 
         var environment = new Models.Environment
         {
-            Name = request.Name.ToLowerInvariant(),
+            Name = nameLower,
             DisplayName = request.DisplayName,
             Description = request.Description,
             Url = request.Url,

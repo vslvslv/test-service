@@ -40,6 +40,86 @@ export interface User {
   username: string;
   email?: string;
   role?: string;
+  isActive?: boolean;
+  permissions?: string[];
+  customPermissions?: string[];
+  firstName?: string;
+  lastName?: string;
+  createdAt?: string;
+  lastLoginAt?: string;
+}
+
+export interface PermissionDescriptor {
+  key: string;
+  description: string;
+  group: string;
+}
+
+export type PathMatchType = 'Exact' | 'Prefix' | 'Regex';
+export type BodyMatchType = 'Any' | 'Exact' | 'Contains' | 'Regex';
+
+export interface MockTimes {
+  unlimited: boolean;
+  remaining: number;
+}
+
+export interface MockRequestMatcher {
+  method?: string;
+  path: string;
+  pathMatchType: PathMatchType;
+  query: Record<string, string>;
+  headers: Record<string, string>;
+  body?: string;
+  bodyMatchType: BodyMatchType;
+}
+
+export interface MockResponseTemplate {
+  status: number;
+  headers: Record<string, string>;
+  body?: string;
+  delayMs: number;
+}
+
+export interface MockExpectation {
+  id?: string;
+  environment: string;
+  name: string;
+  priority: number;
+  enabled: boolean;
+  requestMatcher: MockRequestMatcher;
+  responseTemplate: MockResponseTemplate;
+  times: MockTimes;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface MockRequestLog {
+  id: string;
+  environment: string;
+  method: string;
+  path: string;
+  queryString: string;
+  headers: Record<string, string>;
+  body?: string;
+  matched: boolean;
+  matchedExpectationId?: string;
+  matchedExpectationName?: string;
+  responseStatusCode: number;
+  timestamp: string;
+}
+
+export interface MockVerificationRequest {
+  environment: string;
+  matcher: MockRequestMatcher;
+  exactCount?: number;
+  minCount?: number;
+  maxCount?: number;
+}
+
+export interface MockVerificationResponse {
+  success: boolean;
+  matchedCount: number;
+  message: string;
 }
 
 export interface LoginCredentials {
@@ -113,13 +193,21 @@ export function isApiError(error: unknown): error is ApiError {
   return typeof error === 'object' && error !== null && 'message' in error;
 }
 
-// Helper to get error message from unknown error
+// Helper to get error message from unknown error (supports Axios and API { message } responses)
 export function getErrorMessage(error: unknown): string {
   if (isApiError(error)) {
-    return error.response?.data?.message || error.message || 'An error occurred';
+    const msg = error.response?.data?.message ?? error.message;
+    if (typeof msg === 'string' && msg) return msg;
   }
-  if (error instanceof Error) {
-    return error.message;
+  // Axios: error.response.data may be { message: string } or a plain string
+  const err = error as { response?: { data?: unknown }; message?: string };
+  if (err?.response?.data != null) {
+    const data = err.response.data;
+    if (typeof data === 'object' && data !== null && 'message' in data && typeof (data as { message: unknown }).message === 'string') {
+      return (data as { message: string }).message;
+    }
+    if (typeof data === 'string' && data) return data;
   }
+  if (err?.message) return err.message;
   return 'An unknown error occurred';
 }

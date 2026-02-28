@@ -1,0 +1,47 @@
+name: Backend Tests
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  test-and-coverage:
+    name: Test And Coverage Gate
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restore
+        run: dotnet restore test-service.sln
+
+      - name: Build
+        run: dotnet build test-service.sln --configuration Release --no-restore
+
+      - name: Test With Coverage Threshold
+        run: >
+          dotnet test TestService.Tests/TestService.Tests.csproj
+          --configuration Release
+          --no-build
+          /p:CollectCoverage=true
+          /p:CoverletOutput=./TestResults/Coverage/
+          /p:CoverletOutputFormat=cobertura
+          /p:Threshold=67
+          /p:ThresholdType=line
+          /p:ThresholdStat=total
+
+      - name: Upload Coverage Artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-coverage-cobertura
+          path: TestService.Tests/TestResults/Coverage/
+          if-no-files-found: ignore

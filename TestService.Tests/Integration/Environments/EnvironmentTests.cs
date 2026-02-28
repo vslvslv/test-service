@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using TestService.Api.Models;
 using TestService.Tests.Infrastructure;
@@ -12,14 +13,55 @@ namespace TestService.Tests.Integration.Environments;
 public class EnvironmentCrudTests : IntegrationTestBase
 {
     private string? _adminToken;
+    private readonly List<string> _createdEnvironmentIds = new();
 
-    protected override async void OnOneTimeSetUp()
+    protected override async Task OnOneTimeSetUp()
     {
         // Login as admin to get token
         var loginRequest = new { username = "admin", password = "Admin@123" };
         var loginResponse = await Client.PostAsJsonAsync("/api/auth/login", loginRequest);
         var loginResult = await loginResponse.Content.ReadFromJsonAsync<Dictionary<string, object>>();
         _adminToken = loginResult!["token"].ToString();
+    }
+
+    protected override Task OnSetUp()
+    {
+        SetAdminAuth();
+        return Task.CompletedTask;
+    }
+
+    protected override async Task OnTearDown()
+    {
+        SetAdminAuth();
+        foreach (var id in _createdEnvironmentIds.ToList())
+        {
+            try
+            {
+                await Client.DeleteAsync($"/api/environments/{id}");
+            }
+            catch
+            {
+                // Ignore teardown cleanup errors.
+            }
+        }
+        _createdEnvironmentIds.Clear();
+    }
+
+    private void SetAdminAuth()
+    {
+        if (string.IsNullOrWhiteSpace(_adminToken))
+        {
+            throw new InvalidOperationException("Admin token was not initialized.");
+        }
+        Client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _adminToken);
+    }
+
+    private void TrackCreatedEnvironment(string? id)
+    {
+        if (!string.IsNullOrWhiteSpace(id) && !_createdEnvironmentIds.Contains(id))
+        {
+            _createdEnvironmentIds.Add(id);
+        }
     }
 
     [Test]
@@ -113,7 +155,7 @@ public class EnvironmentCrudTests : IntegrationTestBase
     public async Task CreateEnvironment_WithValidData_ReturnsCreated()
     {
         // Arrange
-        Client.DefaultRequestHeaders.Add("Authorization", $"Bearer {_adminToken}");
+        SetAdminAuth();
         
         var newEnvironment = new
         {
@@ -143,20 +185,18 @@ public class EnvironmentCrudTests : IntegrationTestBase
         Assert.That(created.DisplayName, Is.EqualTo(newEnvironment.displayName));
         Assert.That(created.Configuration.Count, Is.EqualTo(2));
         Assert.That(created.Tags.Count, Is.EqualTo(2));
-
-        // Cleanup
-        Client.DefaultRequestHeaders.Remove("Authorization");
+        TrackCreatedEnvironment(created.Id);
     }
 
     [Test]
-    public async Task CreateEnvironment_WithUppercaseName_ReturnsBadRequest()
+    public async Task CreateEnvironment_WithUppercaseName_NormalizesAndReturnsCreated()
     {
         // Arrange
-        Client.DefaultRequestHeaders.Add("Authorization", $"Bearer {_adminToken}");
+        SetAdminAuth();
         
         var newEnvironment = new
         {
-            name = "QA-ENV",
+            name = $"QA-ENV-{Guid.NewGuid():N}",
             displayName = "QA Environment"
         };
 
@@ -164,17 +204,18 @@ public class EnvironmentCrudTests : IntegrationTestBase
         var response = await Client.PostAsJsonAsync("/api/environments", newEnvironment);
 
         // Assert
-        AssertStatusCode(response, HttpStatusCode.BadRequest);
-
-        // Cleanup
-        Client.DefaultRequestHeaders.Remove("Authorization");
+        AssertStatusCode(response, HttpStatusCode.Created);
+        var created = await response.Content.ReadFromJsonAsync<EnvironmentResponse>();
+        Assert.That(created, Is.Not.Null);
+        Assert.That(created!.Name, Is.EqualTo(newEnvironment.name.ToLowerInvariant()));
+        TrackCreatedEnvironment(created.Id);
     }
 
     [Test]
     public async Task CreateEnvironment_WithDuplicateName_ReturnsConflict()
     {
         // Arrange
-        Client.DefaultRequestHeaders.Add("Authorization", $"Bearer {_adminToken}");
+        SetAdminAuth();
         
         var newEnvironment = new
         {
@@ -189,13 +230,13 @@ public class EnvironmentCrudTests : IntegrationTestBase
         AssertStatusCode(response, HttpStatusCode.Conflict);
 
         // Cleanup
-        Client.DefaultRequestHeaders.Remove("Authorization");
     }
 
     [Test]
     public async Task CreateEnvironment_WithoutAdminRole_ReturnsUnauthorized()
     {
         // Arrange - Create without token
+        Client.DefaultRequestHeaders.Authorization = null;
         var newEnvironment = new
         {
             name = "test",
@@ -213,7 +254,7 @@ public class EnvironmentCrudTests : IntegrationTestBase
     public async Task UpdateEnvironment_WithValidData_ReturnsNoContent()
     {
         // Arrange
-        Client.DefaultRequestHeaders.Add("Authorization", $"Bearer {_adminToken}");
+        SetAdminAuth();
         
         // Create environment first
         var createRequest = new
@@ -223,6 +264,7 @@ public class EnvironmentCrudTests : IntegrationTestBase
         };
         var createResponse = await Client.PostAsJsonAsync("/api/environments", createRequest);
         var created = await createResponse.Content.ReadFromJsonAsync<EnvironmentResponse>();
+        TrackCreatedEnvironment(created!.Id);
 
         // Update request
         var updateRequest = new
@@ -245,14 +287,13 @@ public class EnvironmentCrudTests : IntegrationTestBase
         Assert.That(updated.Description, Is.EqualTo("Updated description"));
 
         // Cleanup
-        Client.DefaultRequestHeaders.Remove("Authorization");
     }
 
     [Test]
     public async Task DeleteEnvironment_WithNoEntities_ReturnsNoContent()
     {
         // Arrange
-        Client.DefaultRequestHeaders.Add("Authorization", $"Bearer {_adminToken}");
+        SetAdminAuth();
         
         // Create environment
         var createRequest = new
@@ -274,14 +315,13 @@ public class EnvironmentCrudTests : IntegrationTestBase
         AssertStatusCode(getResponse, HttpStatusCode.NotFound);
 
         // Cleanup
-        Client.DefaultRequestHeaders.Remove("Authorization");
     }
 
     [Test]
     public async Task ActivateEnvironment_ChangesStatus_ReturnsNoContent()
     {
         // Arrange
-        Client.DefaultRequestHeaders.Add("Authorization", $"Bearer {_adminToken}");
+        SetAdminAuth();
         
         // Create and deactivate environment
         var createRequest = new
@@ -291,6 +331,7 @@ public class EnvironmentCrudTests : IntegrationTestBase
         };
         var createResponse = await Client.PostAsJsonAsync("/api/environments", createRequest);
         var created = await createResponse.Content.ReadFromJsonAsync<EnvironmentResponse>();
+        TrackCreatedEnvironment(created!.Id);
 
         // Deactivate first
         await Client.PostAsync($"/api/environments/{created!.Id}/deactivate", null);
@@ -307,14 +348,13 @@ public class EnvironmentCrudTests : IntegrationTestBase
         Assert.That(updated!.IsActive, Is.True);
 
         // Cleanup
-        Client.DefaultRequestHeaders.Remove("Authorization");
     }
 
     [Test]
     public async Task DeactivateEnvironment_ChangesStatus_ReturnsNoContent()
     {
         // Arrange
-        Client.DefaultRequestHeaders.Add("Authorization", $"Bearer {_adminToken}");
+        SetAdminAuth();
         
         // Create environment
         var createRequest = new
@@ -324,6 +364,7 @@ public class EnvironmentCrudTests : IntegrationTestBase
         };
         var createResponse = await Client.PostAsJsonAsync("/api/environments", createRequest);
         var created = await createResponse.Content.ReadFromJsonAsync<EnvironmentResponse>();
+        TrackCreatedEnvironment(created!.Id);
 
         // Act
         var response = await Client.PostAsync($"/api/environments/{created!.Id}/deactivate", null);
@@ -337,7 +378,6 @@ public class EnvironmentCrudTests : IntegrationTestBase
         Assert.That(updated!.IsActive, Is.False);
 
         // Cleanup
-        Client.DefaultRequestHeaders.Remove("Authorization");
     }
 
     [Test]
@@ -364,8 +404,9 @@ public class EnvironmentCrudTests : IntegrationTestBase
 public class EnvironmentValidationTests : IntegrationTestBase
 {
     private string? _adminToken;
+    private readonly List<string> _createdEnvironmentIds = new();
 
-    protected override async void OnOneTimeSetUp()
+    protected override async Task OnOneTimeSetUp()
     {
         // Login as admin
         var loginRequest = new { username = "admin", password = "Admin@123" };
@@ -374,11 +415,51 @@ public class EnvironmentValidationTests : IntegrationTestBase
         _adminToken = loginResult!["token"].ToString();
     }
 
+    protected override Task OnSetUp()
+    {
+        SetAdminAuth();
+        return Task.CompletedTask;
+    }
+
+    protected override async Task OnTearDown()
+    {
+        SetAdminAuth();
+        foreach (var id in _createdEnvironmentIds.ToList())
+        {
+            try
+            {
+                await Client.DeleteAsync($"/api/environments/{id}");
+            }
+            catch
+            {
+                // Ignore teardown cleanup errors.
+            }
+        }
+        _createdEnvironmentIds.Clear();
+    }
+
+    private void SetAdminAuth()
+    {
+        if (string.IsNullOrWhiteSpace(_adminToken))
+        {
+            throw new InvalidOperationException("Admin token was not initialized.");
+        }
+        Client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _adminToken);
+    }
+
+    private void TrackCreatedEnvironment(string? id)
+    {
+        if (!string.IsNullOrWhiteSpace(id) && !_createdEnvironmentIds.Contains(id))
+        {
+            _createdEnvironmentIds.Add(id);
+        }
+    }
+
     [Test]
     public async Task CreateEnvironment_WithSpecialCharactersInName_ReturnsBadRequest()
     {
         // Arrange
-        Client.DefaultRequestHeaders.Add("Authorization", $"Bearer {_adminToken}");
+        SetAdminAuth();
         
         var newEnvironment = new
         {
@@ -393,14 +474,13 @@ public class EnvironmentValidationTests : IntegrationTestBase
         AssertStatusCode(response, HttpStatusCode.BadRequest);
 
         // Cleanup
-        Client.DefaultRequestHeaders.Remove("Authorization");
     }
 
     [Test]
     public async Task CreateEnvironment_WithHyphensInName_Succeeds()
     {
         // Arrange
-        Client.DefaultRequestHeaders.Add("Authorization", $"Bearer {_adminToken}");
+        SetAdminAuth();
         
         var newEnvironment = new
         {
@@ -413,16 +493,15 @@ public class EnvironmentValidationTests : IntegrationTestBase
 
         // Assert
         AssertStatusCode(response, HttpStatusCode.Created);
-
-        // Cleanup
-        Client.DefaultRequestHeaders.Remove("Authorization");
+        var created = await response.Content.ReadFromJsonAsync<EnvironmentResponse>();
+        TrackCreatedEnvironment(created?.Id);
     }
 
     [Test]
     public async Task GetAllEnvironments_WithInactiveFilter_ReturnsOnlyActive()
     {
         // Arrange
-        Client.DefaultRequestHeaders.Add("Authorization", $"Bearer {_adminToken}");
+        SetAdminAuth();
         
         // Create and deactivate an environment
         var createRequest = new
@@ -432,6 +511,7 @@ public class EnvironmentValidationTests : IntegrationTestBase
         };
         var createResponse = await Client.PostAsJsonAsync("/api/environments", createRequest);
         var created = await createResponse.Content.ReadFromJsonAsync<EnvironmentResponse>();
+        TrackCreatedEnvironment(created!.Id);
         await Client.PostAsync($"/api/environments/{created!.Id}/deactivate", null);
 
         // Act - Get without includeInactive
@@ -442,14 +522,13 @@ public class EnvironmentValidationTests : IntegrationTestBase
         Assert.That(environments!.All(e => e.IsActive), Is.True);
 
         // Cleanup
-        Client.DefaultRequestHeaders.Remove("Authorization");
     }
 
     [Test]
     public async Task GetAllEnvironments_IncludeInactive_ReturnsAll()
     {
         // Arrange
-        Client.DefaultRequestHeaders.Add("Authorization", $"Bearer {_adminToken}");
+        SetAdminAuth();
         
         // Create and deactivate an environment
         var createRequest = new
@@ -459,6 +538,7 @@ public class EnvironmentValidationTests : IntegrationTestBase
         };
         var createResponse = await Client.PostAsJsonAsync("/api/environments", createRequest);
         var created = await createResponse.Content.ReadFromJsonAsync<EnvironmentResponse>();
+        TrackCreatedEnvironment(created!.Id);
         await Client.PostAsync($"/api/environments/{created!.Id}/deactivate", null);
 
         // Act
@@ -469,6 +549,5 @@ public class EnvironmentValidationTests : IntegrationTestBase
         Assert.That(environments!.Any(e => !e.IsActive), Is.True);
 
         // Cleanup
-        Client.DefaultRequestHeaders.Remove("Authorization");
     }
 }

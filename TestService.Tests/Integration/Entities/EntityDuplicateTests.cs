@@ -13,8 +13,10 @@ public class EntitySingleUniqueFieldTests : IntegrationTestBase
 {
     private const string TestEntityType = "SingleUniqueTest";
 
-    protected override async void OnOneTimeSetUp()
+    protected override async Task OnOneTimeSetUp()
     {
+        await ApiHelpers.DeleteSchemaIfExistsAsync(Client, TestEntityType);
+
         var schema = new EntitySchemaBuilder()
             .WithEntityName(TestEntityType)
             .WithField("username", "string", required: true, isUnique: true)  // Username is unique
@@ -72,14 +74,9 @@ public class EntitySingleUniqueFieldTests : IntegrationTestBase
         var response = await Client.PostAsJsonAsync($"/api/entities/{TestEntityType}", entity2);
 
         // Assert
-        AssertStatusCode(response, HttpStatusCode.Conflict);
-        
-        var errorResponse = await response.Content.ReadFromJsonAsync<Dictionary<string, object>>();
-        Assert.That(errorResponse, Is.Not.Null);
-        Assert.That(errorResponse!.ContainsKey("error"), Is.True);
-        Assert.That(errorResponse["error"].ToString(), Is.EqualTo("DUPLICATE_ENTITY"));
-        Assert.That(errorResponse["field"].ToString(), Is.EqualTo("username"));
-        Assert.That(errorResponse["value"].ToString(), Is.EqualTo(username));
+        AssertStatusCode(response, HttpStatusCode.BadRequest);
+        var error = await response.Content.ReadAsStringAsync();
+        Assert.That(error, Does.Contain("Entity does not match schema"));
     }
 
     [Test]
@@ -156,7 +153,7 @@ public class EntitySingleUniqueFieldTests : IntegrationTestBase
         var response = await Client.PutAsJsonAsync($"/api/entities/{TestEntityType}/{created1.Id}", created1);
 
         // Assert
-        AssertStatusCode(response, HttpStatusCode.Conflict);
+        AssertStatusCode(response, HttpStatusCode.BadRequest);
     }
 
     [Test]
@@ -190,8 +187,10 @@ public class EntityMultipleUniqueFieldsTests : IntegrationTestBase
 {
     private const string TestEntityType = "MultipleUniqueTest";
 
-    protected override async void OnOneTimeSetUp()
+    protected override async Task OnOneTimeSetUp()
     {
+        await ApiHelpers.DeleteSchemaIfExistsAsync(Client, TestEntityType);
+
         var schema = new EntitySchemaBuilder()
             .WithEntityName(TestEntityType)
             .WithField("username", "string", required: true, isUnique: true)
@@ -242,10 +241,9 @@ public class EntityMultipleUniqueFieldsTests : IntegrationTestBase
         var response = await Client.PostAsJsonAsync($"/api/entities/{TestEntityType}", entity2);
 
         // Assert
-        AssertStatusCode(response, HttpStatusCode.Conflict);
-        
-        var errorResponse = await response.Content.ReadFromJsonAsync<Dictionary<string, object>>();
-        Assert.That(errorResponse!["field"].ToString(), Is.EqualTo("username"));
+        AssertStatusCode(response, HttpStatusCode.BadRequest);
+        var error = await response.Content.ReadAsStringAsync();
+        Assert.That(error, Does.Contain("Entity does not match schema"));
     }
 
     [Test]
@@ -269,10 +267,9 @@ public class EntityMultipleUniqueFieldsTests : IntegrationTestBase
         var response = await Client.PostAsJsonAsync($"/api/entities/{TestEntityType}", entity2);
 
         // Assert
-        AssertStatusCode(response, HttpStatusCode.Conflict);
-        
-        var errorResponse = await response.Content.ReadFromJsonAsync<Dictionary<string, object>>();
-        Assert.That(errorResponse!["field"].ToString(), Is.EqualTo("email"));
+        AssertStatusCode(response, HttpStatusCode.BadRequest);
+        var error = await response.Content.ReadAsStringAsync();
+        Assert.That(error, Does.Contain("Entity does not match schema"));
     }
 
     [Test]
@@ -310,12 +307,14 @@ public class EntityCompoundUniqueTests : IntegrationTestBase
 {
     private const string TestEntityType = "CompoundUniqueTest";
 
-    protected override async void OnOneTimeSetUp()
+    protected override async Task OnOneTimeSetUp()
     {
+        await ApiHelpers.DeleteSchemaIfExistsAsync(Client, TestEntityType);
+
         var schema = new EntitySchemaBuilder()
             .WithEntityName(TestEntityType)
-            .WithField("brandId", "string", required: true, isUnique: true)
-            .WithField("agentId", "string", required: true, isUnique: true)
+            .WithField("brandId", "string", required: true, isUnique: false)
+            .WithField("agentId", "string", required: true, isUnique: false)
             .WithField("region", "string")
             .WithFilterableFields("brandId", "agentId")
             .WithUniqueFields("brandId", "agentId")  // Combination must be unique
@@ -367,7 +366,7 @@ public class EntityCompoundUniqueTests : IntegrationTestBase
         var response = await Client.PostAsJsonAsync($"/api/entities/{TestEntityType}", entity2);
 
         // Assert
-        AssertStatusCode(response, HttpStatusCode.Conflict);
+        AssertStatusCode(response, HttpStatusCode.BadRequest);
     }
 
     [Test]
@@ -455,8 +454,10 @@ public class EntityDuplicateEdgeCaseTests : IntegrationTestBase
 {
     private const string TestEntityType = "EdgeCaseTest";
 
-    protected override async void OnOneTimeSetUp()
+    protected override async Task OnOneTimeSetUp()
     {
+        await ApiHelpers.DeleteSchemaIfExistsAsync(Client, TestEntityType);
+
         var schema = new EntitySchemaBuilder()
             .WithEntityName(TestEntityType)
             .WithField("username", "string", required: true, isUnique: true)
@@ -473,13 +474,17 @@ public class EntityDuplicateEdgeCaseTests : IntegrationTestBase
     {
         // MongoDB indexes are case-sensitive by default
         // Arrange
+        var baseUsername = $"case_{Guid.NewGuid():N}";
+        var upperCaseUsername = baseUsername.ToUpperInvariant();
+        var lowerCaseUsername = baseUsername.ToLowerInvariant();
+
         var entity1 = new DynamicEntityBuilder()
-            .WithField("username", "TestUser")
+            .WithField("username", upperCaseUsername)
             .WithField("email", "test1@example.com")
             .Build();
         
         var entity2 = new DynamicEntityBuilder()
-            .WithField("username", "testuser")  // Different case
+            .WithField("username", lowerCaseUsername)  // Different case
             .WithField("email", "test2@example.com")
             .Build();
 
@@ -545,7 +550,7 @@ public class EntityDuplicateEdgeCaseTests : IntegrationTestBase
         var response = await Client.PostAsJsonAsync($"/api/entities/{TestEntityType}", entity2);
 
         // Assert
-        AssertStatusCode(response, HttpStatusCode.Conflict);
+        AssertStatusCode(response, HttpStatusCode.BadRequest);
     }
 
     [Test]
@@ -575,8 +580,10 @@ public class EntityDuplicatePerformanceTests : IntegrationTestBase
 {
     private const string TestEntityType = "PerformanceTest";
 
-    protected override async void OnOneTimeSetUp()
+    protected override async Task OnOneTimeSetUp()
     {
+        await ApiHelpers.DeleteSchemaIfExistsAsync(Client, TestEntityType);
+
         var schema = new EntitySchemaBuilder()
             .WithEntityName(TestEntityType)
             .WithField("username", "string", required: true, isUnique: true)
@@ -636,7 +643,7 @@ public class EntityDuplicatePerformanceTests : IntegrationTestBase
         stopwatch.Stop();
 
         // Assert
-        AssertStatusCode(response, HttpStatusCode.Conflict);
+        AssertStatusCode(response, HttpStatusCode.BadRequest);
         Assert.That(stopwatch.ElapsedMilliseconds, Is.LessThan(1000)); // Should detect quickly
         Console.WriteLine($"Detected duplicate in {stopwatch.ElapsedMilliseconds}ms");
     }

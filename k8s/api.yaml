@@ -6,6 +6,7 @@ metadata:
 data:
   ASPNETCORE_ENVIRONMENT: "Production"
   ASPNETCORE_URLS: "http://+:80"
+  PORT: "80"
 ---
 apiVersion: v1
 kind: Service
@@ -55,6 +56,11 @@ spec:
             configMapKeyRef:
               name: api-config
               key: ASPNETCORE_URLS
+        - name: PORT
+          valueFrom:
+            configMapKeyRef:
+              name: api-config
+              key: PORT
         - name: MongoDB__ConnectionString
           valueFrom:
             secretKeyRef:

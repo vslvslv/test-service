@@ -428,10 +428,12 @@ public class ApiKeysControllerTests
         };
         var createResponse = await _client!.PostAsJsonAsync("/api/settings/api-keys", createRequest);
         var createdKey = await createResponse.Content.ReadFromJsonAsync<ApiKey>();
-        Assert.That(createdKey?.Id, Is.Not.Null);
+        Assert.That(createdKey, Is.Not.Null);
+        Assert.That(createdKey!.Id, Is.Not.Null);
+        var keyId = createdKey.Id;
 
         // Act
-        var deleteResponse = await _client.DeleteAsync($"/api/settings/api-keys/{createdKey!.Id}");
+        var deleteResponse = await _client!.DeleteAsync($"/api/settings/api-keys/{keyId}");
 
         // Assert
         Assert.That(deleteResponse.StatusCode, Is.EqualTo(HttpStatusCode.NoContent));
@@ -440,7 +442,8 @@ public class ApiKeysControllerTests
         var getResponse = await _client.GetAsync("/api/settings/api-keys");
         var keys = await getResponse.Content.ReadFromJsonAsync<List<ApiKey>>();
         Assert.That(keys, Is.Not.Null);
-        Assert.That(keys!.Any(k => k.Id == createdKey.Id), Is.False);
+        var keysList = keys!;
+        Assert.That(keysList.Any(k => k.Id == keyId), Is.False);
     }
 
     [Test]
@@ -583,20 +586,24 @@ public class ApiKeysControllerTests
         Assert.That(createResponse.StatusCode, Is.EqualTo(HttpStatusCode.Created));
         var createdKey = await createResponse.Content.ReadFromJsonAsync<ApiKey>();
         Assert.That(createdKey, Is.Not.Null);
+        var keyToDelete = createdKey!;
 
         // Act & Assert - List
-        var listResponse = await _client.GetAsync("/api/settings/api-keys");
+        var listResponse = await _client!.GetAsync("/api/settings/api-keys");
         Assert.That(listResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var keys = await listResponse.Content.ReadFromJsonAsync<List<ApiKey>>();
-        Assert.That(keys!.Any(k => k.Name == keyName), Is.True);
+        Assert.That(keys, Is.Not.Null);
+        var keysList = keys!;
+        Assert.That(keysList.Any(k => k.Name == keyName), Is.True);
 
         // Act & Assert - Delete
-        var deleteResponse = await _client.DeleteAsync($"/api/settings/api-keys/{createdKey!.Id}");
+        var deleteResponse = await _client.DeleteAsync($"/api/settings/api-keys/{keyToDelete.Id}");
         Assert.That(deleteResponse.StatusCode, Is.EqualTo(HttpStatusCode.NoContent));
 
         // Verify deletion
         var verifyResponse = await _client.GetAsync("/api/settings/api-keys");
         var keysAfterDelete = await verifyResponse.Content.ReadFromJsonAsync<List<ApiKey>>();
+        Assert.That(keysAfterDelete, Is.Not.Null);
         Assert.That(keysAfterDelete!.Any(k => k.Name == keyName), Is.False);
     }
 

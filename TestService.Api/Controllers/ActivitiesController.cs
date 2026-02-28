@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TestService.Api.Models;
 using TestService.Api.Services;
@@ -6,6 +7,7 @@ namespace TestService.Api.Controllers;
 
 [ApiController]
 [Route("api/activities")]
+[Authorize(Policy = PermissionDefinitions.ActivityRead)]
 public class ActivitiesController : ControllerBase
 {
     private readonly IActivityService _activityService;

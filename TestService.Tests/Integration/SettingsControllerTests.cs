@@ -116,7 +116,7 @@ public class SettingsControllerTests
         Assert.That(updateResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         // Verify the update persisted
-        var getResponse = await _client.GetAsync("/api/settings");
+        var getResponse = await _client!.GetAsync("/api/settings");
         var updatedSettings = await getResponse.Content.ReadFromJsonAsync<AppSettings>();
         
         Assert.That(updatedSettings, Is.Not.Null);
@@ -148,7 +148,7 @@ public class SettingsControllerTests
         // Assert
         Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
-        var getResponse = await _client.GetAsync("/api/settings");
+        var getResponse = await _client!.GetAsync("/api/settings");
         var updatedSettings = await getResponse.Content.ReadFromJsonAsync<AppSettings>();
         
         Assert.That(updatedSettings?.DataRetention.SchemaRetentionDays, Is.Null);

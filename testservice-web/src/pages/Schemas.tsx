@@ -91,7 +91,7 @@ const Schemas: React.FC = () => {
     try {
       const result = await apiService.deleteAllSchemaEntities(schemaEntityName);
       alert(`Successfully deleted ${result.deletedCount} entities from ${schemaEntityName}`);
-      // No need to reload schemas, just show success
+      await loadSchemas();
     } catch (err) {
       alert(getErrorMessage(err));
     }

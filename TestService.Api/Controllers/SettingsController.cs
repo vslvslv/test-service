@@ -8,7 +8,7 @@ namespace TestService.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize(Roles = "Admin")]
+[Authorize]
 public class SettingsController : ControllerBase
 {
     private readonly ISettingsRepository _settingsRepository;
@@ -28,6 +28,7 @@ public class SettingsController : ControllerBase
     /// Get current application settings
     /// </summary>
     [HttpGet]
+    [Authorize(Policy = PermissionDefinitions.SettingsRead)]
     public async Task<ActionResult<AppSettings>> GetSettings()
     {
         try
@@ -46,6 +47,7 @@ public class SettingsController : ControllerBase
     /// Update application settings
     /// </summary>
     [HttpPut]
+    [Authorize(Policy = PermissionDefinitions.SettingsWrite)]
     public async Task<ActionResult<AppSettings>> UpdateSettings([FromBody] AppSettings settings)
     {
         try
@@ -73,6 +75,7 @@ public class SettingsController : ControllerBase
     /// Get all API keys
     /// </summary>
     [HttpGet("api-keys")]
+    [Authorize(Policy = PermissionDefinitions.ApiKeysRead)]
     public async Task<ActionResult<IEnumerable<ApiKey>>> GetApiKeys()
     {
         try
@@ -105,6 +108,7 @@ public class SettingsController : ControllerBase
     /// Generate a new API key
     /// </summary>
     [HttpPost("api-keys")]
+    [Authorize(Policy = PermissionDefinitions.ApiKeysCreate)]
     public async Task<ActionResult<ApiKey>> CreateApiKey([FromBody] CreateApiKeyRequest request)
     {
         try
@@ -146,6 +150,7 @@ public class SettingsController : ControllerBase
     /// Delete an API key
     /// </summary>
     [HttpDelete("api-keys/{id}")]
+    [Authorize(Policy = PermissionDefinitions.ApiKeysDelete)]
     public async Task<ActionResult> DeleteApiKey(string id)
     {
         try

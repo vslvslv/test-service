@@ -14,6 +14,7 @@ public interface IDynamicEntityRepository
     Task<DynamicEntity> CreateAsync(DynamicEntity entity);
     Task<bool> UpdateAsync(string entityType, string id, DynamicEntity entity);
     Task<bool> DeleteAsync(string entityType, string id);
+    Task<int> DeleteAllAsync(string entityType, string? environment = null);
     Task<bool> MarkAsConsumedAsync(string entityType, string id);
     Task<bool> ResetConsumedAsync(string entityType, string id);
     Task<int> ResetAllConsumedAsync(string entityType, string? environment = null);
@@ -199,6 +200,20 @@ public class DynamicEntityRepository : IDynamicEntityRepository
         {
             return false;
         }
+    }
+
+    public async Task<int> DeleteAllAsync(string entityType, string? environment = null)
+    {
+        var collection = GetCollection(entityType);
+        var filterBuilder = Builders<BsonDocument>.Filter;
+        var filters = new List<FilterDefinition<BsonDocument>>();
+        if (!string.IsNullOrEmpty(environment))
+        {
+            filters.Add(filterBuilder.Eq("environment", environment));
+        }
+        var filter = filters.Any() ? filterBuilder.And(filters) : filterBuilder.Empty;
+        var result = await collection.DeleteManyAsync(filter);
+        return (int)result.DeletedCount;
     }
 
     public async Task<bool> MarkAsConsumedAsync(string entityType, string id)
