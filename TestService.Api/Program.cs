@@ -211,6 +211,7 @@ builder.Services.AddScoped<ITestDataService, TestDataService>();
 builder.Services.AddSingleton<IEntitySchemaRepository, EntitySchemaRepository>();
 builder.Services.AddSingleton<IDynamicEntityRepository, DynamicEntityRepository>();
 builder.Services.AddScoped<IDynamicEntityService, DynamicEntityService>();
+builder.Services.AddScoped<IEntityImportExportService, EntityImportExportService>();
 
 // Register Message Bus service (shared)
 builder.Services.AddSingleton<IMessageBusService, MessageBusService>();
@@ -224,6 +225,7 @@ builder.Services.AddSingleton<ISettingsRepository, SettingsRepository>();
 // Register Mocking services
 builder.Services.AddSingleton<IMockRepository, MockRepository>();
 builder.Services.AddScoped<IMockService, MockService>();
+builder.Services.AddSingleton<IPostmanImportService, PostmanImportService>();
 
 // Register Activity services
 builder.Services.AddSingleton<IActivityRepository, ActivityRepository>();

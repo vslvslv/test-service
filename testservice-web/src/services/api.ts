@@ -3,6 +3,7 @@ import type {
   Schema,
   Environment,
   Entity,
+  EntityImportResult,
   User,
   Activity,
   ActivityListResponse,
@@ -12,7 +13,8 @@ import type {
   MockExpectation,
   MockRequestLog,
   MockVerificationRequest,
-  MockVerificationResponse
+  MockVerificationResponse,
+  PostmanImportResult
 } from '../types';
 
 // For development: use /api (proxied), for production: use env variable
@@ -152,6 +154,23 @@ class ApiService {
     return response.data;
   }
 
+  async importPostmanExpectations(file: File, targetEnvironment: string, pathPrefix?: string): Promise<PostmanImportResult> {
+    const formData = new FormData();
+    formData.append('file', file);
+    const params: Record<string, string> = { targetEnvironment };
+    if (pathPrefix) params.pathPrefix = pathPrefix;
+    const response = await this.api.post<PostmanImportResult>('/api/mocks/expectations/import/postman', formData, {
+      params,
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data;
+  }
+
+  async duplicateMockExpectation(id: string, targetEnvironment: string): Promise<MockExpectation> {
+    const response = await this.api.post<MockExpectation>(`/api/mocks/expectations/${id}/duplicate`, { targetEnvironment });
+    return response.data;
+  }
+
   // Environments
   async getEnvironments(): Promise<Environment[]> {
     const response = await this.api.get<Environment[]>('/api/environments');
@@ -224,6 +243,38 @@ class ApiService {
 
   async deleteEntity(entityType: string, id: string) {
     const response = await this.api.delete(`/api/entities/${entityType}/${id}`);
+    return response.data;
+  }
+
+  /** Export entities as CSV or JSON; returns blob for download */
+  async exportEntities(entityType: string, format: 'csv' | 'json', environment?: string): Promise<Blob> {
+    const params: Record<string, string> = { format };
+    if (environment) params.environment = environment;
+    const response = await this.api.get(`/api/entities/${entityType}/export`, {
+      params,
+      responseType: 'blob',
+    });
+    return response.data as Blob;
+  }
+
+  /** Bulk import entities from file; returns result with created/updated/skipped/errors */
+  async importEntities(
+    entityType: string,
+    file: File,
+    options: { environment?: string; mode: 'append' | 'upsert' }
+  ): Promise<EntityImportResult> {
+    const formData = new FormData();
+    formData.append('file', file);
+    const params: Record<string, string> = { mode: options.mode };
+    if (options.environment) params.environment = options.environment;
+    const response = await this.api.post<EntityImportResult>(
+      `/api/entities/${entityType}/import`,
+      formData,
+      {
+        params,
+        headers: { 'Content-Type': 'multipart/form-data' },
+      }
+    );
     return response.data;
   }
 

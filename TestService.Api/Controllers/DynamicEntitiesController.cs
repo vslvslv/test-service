@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TestService.Api.Models;
 using TestService.Api.Services;
@@ -6,22 +7,26 @@ namespace TestService.Api.Controllers;
 
 [ApiController]
 [Route("api/entities")]
+[Authorize]
 public class DynamicEntitiesController : ControllerBase
 {
     private readonly IDynamicEntityService _entityService;
     private readonly IEntitySchemaRepository _schemaRepository;
     private readonly IActivityService _activityService;
+    private readonly IEntityImportExportService _importExportService;
     private readonly ILogger<DynamicEntitiesController> _logger;
 
     public DynamicEntitiesController(
         IDynamicEntityService entityService,
         IEntitySchemaRepository schemaRepository,
         IActivityService activityService,
+        IEntityImportExportService importExportService,
         ILogger<DynamicEntitiesController> logger)
     {
         _entityService = entityService;
         _schemaRepository = schemaRepository;
         _activityService = activityService;
+        _importExportService = importExportService;
         _logger = logger;
     }
 
@@ -429,6 +434,104 @@ public class DynamicEntitiesController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error resetting all consumed entities for type: {EntityType}", entityType);
+            return StatusCode(500, "Internal server error");
+        }
+    }
+
+    /// <summary>
+    /// Export entities as JSON or CSV
+    /// </summary>
+    /// <param name="entityType">The entity type</param>
+    /// <param name="environment">Optional: Filter by environment</param>
+    /// <param name="format">csv or json (default: json)</param>
+    [HttpGet("{entityType}/export")]
+    [Authorize(Policy = PermissionDefinitions.EntitiesRead)]
+    public async Task<ActionResult> Export(
+        string entityType,
+        [FromQuery] string? environment = null,
+        [FromQuery] string format = "json")
+    {
+        try
+        {
+            if (!await _schemaRepository.SchemaExistsAsync(entityType))
+            {
+                return NotFound($"Entity type '{entityType}' not found.");
+            }
+
+            byte[] bytes;
+            string contentType;
+            string fileExtension;
+
+            if (string.Equals(format, "csv", StringComparison.OrdinalIgnoreCase))
+            {
+                bytes = await _importExportService.ExportAsCsvAsync(entityType, environment);
+                contentType = "text/csv";
+                fileExtension = "csv";
+            }
+            else
+            {
+                bytes = await _importExportService.ExportAsJsonAsync(entityType, environment);
+                contentType = "application/json";
+                fileExtension = "json";
+            }
+
+            var fileName = $"{entityType}-export.{fileExtension}";
+            return File(bytes, contentType, fileName);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error exporting entities for type: {EntityType}", entityType);
+            return StatusCode(500, "Internal server error");
+        }
+    }
+
+    /// <summary>
+    /// Bulk import entities from CSV or JSON file
+    /// </summary>
+    /// <param name="entityType">The entity type</param>
+    /// <param name="environment">Optional: Default environment for imported entities</param>
+    /// <param name="mode">append (always create) or upsert (update if unique key exists)</param>
+    [HttpPost("{entityType}/import")]
+    [Authorize(Policy = PermissionDefinitions.EntitiesWrite)]
+    public async Task<ActionResult<EntityImportResult>> Import(
+        string entityType,
+        [FromQuery] string? environment = null,
+        [FromQuery] string mode = "append",
+        IFormFile? file = null)
+    {
+        try
+        {
+            if (!await _schemaRepository.SchemaExistsAsync(entityType))
+            {
+                return NotFound($"Entity type '{entityType}' not found.");
+            }
+
+            if (file == null || file.Length == 0)
+            {
+                return BadRequest("No file uploaded.");
+            }
+
+            if (!string.Equals(mode, "append", StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(mode, "upsert", StringComparison.OrdinalIgnoreCase))
+            {
+                return BadRequest("Mode must be 'append' or 'upsert'.");
+            }
+
+            await using var stream = file.OpenReadStream();
+            var user = User?.Identity?.Name;
+            var result = await _importExportService.ImportAsync(
+                entityType,
+                stream,
+                file.FileName,
+                environment,
+                mode,
+                user);
+
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error importing entities for type: {EntityType}", entityType);
             return StatusCode(500, "Internal server error");
         }
     }

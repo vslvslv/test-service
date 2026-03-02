@@ -11,11 +11,13 @@ namespace TestService.Api.Controllers;
 public class MocksController : ControllerBase
 {
     private readonly IMockService _mockService;
+    private readonly IPostmanImportService _postmanImportService;
     private readonly ILogger<MocksController> _logger;
 
-    public MocksController(IMockService mockService, ILogger<MocksController> logger)
+    public MocksController(IMockService mockService, IPostmanImportService postmanImportService, ILogger<MocksController> logger)
     {
         _mockService = mockService;
+        _postmanImportService = postmanImportService;
         _logger = logger;
     }
 
@@ -141,6 +143,116 @@ public class MocksController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error verifying mock requests");
+            return StatusCode(500, "Internal server error");
+        }
+    }
+
+    /// <summary>
+    /// Import mock expectations from a Postman Collection v2.1 JSON file
+    /// </summary>
+    [HttpPost("expectations/import/postman")]
+    [Authorize(Policy = PermissionDefinitions.MocksWrite)]
+    public async Task<ActionResult<PostmanImportResult>> ImportPostman(
+        [FromQuery] string targetEnvironment,
+        [FromQuery] string? pathPrefix = null,
+        IFormFile? file = null)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(targetEnvironment))
+            {
+                return BadRequest("targetEnvironment is required.");
+            }
+
+            if (file == null || file.Length == 0)
+            {
+                return BadRequest("No file uploaded.");
+            }
+
+            await using var stream = file.OpenReadStream();
+            var expectations = _postmanImportService.ParseCollection(stream, targetEnvironment.Trim(), pathPrefix);
+            var result = new PostmanImportResult();
+
+            foreach (var expectation in expectations)
+            {
+                try
+                {
+                    await _mockService.CreateExpectationAsync(expectation);
+                    result.Created++;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to create expectation {Name}", expectation.Name);
+                    result.Errors.Add($"{expectation.Name}: {ex.Message}");
+                }
+            }
+
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error importing Postman collection");
+            return StatusCode(500, "Internal server error");
+        }
+    }
+
+    /// <summary>
+    /// Duplicate an existing expectation to another environment (path remains the same; mock URL will be /mock/{targetEnvironment}/...)
+    /// </summary>
+    [HttpPost("expectations/{id}/duplicate")]
+    [Authorize(Policy = PermissionDefinitions.MocksWrite)]
+    public async Task<ActionResult<MockExpectation>> DuplicateExpectation(string id, [FromBody] DuplicateExpectationRequest request)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(request.TargetEnvironment))
+            {
+                return BadRequest("TargetEnvironment is required.");
+            }
+
+            var existing = await _mockService.GetExpectationByIdAsync(id);
+            if (existing == null)
+            {
+                return NotFound();
+            }
+
+            var clone = new MockExpectation
+            {
+                Id = null,
+                Environment = request.TargetEnvironment.Trim(),
+                Name = $"{existing.Name} ({request.TargetEnvironment.Trim()})",
+                Priority = existing.Priority,
+                Enabled = existing.Enabled,
+                RequestMatcher = new MockRequestMatcher
+                {
+                    Method = existing.RequestMatcher?.Method,
+                    Path = existing.RequestMatcher?.Path ?? "/",
+                    PathMatchType = existing.RequestMatcher?.PathMatchType ?? PathMatchType.Exact,
+                    Query = existing.RequestMatcher?.Query != null ? new Dictionary<string, string>(existing.RequestMatcher.Query) : new Dictionary<string, string>(),
+                    Headers = existing.RequestMatcher?.Headers != null ? new Dictionary<string, string>(existing.RequestMatcher.Headers, StringComparer.OrdinalIgnoreCase) : new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase),
+                    Body = existing.RequestMatcher?.Body,
+                    BodyMatchType = existing.RequestMatcher?.BodyMatchType ?? BodyMatchType.Any
+                },
+                ResponseTemplate = new MockResponseTemplate
+                {
+                    Status = existing.ResponseTemplate?.Status ?? 200,
+                    Headers = existing.ResponseTemplate?.Headers != null ? new Dictionary<string, string>(existing.ResponseTemplate.Headers, StringComparer.OrdinalIgnoreCase) : new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase),
+                    Body = existing.ResponseTemplate?.Body,
+                    DelayMs = existing.ResponseTemplate?.DelayMs ?? 0
+                },
+                Times = new MockTimes
+                {
+                    Unlimited = existing.Times?.Unlimited ?? true,
+                    Remaining = existing.Times?.Remaining ?? 0
+                }
+            };
+
+            var created = await _mockService.CreateExpectationAsync(clone);
+            return Ok(created);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error duplicating expectation {Id}", id);
             return StatusCode(500, "Internal server error");
         }
     }

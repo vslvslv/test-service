@@ -177,3 +177,14 @@ public class MockExecutionResult
     public string? MatchedExpectationId { get; set; }
     public string? MatchedExpectationName { get; set; }
 }
+
+public class PostmanImportResult
+{
+    public int Created { get; set; }
+    public List<string> Errors { get; set; } = new();
+}
+
+public class DuplicateExpectationRequest
+{
+    public string TargetEnvironment { get; set; } = string.Empty;
+}
