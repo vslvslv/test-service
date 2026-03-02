@@ -176,6 +176,171 @@ const methodBadgeClass = (method?: string) => {
   }
 };
 
+function requestReceivedText(log: MockRequestLog): string {
+  const pathWithQuery = log.path + (log.queryString ? `?${log.queryString}` : '');
+  const lines: string[] = [
+    `${log.method || 'GET'} ${pathWithQuery}`,
+    '',
+    ...Object.entries(log.headers || {}).map(([k, v]) => `${k}: ${v}`),
+  ];
+  if (log.body != null && log.body !== '') {
+    lines.push('');
+    lines.push(log.body);
+  }
+  return lines.join('\n');
+}
+
+function buildCurl(log: MockRequestLog): string {
+  const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://example.com';
+  const pathWithQuery = log.path + (log.queryString ? `?${log.queryString}` : '');
+  const url = `${baseUrl}/mock/${encodeURIComponent(log.environment)}${pathWithQuery.startsWith('/') ? pathWithQuery : `/${pathWithQuery}`}`;
+  const method = log.method || 'GET';
+  const parts: string[] = ['curl'];
+  parts.push('-X', method);
+  for (const [key, value] of Object.entries(log.headers || {})) {
+    if (key.toLowerCase() === 'host') continue;
+    const headerValue = `${key}: ${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}`;
+    parts.push('-H', `"${headerValue}"`);
+  }
+  if (log.body != null && log.body !== '' && !['GET', 'HEAD'].includes(method.toUpperCase())) {
+    const escapedBody = log.body.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+    parts.push('-d', `"${escapedBody}"`);
+  }
+  const escapedUrl = url.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+  parts.push(`"${escapedUrl}"`);
+  return parts.join(' ');
+}
+
+interface RequestLogDetailSidebarProps {
+  log: MockRequestLog;
+  onClose: () => void;
+  formatTimestamp: (ts: string) => string;
+  methodBadgeClass: (method: string) => string;
+}
+
+const RequestLogDetailSidebar: React.FC<RequestLogDetailSidebarProps> = ({
+  log,
+  onClose,
+  formatTimestamp,
+  methodBadgeClass,
+}) => {
+  const [copiedKind, setCopiedKind] = useState<'request' | 'curl' | null>(null);
+
+  const handleCopyRequest = async () => {
+    try {
+      await navigator.clipboard.writeText(requestReceivedText(log));
+      setCopiedKind('request');
+      setTimeout(() => setCopiedKind(null), 2000);
+    } catch {
+      setCopiedKind(null);
+    }
+  };
+
+  const handleCopyCurl = async () => {
+    try {
+      await navigator.clipboard.writeText(buildCurl(log));
+      setCopiedKind('curl');
+      setTimeout(() => setCopiedKind(null), 2000);
+    } catch {
+      setCopiedKind(null);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/40 flex justify-end" onClick={onClose}>
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="mock-log-detail-title"
+        className="h-full w-full max-w-2xl bg-gray-900 border-l border-gray-700 flex flex-col"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex-shrink-0 flex items-center justify-between p-6 pb-4 border-b border-gray-700 bg-gray-900">
+          <h3 id="mock-log-detail-title" className="text-lg font-semibold text-white">Request Log Details</h3>
+          <button type="button" onClick={onClose} aria-label="Close request log details" className="p-2 rounded hover:bg-gray-800 text-gray-300">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+        <div className="flex-1 min-h-0 overflow-y-auto p-6 pt-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm mb-4">
+          <div className="rounded border border-gray-700 bg-gray-800 p-3">
+            <p className="text-gray-400 text-xs mb-1">Timestamp</p>
+            <p className="text-gray-100">{formatTimestamp(log.timestamp)}</p>
+          </div>
+          <div className="rounded border border-gray-700 bg-gray-800 p-3">
+            <p className="text-gray-400 text-xs mb-1">Environment</p>
+            <p className="text-gray-100">{log.environment}</p>
+          </div>
+          <div className="rounded border border-gray-700 bg-gray-800 p-3">
+            <p className="text-gray-400 text-xs mb-1">Method</p>
+            <span className={`inline-flex px-2 py-1 rounded border text-xs ${methodBadgeClass(log.method)}`}>
+              {log.method || 'ANY'}
+            </span>
+          </div>
+          <div className="rounded border border-gray-700 bg-gray-800 p-3">
+            <p className="text-gray-400 text-xs mb-1">Matched</p>
+            <span className={`inline-flex px-2 py-1 rounded text-xs border ${log.matched ? 'bg-green-500/15 text-green-300 border-green-500/30' : 'bg-amber-500/15 text-amber-300 border-amber-500/30'}`}>
+              {log.matched ? 'Matched' : 'Unmatched'}
+            </span>
+          </div>
+        </div>
+        <div className="rounded border border-gray-700 bg-gray-800 p-3 mb-3">
+          <p className="text-gray-400 text-xs mb-1">Path</p>
+          <p className="font-mono text-gray-100 break-all">{log.path}</p>
+        </div>
+        <div className="rounded border border-gray-700 bg-gray-800 p-3 mb-3">
+          <p className="text-gray-400 text-xs mb-1">Query String</p>
+          <p className="font-mono text-gray-100 break-all">{log.queryString || '-'}</p>
+        </div>
+        <div className="rounded border border-gray-700 bg-gray-800 p-3 mb-3">
+          <p className="text-gray-400 text-xs mb-1">Matched Expectation</p>
+          <p className="text-gray-100">{log.matchedExpectationName || '-'}</p>
+        </div>
+        <div className="rounded border border-gray-700 bg-gray-800 p-3 mb-3">
+          <p className="text-gray-400 text-xs mb-1">Response Status</p>
+          <p className="text-gray-100">{log.responseStatusCode}</p>
+        </div>
+
+        <div className="rounded border border-gray-700 bg-gray-800 p-3 mb-3">
+          <div className="flex items-center justify-between gap-2 mb-2">
+            <p className="text-gray-400 text-xs">Request received</p>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleCopyRequest}
+                className="inline-flex items-center gap-1.5 px-2 py-1.5 rounded bg-gray-700 hover:bg-gray-600 text-gray-200 text-xs"
+              >
+                <Copy className="w-3.5 h-3.5" />
+                {copiedKind === 'request' ? 'Copied!' : 'Copy'}
+              </button>
+              <button
+                type="button"
+                onClick={handleCopyCurl}
+                className="inline-flex items-center gap-1.5 px-2 py-1.5 rounded bg-gray-700 hover:bg-gray-600 text-gray-200 text-xs"
+              >
+                {copiedKind === 'curl' ? 'Copied!' : 'Copy as cURL'}
+              </button>
+            </div>
+          </div>
+          <pre className="text-xs text-gray-200 whitespace-pre-wrap break-all font-mono bg-gray-900 rounded p-3 overflow-x-auto max-h-48 overflow-y-auto">
+            {requestReceivedText(log)}
+          </pre>
+        </div>
+
+        <div className="rounded border border-gray-700 bg-gray-800 p-3 mb-3">
+          <p className="text-gray-400 text-xs mb-1">Headers</p>
+          <pre className="text-xs text-gray-200 overflow-x-auto">{JSON.stringify(log.headers || {}, null, 2)}</pre>
+        </div>
+        <div className="rounded border border-gray-700 bg-gray-800 p-3">
+          <p className="text-gray-400 text-xs mb-1">Body</p>
+          <pre className="text-xs text-gray-200 whitespace-pre-wrap break-words">{log.body || '-'}</pre>
+        </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const Mocks: React.FC = () => {
   const { hasPermission } = useAuth();
   const canWriteMocks = hasPermission(Permissions.MocksWrite);
@@ -1790,68 +1955,12 @@ const Mocks: React.FC = () => {
       )}
 
       {activeTab === 'logs' && selectedLog && (
-        <div className="fixed inset-0 z-50 bg-black/40 flex justify-end" onClick={() => setSelectedLog(null)}>
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="mock-log-detail-title"
-            className="h-full w-full max-w-2xl bg-gray-900 border-l border-gray-700 p-6 overflow-y-auto"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between mb-4">
-              <h3 id="mock-log-detail-title" className="text-lg font-semibold text-white">Request Log Details</h3>
-              <button type="button" onClick={() => setSelectedLog(null)} aria-label="Close request log details" className="p-2 rounded hover:bg-gray-800 text-gray-300">
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm mb-4">
-              <div className="rounded border border-gray-700 bg-gray-800 p-3">
-                <p className="text-gray-400 text-xs mb-1">Timestamp</p>
-                <p className="text-gray-100">{formatTimestamp(selectedLog.timestamp)}</p>
-              </div>
-              <div className="rounded border border-gray-700 bg-gray-800 p-3">
-                <p className="text-gray-400 text-xs mb-1">Environment</p>
-                <p className="text-gray-100">{selectedLog.environment}</p>
-              </div>
-              <div className="rounded border border-gray-700 bg-gray-800 p-3">
-                <p className="text-gray-400 text-xs mb-1">Method</p>
-                <span className={`inline-flex px-2 py-1 rounded border text-xs ${methodBadgeClass(selectedLog.method)}`}>
-                  {selectedLog.method || 'ANY'}
-                </span>
-              </div>
-              <div className="rounded border border-gray-700 bg-gray-800 p-3">
-                <p className="text-gray-400 text-xs mb-1">Matched</p>
-                <span className={`inline-flex px-2 py-1 rounded text-xs border ${selectedLog.matched ? 'bg-green-500/15 text-green-300 border-green-500/30' : 'bg-amber-500/15 text-amber-300 border-amber-500/30'}`}>
-                  {selectedLog.matched ? 'Matched' : 'Unmatched'}
-                </span>
-              </div>
-            </div>
-            <div className="rounded border border-gray-700 bg-gray-800 p-3 mb-3">
-              <p className="text-gray-400 text-xs mb-1">Path</p>
-              <p className="font-mono text-gray-100 break-all">{selectedLog.path}</p>
-            </div>
-            <div className="rounded border border-gray-700 bg-gray-800 p-3 mb-3">
-              <p className="text-gray-400 text-xs mb-1">Query String</p>
-              <p className="font-mono text-gray-100 break-all">{selectedLog.queryString || '-'}</p>
-            </div>
-            <div className="rounded border border-gray-700 bg-gray-800 p-3 mb-3">
-              <p className="text-gray-400 text-xs mb-1">Matched Expectation</p>
-              <p className="text-gray-100">{selectedLog.matchedExpectationName || '-'}</p>
-            </div>
-            <div className="rounded border border-gray-700 bg-gray-800 p-3 mb-3">
-              <p className="text-gray-400 text-xs mb-1">Response Status</p>
-              <p className="text-gray-100">{selectedLog.responseStatusCode}</p>
-            </div>
-            <div className="rounded border border-gray-700 bg-gray-800 p-3 mb-3">
-              <p className="text-gray-400 text-xs mb-1">Headers</p>
-              <pre className="text-xs text-gray-200 overflow-x-auto">{JSON.stringify(selectedLog.headers || {}, null, 2)}</pre>
-            </div>
-            <div className="rounded border border-gray-700 bg-gray-800 p-3">
-              <p className="text-gray-400 text-xs mb-1">Body</p>
-              <pre className="text-xs text-gray-200 whitespace-pre-wrap break-words">{selectedLog.body || '-'}</pre>
-            </div>
-          </div>
-        </div>
+        <RequestLogDetailSidebar
+          log={selectedLog}
+          onClose={() => setSelectedLog(null)}
+          formatTimestamp={formatTimestamp}
+          methodBadgeClass={methodBadgeClass}
+        />
       )}
 
       {showPostmanImportModal && (
