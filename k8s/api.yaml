@@ -30,7 +30,7 @@ metadata:
   name: testservice-api
   namespace: testservice
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: testservice-api
@@ -41,7 +41,7 @@ spec:
     spec:
       containers:
       - name: api
-        image: ghcr.io/YOUR_ORG/YOUR_REPO/api:latest
+        image: harbor.qa2-env01.cloudad.local/library/testservice-api:1.0.7
         imagePullPolicy: Always
         ports:
         - containerPort: 80
@@ -66,11 +66,24 @@ spec:
             secretKeyRef:
               name: mongodb-secret
               key: connection-string
-        - name: RabbitMQ__HostName
+        - name: MongoDbSettings__ConnectionString
+          valueFrom:
+            secretKeyRef:
+              name: mongodb-secret
+              key: connection-string
+        - name: JwtSettings__SecretKey
+          valueFrom:
+            secretKeyRef:
+              name: jwt-secret
+              key: secret-key
+        - name: RabbitMqSettings__HostName
           value: "rabbitmq"
-        - name: RabbitMQ__UserName
-          value: "guest"
-        - name: RabbitMQ__Password
+        - name: RabbitMqSettings__UserName
+          valueFrom:
+            secretKeyRef:
+              name: rabbitmq-secret
+              key: username
+        - name: RabbitMqSettings__Password
           valueFrom:
             secretKeyRef:
               name: rabbitmq-secret
@@ -95,4 +108,4 @@ spec:
             memory: "512Mi"
             cpu: "500m"
       imagePullSecrets:
-      - name: ghcr-secret
+      - name: harbor-registry-secret

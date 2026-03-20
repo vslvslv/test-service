@@ -208,6 +208,9 @@ public class EntityIsUniquePropertyTests : IntegrationTestBase
 
         // Assert - Should fail due to duplicate email
         AssertStatusCode(response, HttpStatusCode.BadRequest);
+        var error = await response.Content.ReadAsStringAsync();
+        Assert.That(error, Does.Contain("email"));
+        Assert.That(error, Does.Contain("must be unique"));
     }
 
     [Test]

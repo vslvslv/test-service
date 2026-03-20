@@ -1,4 +1,6 @@
 using TestService.Api.Models;
+using System.Globalization;
+using System.Text.Json;
 
 namespace TestService.Api.Services;
 
@@ -99,8 +101,9 @@ public class DynamicEntityService : IDynamicEntityService
         
         var schema = await _schemaRepository.GetSchemaByNameAsync(entityType);
         bool excludeConsumed = schema?.ExcludeOnFetch ?? false;
+        var normalizedValue = NormalizeFilterValue(schema, fieldName, value);
         
-        return await _repository.GetByFieldValueAsync(entityType, fieldName, value, excludeConsumed, environment);
+        return await _repository.GetByFieldValueAsync(entityType, fieldName, normalizedValue, excludeConsumed, environment);
     }
 
     public async Task<DynamicEntity> CreateAsync(string entityType, DynamicEntity entity)
@@ -118,10 +121,19 @@ public class DynamicEntityService : IDynamicEntityService
             }
         }
         
-        // Validate against schema
-        if (!await ValidateEntityAsync(entityType, entity))
+        var schema = await _schemaRepository.GetSchemaByNameAsync(entityType);
+        if (schema == null)
         {
-            throw new ArgumentException($"Entity does not match schema for type: {entityType}");
+            throw new ArgumentException($"Schema not found for entity type: {entityType}");
+        }
+
+        NormalizeEntityFields(entity, schema);
+
+        // Validate against schema
+        var validationResult = await ValidateEntityAsync(entityType, entity, schema);
+        if (!validationResult.IsValid)
+        {
+            throw new ArgumentException(validationResult.Message);
         }
 
         entity.EntityType = entityType;
@@ -154,10 +166,20 @@ public class DynamicEntityService : IDynamicEntityService
             }
         }
         
-        // Validate against schema
-        if (!await ValidateEntityAsync(entityType, entity))
+        var schema = await _schemaRepository.GetSchemaByNameAsync(entityType);
+        if (schema == null)
         {
-            throw new ArgumentException($"Entity does not match schema for type: {entityType}");
+            throw new ArgumentException($"Schema not found for entity type: {entityType}");
+        }
+
+        entity.Id = id;
+        NormalizeEntityFields(entity, schema);
+
+        // Validate against schema
+        var validationResult = await ValidateEntityAsync(entityType, entity, schema);
+        if (!validationResult.IsValid)
+        {
+            throw new ArgumentException(validationResult.Message);
         }
 
         // Preserve immutable runtime metadata.
@@ -220,10 +242,16 @@ public class DynamicEntityService : IDynamicEntityService
     public async Task<bool> ValidateEntityAsync(string entityType, DynamicEntity entity)
     {
         var schema = await _schemaRepository.GetSchemaByNameAsync(entityType);
+        var validationResult = await ValidateEntityAsync(entityType, entity, schema);
+        return validationResult.IsValid;
+    }
+
+    private async Task<EntityValidationResult> ValidateEntityAsync(string entityType, DynamicEntity entity, EntitySchema? schema)
+    {
         if (schema == null)
         {
             _logger.LogWarning("Schema not found for entity type: {EntityType}", entityType);
-            return false;
+            return EntityValidationResult.Fail($"Schema not found for entity type: {entityType}");
         }
 
         // Validate required fields
@@ -232,7 +260,7 @@ public class DynamicEntityService : IDynamicEntityService
             if (!entity.Fields.ContainsKey(field.Name) || entity.Fields[field.Name] == null)
             {
                 _logger.LogWarning("Required field {Field} missing for {EntityType}", field.Name, entityType);
-                return false;
+                return EntityValidationResult.Fail($"Required field '{field.Name}' is missing.");
             }
         }
 
@@ -273,7 +301,7 @@ public class DynamicEntityService : IDynamicEntityService
                         {
                             _logger.LogWarning("Duplicate value found for unique field '{Field}' in {EntityType} (environment: '{Environment}'). Value: {Value}",
                                 uniqueField, entityType, entity.Environment ?? "default", newValue);
-                            return false;
+                            return EntityValidationResult.Fail($"Field '{uniqueField}' must be unique. Value '{newValue}' already exists.");
                         }
                     }
                 }
@@ -316,11 +344,281 @@ public class DynamicEntityService : IDynamicEntityService
                     var fieldNames = string.Join(", ", compoundUniqueFields);
                     _logger.LogWarning("Duplicate entity found for {EntityType} in environment '{Environment}'. Compound unique fields ({Fields}) must be unique together.",
                         entityType, entity.Environment ?? "default", fieldNames);
-                    return false;
+                    return EntityValidationResult.Fail($"Fields [{fieldNames}] must be unique together.");
                 }
             }
         }
 
-        return true;
+        return EntityValidationResult.Success();
+    }
+
+    private static void NormalizeEntityFields(DynamicEntity entity, EntitySchema schema)
+    {
+        foreach (var field in schema.Fields)
+        {
+            if (!entity.Fields.TryGetValue(field.Name, out var rawValue))
+            {
+                continue;
+            }
+
+            entity.Fields[field.Name] = NormalizeFieldValue(field, rawValue);
+        }
+    }
+
+    private static object NormalizeFilterValue(EntitySchema? schema, string fieldName, object value)
+    {
+        if (schema == null)
+        {
+            return value;
+        }
+
+        var field = schema.Fields.FirstOrDefault(f => string.Equals(f.Name, fieldName, StringComparison.Ordinal));
+        if (field == null)
+        {
+            return value;
+        }
+
+        return NormalizeFieldValue(field, value) ?? value;
+    }
+
+    private sealed class EntityValidationResult
+    {
+        public bool IsValid { get; init; }
+        public string? Message { get; init; }
+
+        public static EntityValidationResult Success() => new() { IsValid = true };
+        public static EntityValidationResult Fail(string message) => new() { IsValid = false, Message = message };
+    }
+
+    private static object? NormalizeFieldValue(FieldDefinition field, object? rawValue)
+    {
+        if (rawValue == null)
+        {
+            return null;
+        }
+
+        return field.Type.ToLowerInvariant() switch
+        {
+            "string" => NormalizeStringValue(rawValue),
+            "number" => NormalizeNumberValue(field.Name, rawValue),
+            "boolean" => NormalizeBooleanValue(field.Name, rawValue),
+            "date" => NormalizeDateTimeValue(field.Name, rawValue),
+            "datetime" => NormalizeDateTimeValue(field.Name, rawValue),
+            "array" => NormalizeStructuredValue(field.Name, rawValue, JsonValueKind.Array),
+            "object" => NormalizeStructuredValue(field.Name, rawValue, JsonValueKind.Object),
+            _ => rawValue
+        };
+    }
+
+    private static string? NormalizeStringValue(object rawValue)
+    {
+        if (rawValue is JsonElement element)
+        {
+            return element.ValueKind switch
+            {
+                JsonValueKind.Null => null,
+                JsonValueKind.String => element.GetString(),
+                _ => element.ToString()
+            };
+        }
+
+        return rawValue.ToString();
+    }
+
+    private static object? NormalizeNumberValue(string fieldName, object rawValue)
+    {
+        if (rawValue is JsonElement element)
+        {
+            if (element.ValueKind == JsonValueKind.Null)
+            {
+                return null;
+            }
+
+            if (element.ValueKind == JsonValueKind.Number)
+            {
+                return element.TryGetInt64(out var longValue)
+                    ? longValue
+                    : element.GetDecimal();
+            }
+
+            if (element.ValueKind == JsonValueKind.String)
+            {
+                return ParseNumber(fieldName, element.GetString());
+            }
+        }
+
+        if (rawValue is string stringValue)
+        {
+            return ParseNumber(fieldName, stringValue);
+        }
+
+        if (rawValue is sbyte or byte or short or ushort or int or uint or long or ulong or float or double or decimal)
+        {
+            return rawValue;
+        }
+
+        throw new ArgumentException($"Field '{fieldName}' must be a number.");
+    }
+
+    private static object? ParseNumber(string fieldName, string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return null;
+        }
+
+        if (long.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var longValue))
+        {
+            return longValue;
+        }
+
+        if (decimal.TryParse(value, NumberStyles.Number, CultureInfo.InvariantCulture, out var decimalValue))
+        {
+            return decimalValue;
+        }
+
+        throw new ArgumentException($"Field '{fieldName}' must be a valid number.");
+    }
+
+    private static object? NormalizeBooleanValue(string fieldName, object rawValue)
+    {
+        if (rawValue is JsonElement element)
+        {
+            if (element.ValueKind == JsonValueKind.Null)
+            {
+                return null;
+            }
+
+            if (element.ValueKind is JsonValueKind.True or JsonValueKind.False)
+            {
+                return element.GetBoolean();
+            }
+
+            if (element.ValueKind == JsonValueKind.String)
+            {
+                if (string.IsNullOrWhiteSpace(element.GetString()))
+                {
+                    return null;
+                }
+
+                return ParseBoolean(fieldName, element.GetString());
+            }
+        }
+
+        if (rawValue is bool boolValue)
+        {
+            return boolValue;
+        }
+
+        if (rawValue is string stringValue)
+        {
+            if (string.IsNullOrWhiteSpace(stringValue))
+            {
+                return null;
+            }
+
+            return ParseBoolean(fieldName, stringValue);
+        }
+
+        throw new ArgumentException($"Field '{fieldName}' must be a boolean.");
+    }
+
+    private static bool ParseBoolean(string fieldName, string? value)
+    {
+        if (bool.TryParse(value, out var boolValue))
+        {
+            return boolValue;
+        }
+
+        throw new ArgumentException($"Field '{fieldName}' must be 'true' or 'false'.");
+    }
+
+    private static object? NormalizeDateTimeValue(string fieldName, object rawValue)
+    {
+        if (rawValue is JsonElement element)
+        {
+            if (element.ValueKind == JsonValueKind.Null)
+            {
+                return null;
+            }
+
+            if (element.ValueKind == JsonValueKind.String)
+            {
+                if (string.IsNullOrWhiteSpace(element.GetString()))
+                {
+                    return null;
+                }
+
+                return ParseDateTime(fieldName, element.GetString());
+            }
+        }
+
+        if (rawValue is DateTime dateTime)
+        {
+            return dateTime;
+        }
+
+        if (rawValue is string stringValue)
+        {
+            if (string.IsNullOrWhiteSpace(stringValue))
+            {
+                return null;
+            }
+
+            return ParseDateTime(fieldName, stringValue);
+        }
+
+        throw new ArgumentException($"Field '{fieldName}' must be a valid date.");
+    }
+
+    private static DateTime ParseDateTime(string fieldName, string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            throw new ArgumentException($"Field '{fieldName}' must be a valid date.");
+        }
+
+        if (DateTime.TryParse(value, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var parsed))
+        {
+            return parsed;
+        }
+
+        throw new ArgumentException($"Field '{fieldName}' must be a valid date.");
+    }
+
+    private static object? NormalizeStructuredValue(string fieldName, object rawValue, JsonValueKind expectedKind)
+    {
+        if (rawValue is JsonElement element)
+        {
+            if (element.ValueKind == JsonValueKind.Null)
+            {
+                return null;
+            }
+
+            if (element.ValueKind != expectedKind)
+            {
+                throw new ArgumentException($"Field '{fieldName}' must be a valid {expectedKind.ToString().ToLowerInvariant()}.");
+            }
+
+            return rawValue;
+        }
+
+        if (rawValue is string stringValue)
+        {
+            if (string.IsNullOrWhiteSpace(stringValue))
+            {
+                return null;
+            }
+
+            using var document = JsonDocument.Parse(stringValue);
+            if (document.RootElement.ValueKind != expectedKind)
+            {
+                throw new ArgumentException($"Field '{fieldName}' must be a valid {expectedKind.ToString().ToLowerInvariant()}.");
+            }
+
+            return JsonSerializer.Deserialize<object>(document.RootElement.GetRawText());
+        }
+
+        return rawValue;
     }
 }

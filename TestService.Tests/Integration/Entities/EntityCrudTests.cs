@@ -51,6 +51,24 @@ public class EntityCreationPositiveTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task CreateEntity_WithSchemaTypedStringInputs_PreservesSchemaTypes()
+    {
+        var entity = new DynamicEntityBuilder()
+            .WithField("name", 12345)
+            .WithField("value", "100.5")
+            .Build();
+
+        var response = await Client.PostAsJsonAsync($"/api/entities/{TestEntityType}", entity);
+
+        AssertStatusCode(response, HttpStatusCode.Created);
+
+        var created = await response.Content.ReadFromJsonAsync<DynamicEntity>();
+        Assert.That(created, Is.Not.Null);
+        Assert.That(GetFieldString(created!, "name"), Is.EqualTo("12345"));
+        Assert.That(GetFieldValue<decimal>(created, "value"), Is.EqualTo(100.5m));
+    }
+
+    [Test]
     public async Task CreateEntity_WithOnlyRequiredFields_ReturnsCreated()
     {
         // Arrange
