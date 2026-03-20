@@ -1,7 +1,8 @@
 import { useEffect, useState, useCallback } from 'react';
 import * as signalR from '@microsoft/signalr';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? (import.meta.env.DEV ? 'http://localhost:5000' : '/testservice');
+const HUB_URL = `${API_BASE_URL.replace(/\/$/, '')}/notificationHub`;
 
 export function useSignalR<T = any>(
   onMessage: (data: T) => void,
@@ -19,7 +20,7 @@ export function useSignalR<T = any>(
 
     // Create SignalR connection
     const newConnection = new signalR.HubConnectionBuilder()
-      .withUrl(`${API_BASE_URL}/notificationHub`, {
+      .withUrl(HUB_URL, {
         accessTokenFactory: () => token,
       })
       .withAutomaticReconnect()

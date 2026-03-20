@@ -15,8 +15,8 @@ import type {
   MockVerificationResponse
 } from '../types';
 
-// For development: use /api (proxied), for production: use env variable
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? '/api' : '/testservice');
+// For development: use /api (proxied). For production: use env or relative path so same host is used (no localhost).
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? (import.meta.env.DEV ? '/api' : '/testservice');
 
 // Log API configuration for debugging
 if (typeof window !== 'undefined') {

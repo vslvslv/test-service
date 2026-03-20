@@ -4,41 +4,24 @@ metadata:
   name: testservice-ingress
   namespace: testservice
   annotations:
-    nginx.ingress.kubernetes.io/rewrite-target: /$2
-    nginx.ingress.kubernetes.io/use-regex: "true"
-    nginx.ingress.kubernetes.io/ssl-redirect: "true"
     cert-manager.io/cluster-issuer: "letsencrypt-prod"
 spec:
-  ingressClassName: nginx
+  ingressClassName: traefik
   tls:
   - hosts:
-    - your-domain.com
+    - qa2-env01.cloudad.local
     secretName: testservice-tls
   rules:
-  - host: your-domain.com
+  - host: qa2-env01.cloudad.local
     http:
       paths:
-      # Web UI
-      - path: /testservice/ui(/|$)(.*)
-        pathType: ImplementationSpecific
-        backend:
-          service:
-            name: web
-            port:
-              number: 80
-      # API
-      - path: /testservice/api(/|$)(.*)
-        pathType: ImplementationSpecific
-        backend:
-          service:
-            name: api
-            port:
-              number: 80
-      # SignalR Hub
-      - path: /testservice/notificationHub
+      # Route all /testservice traffic to the web UI/nginx pod.
+      # The web container's nginx.conf handles /testservice/ui, /testservice/api,
+      # and /testservice/notificationHub (including rewrites and proxying to the API service).
+      - path: /testservice
         pathType: Prefix
         backend:
           service:
-            name: api
+            name: web
             port:
               number: 80

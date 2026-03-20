@@ -1,0 +1,81 @@
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: testservice
+  namespace: testservice
+  labels:
+    app: testservice
+spec:
+  entryPoints:
+    - web
+  routes:
+    # Static assets (built SPA)
+    - kind: Rule
+      match: Host(`qa2-env01.cloudad.local`) && PathPrefix(`/assets`)
+      priority: 150
+      services:
+        - name: web
+          port: 80
+
+    # Web UI under /testservice/ui
+    - kind: Rule
+      match: Host(`qa2-env01.cloudad.local`) && PathPrefix(`/testservice/ui`)
+      middlewares:
+        - name: testservice-ui-strip-prefix
+      priority: 140
+      services:
+        - name: web
+          port: 80
+
+    # API under /testservice/api -> /api on backend
+    - kind: Rule
+      match: Host(`qa2-env01.cloudad.local`) && PathPrefix(`/testservice/api`)
+      middlewares:
+        - name: testservice-strip-prefix
+      priority: 130
+      services:
+        - name: api
+          port: 80
+
+    # Health endpoint (if needed separately)
+    - kind: Rule
+      match: Host(`qa2-env01.cloudad.local`) && PathPrefix(`/testservice/health`)
+      middlewares:
+        - name: testservice-strip-prefix
+      priority: 130
+      services:
+        - name: api
+          port: 80
+
+    # SignalR hub with websocket transport
+    - kind: Rule
+      match: Host(`qa2-env01.cloudad.local`) && PathPrefix(`/testservice/notificationHub`)
+      middlewares:
+        - name: testservice-strip-prefix
+        - name: testservice-signalr-add-api-prefix
+      priority: 130
+      services:
+        - name: api
+          port: 80
+          serversTransport: testservice-websocket-transport
+
+    # Mock runtime endpoints under /testservice/mock -> /mock on backend
+    - kind: Rule
+      match: Host(`qa2-env01.cloudad.local`) && PathPrefix(`/testservice/mock`)
+      middlewares:
+        - name: testservice-strip-prefix
+      priority: 130
+      services:
+        - name: api
+          port: 80
+
+    # Fallback: /testservice and subpaths to web (SPA)
+    - kind: Rule
+      match: Host(`qa2-env01.cloudad.local`) && (Path(`/testservice`) || PathPrefix(`/testservice/`))
+      middlewares:
+        - name: testservice-strip-prefix
+      priority: 10
+      services:
+        - name: web
+          port: 80
+

@@ -65,6 +65,10 @@ cd testservice-web && npm install && npm run dev
 
 # Azure Container Registry
 ./build-and-publish.ps1 -Registry "yourregistry.azurecr.io" -Tag "v1.0.0" -Push
+
+# Harbor (Linux amd64; UI image as testservice-ui)
+# See documents/HARBOR_BUILD_DEPLOY.md for full steps.
+# ./build-and-publish.sh -r harbor.qa2-env01.cloudad.local/library --web-image-name testservice-ui -t 1.0.1 --platform linux/amd64 -p
 ```
 
 ### Deploy from Published Images

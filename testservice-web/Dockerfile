@@ -1,13 +1,18 @@
+# API base path: relative so same host as page (override with --build-arg for local Docker).
 # Build stage
 FROM node:20-alpine AS build
 WORKDIR /app
 
-# API base URL for the SPA (passed at build time for Docker)
-ARG VITE_API_BASE_URL=http://localhost:5000
+# Override with --build-arg VITE_API_BASE_URL=http://localhost:5000 for local Docker.
+ARG VITE_API_BASE_URL=/testservice
 ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
 
-# Base path for the SPA: / for Docker (serve at root), omit for other builds
-ARG VITE_BASE_PATH=/
+# Base path for the SPA. Default to '/testservice/ui/' so BrowserRouter
+# generates URLs like /testservice/ui/login instead of /login, which
+# prevents 404s on refresh behind the /testservice/ui ingress path.
+# For Docker/root hosting, override with:
+#   --build-arg VITE_BASE_PATH=/
+ARG VITE_BASE_PATH=/testservice/ui/
 ENV VITE_BASE_PATH=$VITE_BASE_PATH
 
 # Copy package files

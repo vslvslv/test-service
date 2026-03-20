@@ -45,6 +45,10 @@ while [[ $# -gt 0 ]]; do
             PLATFORM="$2"
             shift 2
             ;;
+        --web-image-name)
+            WEB_IMAGE_NAME="$2"
+            shift 2
+            ;;
         -h|--help)
             echo "Usage: ./build-and-publish.sh [OPTIONS]"
             echo ""
@@ -54,12 +58,14 @@ while [[ $# -gt 0 ]]; do
             echo "  -p, --push               Push images to registry"
             echo "  --no-build               Skip building, only push"
             echo "  --platform PLATFORM      Target platform (default: linux/amd64,linux/arm64)"
+            echo "  --web-image-name NAME   Registry name for web image (default: testservice-web, use testservice-ui for Harbor)"
             echo "  -h, --help               Show this help message"
             echo ""
             echo "Examples:"
             echo "  ./build-and-publish.sh"
             echo "  ./build-and-publish.sh -r docker.io/myusername -t v1.0.0 -p"
             echo "  ./build-and-publish.sh -r ghcr.io/myorg -p"
+            echo "  ./build-and-publish.sh -r harbor.qa2-env01.cloudad.local/library --web-image-name testservice-ui -t 1.0.1 --platform linux/amd64 -p"
             exit 0
             ;;
         *)
@@ -198,8 +204,8 @@ echo ""
 
 if [ "$NO_BUILD" = false ]; then
     echo -e "${YELLOW}Built images:${NC}"
-    echo -e "  ${WHITE}• $API_FULL_NAME${NC}"
-    echo -e "  ${WHITE}• $WEB_FULL_NAME${NC}"
+    echo -e "  ${WHITE}ï¿½ $API_FULL_NAME${NC}"
+    echo -e "  ${WHITE}ï¿½ $WEB_FULL_NAME${NC}"
     echo ""
 fi
 
