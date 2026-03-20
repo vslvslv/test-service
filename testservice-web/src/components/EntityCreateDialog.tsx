@@ -60,6 +60,26 @@ const EntityCreateDialog: React.FC<EntityCreateDialogProps> = ({
 
   if (!isOpen || !schema) return null;
 
+  const coerceFieldValue = (field: any, rawValue: string) => {
+    if (rawValue === '') {
+      return '';
+    }
+
+    switch (field.type) {
+      case 'number': {
+        const parsed = Number(rawValue);
+        return Number.isNaN(parsed) ? rawValue : parsed;
+      }
+      case 'boolean':
+        return rawValue === 'true';
+      case 'date':
+      case 'datetime':
+        return rawValue;
+      default:
+        return rawValue;
+    }
+  };
+
   const handleFieldChange = (fieldName: string, value: any) => {
     setFormData(prev => ({
       ...prev,
@@ -265,7 +285,7 @@ const EntityCreateDialog: React.FC<EntityCreateDialogProps> = ({
           <input
             type={inputType}
             value={value}
-            onChange={(e) => handleFieldChange(field.name, e.target.value)}
+            onChange={(e) => handleFieldChange(field.name, coerceFieldValue(field, e.target.value))}
             placeholder={field.defaultValue ? `Default: ${field.defaultValue}` : `Enter ${field.name}`}
             className={`w-full px-3 py-2 bg-gray-700 border ${
               hasError ? 'border-red-500' : 'border-gray-600'

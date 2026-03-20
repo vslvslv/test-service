@@ -12,6 +12,9 @@ k8s/*.bak
 .env.local
 .env.production
 
+# Database backups (local dumps)
+backups/
+
 # kubeconfig files
 kubeconfig
 *.kubeconfig

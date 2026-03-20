@@ -1,0 +1,8 @@
+# BuildKit config so the buildx builder (docker-container driver) can push to
+# Harbor when its TLS cert is not in the builder's CA store (e.g. corporate CA).
+# Used by build-and-push-harbor.sh when creating the testservice-builder.
+#
+# Ref: https://github.com/moby/buildkit/blob/master/docs/buildkitd.toml.md
+
+[registry."harbor.qa2-env01.cloudad.local"]
+  insecure = true
