@@ -146,35 +146,56 @@ const Environments: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-            <Server className="w-8 h-8" />
-            Environments
-          </h1>
-          <p className="text-gray-400 mt-1">Manage test environment configurations</p>
+    <div className="app-page">
+      <section className="page-hero">
+        <div className="grid gap-5 xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.9fr)]">
+          <div className="space-y-4">
+            <p className="eyebrow">Environment Registry</p>
+            <div className="flex items-start gap-4">
+              <div className="page-hero-icon">
+                <Server className="h-7 w-7 text-blue-300" />
+              </div>
+              <div>
+                <h1 className="text-3xl font-semibold tracking-tight text-white">Environments</h1>
+                <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-300">
+                  Manage environment definitions, update display metadata, and keep runtime targets organized.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="panel p-5">
+            <p className="eyebrow">Environment Snapshot</p>
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <div className="stat-card">
+                <p className="text-sm text-slate-400">Total</p>
+                <p className="mt-2 text-3xl font-semibold text-white">{environments.length}</p>
+                <p className="mt-2 text-xs text-slate-500">registered environments</p>
+              </div>
+              <div className="stat-card">
+                <p className="text-sm text-slate-400">Visible</p>
+                <p className="mt-2 text-3xl font-semibold text-white">{filteredEnvironments.length}</p>
+                <p className="mt-2 text-xs text-slate-500">matching the current search</p>
+              </div>
+            </div>
+            <button onClick={() => setShowCreateModal(true)} className="button-primary mt-5 w-full">
+              <Plus className="h-4 w-4" />
+              Create Environment
+            </button>
+          </div>
         </div>
-        <button
-          onClick={() => setShowCreateModal(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium"
-        >
-          <Plus className="w-5 h-5" />
-          Create Environment
-        </button>
-      </div>
+      </section>
 
       {/* Error Message */}
       {error && (
-        <div className="p-4 bg-red-500/10 border border-red-500/50 rounded-lg flex items-center gap-2 text-red-400">
+        <div className="flex items-center gap-2 rounded-2xl border border-red-500/40 bg-red-500/10 p-4 text-red-300">
           <AlertCircle className="w-5 h-5 flex-shrink-0" />
           <span>{error}</span>
         </div>
       )}
 
       {/* Search Bar */}
-      <div className="bg-gray-800 rounded-lg border border-gray-700 p-4">
+      <div className="panel p-4">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-500" />
           <input
@@ -182,20 +203,8 @@ const Environments: React.FC = () => {
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             placeholder="Search environments..."
-            className="w-full pl-10 pr-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="field-shell w-full pl-10 pr-4"
           />
-        </div>
-      </div>
-
-      {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="bg-gray-800 rounded-lg border border-gray-700 p-4">
-          <p className="text-gray-400 text-sm">Total Environments</p>
-          <p className="text-2xl font-bold text-white mt-1">{environments.length}</p>
-        </div>
-        <div className="bg-gray-800 rounded-lg border border-gray-700 p-4">
-          <p className="text-gray-400 text-sm">Search Results</p>
-          <p className="text-2xl font-bold text-white mt-1">{filteredEnvironments.length}</p>
         </div>
       </div>
 
@@ -205,7 +214,7 @@ const Environments: React.FC = () => {
           filteredEnvironments.map((env) => (
             <div
               key={env.id}
-              className="bg-gray-800 rounded-lg border border-gray-700 p-6 hover:border-gray-600 transition-colors"
+              className="panel p-6 transition-colors hover:border-slate-600"
             >
               <div className="flex items-start justify-between mb-4">
                 <div className="p-3 bg-green-500/10 rounded-lg border border-green-500/20">
@@ -214,17 +223,17 @@ const Environments: React.FC = () => {
                 <div className="flex gap-2">
                   <button
                     onClick={() => handleEditClick(env)}
-                    className="p-2 hover:bg-gray-700 rounded-lg transition-colors"
+                    className="rounded-xl p-2 hover:bg-slate-800 transition-colors"
                     title="Edit"
                   >
-                    <Edit className="w-4 h-4 text-gray-400 hover:text-white" />
+                    <Edit className="w-4 h-4 text-slate-400 hover:text-white" />
                   </button>
                   <button
                     onClick={() => handleDelete(env.id, env.displayName || env.name)}
-                    className="p-2 hover:bg-red-500/10 rounded-lg transition-colors"
+                    className="rounded-xl p-2 hover:bg-red-500/10 transition-colors"
                     title="Delete"
                   >
-                    <Trash2 className="w-4 h-4 text-gray-400 hover:text-red-400" />
+                    <Trash2 className="w-4 h-4 text-slate-400 hover:text-red-400" />
                   </button>
                 </div>
               </div>
@@ -232,10 +241,10 @@ const Environments: React.FC = () => {
                 {env.displayName || env.name}
               </h3>
               {env.description && (
-                <p className="text-sm text-gray-400">{env.description}</p>
+                <p className="text-sm text-slate-400">{env.description}</p>
               )}
               {env.url && (
-                <p className="text-xs text-gray-500 mt-2 flex items-center gap-1">
+                <p className="mt-2 flex items-center gap-1 text-xs text-slate-500">
                   <Globe className="w-3 h-3" />
                   {env.url}
                 </p>
@@ -243,7 +252,7 @@ const Environments: React.FC = () => {
             </div>
           ))
         ) : (
-          <div className="col-span-full text-center py-12 text-gray-500">
+          <div className="col-span-full panel py-12 text-center text-slate-500">
             <Server className="w-16 h-16 mx-auto mb-4 opacity-50" />
             <h3 className="text-lg font-medium text-gray-400 mb-2">
               {searchTerm ? 'No environments found' : 'No environments yet'}
@@ -256,7 +265,7 @@ const Environments: React.FC = () => {
             {!searchTerm && (
               <button
                 onClick={() => setShowCreateModal(true)}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium"
+                className="button-primary"
               >
                 <Plus className="w-5 h-5" />
                 Create Environment
@@ -268,44 +277,44 @@ const Environments: React.FC = () => {
 
       {/* Edit Modal */}
       {showEditModal && editingEnvironment && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-gray-800 rounded-lg border border-gray-700 w-full max-w-md">
-            <div className="p-6 border-b border-gray-700">
+        <div className="modal-backdrop">
+          <div className="modal-shell max-w-md">
+            <div className="border-b border-slate-800 p-6">
               <h2 className="text-xl font-semibold text-white">Edit Environment</h2>
             </div>
             <form onSubmit={handleUpdateEnvironment} className="p-6 space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-slate-300 mb-2">
                   Name
                 </label>
                 <input
                   type="text"
                   value={editingEnvironment.name}
                   readOnly
-                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-gray-400 cursor-not-allowed"
+                  className="field-shell cursor-not-allowed text-slate-400"
                 />
-                <p className="text-xs text-gray-500 mt-1">Environment name cannot be changed</p>
+                <p className="text-xs text-slate-500 mt-1">Environment name cannot be changed</p>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-slate-300 mb-2">
                   Display Name
                 </label>
                 <input
                   type="text"
                   value={editDisplayName}
                   onChange={(e) => setEditDisplayName(e.target.value)}
-                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="field-shell"
                   placeholder="e.g., Development, Staging"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-slate-300 mb-2">
                   Description (Optional)
                 </label>
                 <textarea
                   value={editDescription}
                   onChange={(e) => setEditDescription(e.target.value)}
-                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                  className="field-shell resize-none"
                   placeholder="Brief description of this environment"
                   rows={3}
                 />
@@ -314,14 +323,14 @@ const Environments: React.FC = () => {
                 <button
                   type="button"
                   onClick={handleCloseEditModal}
-                  className="flex-1 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors"
+                  className="button-secondary flex-1 rounded-xl"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isUpdating}
-                  className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="button-primary flex-1 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isUpdating ? 'Saving...' : 'Save'}
                 </button>
@@ -333,33 +342,33 @@ const Environments: React.FC = () => {
 
       {/* Create Modal */}
       {showCreateModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-gray-800 rounded-lg border border-gray-700 w-full max-w-md">
-            <div className="p-6 border-b border-gray-700">
+        <div className="modal-backdrop">
+          <div className="modal-shell max-w-md">
+            <div className="border-b border-slate-800 p-6">
               <h2 className="text-xl font-semibold text-white">Create New Environment</h2>
             </div>
             <form onSubmit={handleCreateEnvironment} className="p-6 space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-slate-300 mb-2">
                   Environment Name *
                 </label>
                 <input
                   type="text"
                   value={newEnvName}
                   onChange={(e) => setNewEnvName(e.target.value)}
-                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="field-shell"
                   placeholder="e.g., dev, staging, production"
                   required
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-slate-300 mb-2">
                   Description (Optional)
                 </label>
                 <textarea
                   value={newEnvDescription}
                   onChange={(e) => setNewEnvDescription(e.target.value)}
-                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                  className="field-shell resize-none"
                   placeholder="Brief description of this environment"
                   rows={3}
                 />
@@ -373,14 +382,14 @@ const Environments: React.FC = () => {
                     setNewEnvDescription('');
                     setError('');
                   }}
-                  className="flex-1 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors"
+                  className="button-secondary flex-1 rounded-xl"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isCreating}
-                  className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="button-primary flex-1 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isCreating ? 'Creating...' : 'Create'}
                 </button>

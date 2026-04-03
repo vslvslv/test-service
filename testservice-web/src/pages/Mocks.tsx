@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Plus, Pencil, Trash2, RefreshCw, ToggleLeft, ToggleRight, Boxes, X, Copy, Upload, CopyPlus } from 'lucide-react';
+import { Plus, Pencil, Trash2, RefreshCw, ToggleLeft, ToggleRight, Boxes, X, Copy } from 'lucide-react';
 import { apiService } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import type { Environment, MockExpectation, MockRequestLog, MockVerificationRequest, MockVerificationResponse } from '../types';
@@ -176,171 +176,6 @@ const methodBadgeClass = (method?: string) => {
   }
 };
 
-function requestReceivedText(log: MockRequestLog): string {
-  const pathWithQuery = log.path + (log.queryString ? `?${log.queryString}` : '');
-  const lines: string[] = [
-    `${log.method || 'GET'} ${pathWithQuery}`,
-    '',
-    ...Object.entries(log.headers || {}).map(([k, v]) => `${k}: ${v}`),
-  ];
-  if (log.body != null && log.body !== '') {
-    lines.push('');
-    lines.push(log.body);
-  }
-  return lines.join('\n');
-}
-
-function buildCurl(log: MockRequestLog): string {
-  const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://example.com';
-  const pathWithQuery = log.path + (log.queryString ? `?${log.queryString}` : '');
-  const url = `${baseUrl}/mock/${encodeURIComponent(log.environment)}${pathWithQuery.startsWith('/') ? pathWithQuery : `/${pathWithQuery}`}`;
-  const method = log.method || 'GET';
-  const parts: string[] = ['curl'];
-  parts.push('-X', method);
-  for (const [key, value] of Object.entries(log.headers || {})) {
-    if (key.toLowerCase() === 'host') continue;
-    const headerValue = `${key}: ${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}`;
-    parts.push('-H', `"${headerValue}"`);
-  }
-  if (log.body != null && log.body !== '' && !['GET', 'HEAD'].includes(method.toUpperCase())) {
-    const escapedBody = log.body.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
-    parts.push('-d', `"${escapedBody}"`);
-  }
-  const escapedUrl = url.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
-  parts.push(`"${escapedUrl}"`);
-  return parts.join(' ');
-}
-
-interface RequestLogDetailSidebarProps {
-  log: MockRequestLog;
-  onClose: () => void;
-  formatTimestamp: (ts: string) => string;
-  methodBadgeClass: (method: string) => string;
-}
-
-const RequestLogDetailSidebar: React.FC<RequestLogDetailSidebarProps> = ({
-  log,
-  onClose,
-  formatTimestamp,
-  methodBadgeClass,
-}) => {
-  const [copiedKind, setCopiedKind] = useState<'request' | 'curl' | null>(null);
-
-  const handleCopyRequest = async () => {
-    try {
-      await navigator.clipboard.writeText(requestReceivedText(log));
-      setCopiedKind('request');
-      setTimeout(() => setCopiedKind(null), 2000);
-    } catch {
-      setCopiedKind(null);
-    }
-  };
-
-  const handleCopyCurl = async () => {
-    try {
-      await navigator.clipboard.writeText(buildCurl(log));
-      setCopiedKind('curl');
-      setTimeout(() => setCopiedKind(null), 2000);
-    } catch {
-      setCopiedKind(null);
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 bg-black/40 flex justify-end" onClick={onClose}>
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="mock-log-detail-title"
-        className="h-full w-full max-w-2xl bg-gray-900 border-l border-gray-700 flex flex-col"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex-shrink-0 flex items-center justify-between p-6 pb-4 border-b border-gray-700 bg-gray-900">
-          <h3 id="mock-log-detail-title" className="text-lg font-semibold text-white">Request Log Details</h3>
-          <button type="button" onClick={onClose} aria-label="Close request log details" className="p-2 rounded hover:bg-gray-800 text-gray-300">
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-        <div className="flex-1 min-h-0 overflow-y-auto p-6 pt-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm mb-4">
-          <div className="rounded border border-gray-700 bg-gray-800 p-3">
-            <p className="text-gray-400 text-xs mb-1">Timestamp</p>
-            <p className="text-gray-100">{formatTimestamp(log.timestamp)}</p>
-          </div>
-          <div className="rounded border border-gray-700 bg-gray-800 p-3">
-            <p className="text-gray-400 text-xs mb-1">Environment</p>
-            <p className="text-gray-100">{log.environment}</p>
-          </div>
-          <div className="rounded border border-gray-700 bg-gray-800 p-3">
-            <p className="text-gray-400 text-xs mb-1">Method</p>
-            <span className={`inline-flex px-2 py-1 rounded border text-xs ${methodBadgeClass(log.method)}`}>
-              {log.method || 'ANY'}
-            </span>
-          </div>
-          <div className="rounded border border-gray-700 bg-gray-800 p-3">
-            <p className="text-gray-400 text-xs mb-1">Matched</p>
-            <span className={`inline-flex px-2 py-1 rounded text-xs border ${log.matched ? 'bg-green-500/15 text-green-300 border-green-500/30' : 'bg-amber-500/15 text-amber-300 border-amber-500/30'}`}>
-              {log.matched ? 'Matched' : 'Unmatched'}
-            </span>
-          </div>
-        </div>
-        <div className="rounded border border-gray-700 bg-gray-800 p-3 mb-3">
-          <p className="text-gray-400 text-xs mb-1">Path</p>
-          <p className="font-mono text-gray-100 break-all">{log.path}</p>
-        </div>
-        <div className="rounded border border-gray-700 bg-gray-800 p-3 mb-3">
-          <p className="text-gray-400 text-xs mb-1">Query String</p>
-          <p className="font-mono text-gray-100 break-all">{log.queryString || '-'}</p>
-        </div>
-        <div className="rounded border border-gray-700 bg-gray-800 p-3 mb-3">
-          <p className="text-gray-400 text-xs mb-1">Matched Expectation</p>
-          <p className="text-gray-100">{log.matchedExpectationName || '-'}</p>
-        </div>
-        <div className="rounded border border-gray-700 bg-gray-800 p-3 mb-3">
-          <p className="text-gray-400 text-xs mb-1">Response Status</p>
-          <p className="text-gray-100">{log.responseStatusCode}</p>
-        </div>
-
-        <div className="rounded border border-gray-700 bg-gray-800 p-3 mb-3">
-          <div className="flex items-center justify-between gap-2 mb-2">
-            <p className="text-gray-400 text-xs">Request received</p>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={handleCopyRequest}
-                className="inline-flex items-center gap-1.5 px-2 py-1.5 rounded bg-gray-700 hover:bg-gray-600 text-gray-200 text-xs"
-              >
-                <Copy className="w-3.5 h-3.5" />
-                {copiedKind === 'request' ? 'Copied!' : 'Copy'}
-              </button>
-              <button
-                type="button"
-                onClick={handleCopyCurl}
-                className="inline-flex items-center gap-1.5 px-2 py-1.5 rounded bg-gray-700 hover:bg-gray-600 text-gray-200 text-xs"
-              >
-                {copiedKind === 'curl' ? 'Copied!' : 'Copy as cURL'}
-              </button>
-            </div>
-          </div>
-          <pre className="text-xs text-gray-200 whitespace-pre-wrap break-all font-mono bg-gray-900 rounded p-3 overflow-x-auto max-h-48 overflow-y-auto">
-            {requestReceivedText(log)}
-          </pre>
-        </div>
-
-        <div className="rounded border border-gray-700 bg-gray-800 p-3 mb-3">
-          <p className="text-gray-400 text-xs mb-1">Headers</p>
-          <pre className="text-xs text-gray-200 overflow-x-auto">{JSON.stringify(log.headers || {}, null, 2)}</pre>
-        </div>
-        <div className="rounded border border-gray-700 bg-gray-800 p-3">
-          <p className="text-gray-400 text-xs mb-1">Body</p>
-          <pre className="text-xs text-gray-200 whitespace-pre-wrap break-words">{log.body || '-'}</pre>
-        </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
 const Mocks: React.FC = () => {
   const { hasPermission } = useAuth();
   const canWriteMocks = hasPermission(Permissions.MocksWrite);
@@ -374,13 +209,6 @@ const Mocks: React.FC = () => {
   const [showUnmatchedSeries, setShowUnmatchedSeries] = useState(true);
   const [selectedLog, setSelectedLog] = useState<MockRequestLog | null>(null);
   const [verifyMethod, setVerifyMethod] = useState('ANY');
-  const [showPostmanImportModal, setShowPostmanImportModal] = useState(false);
-  const [postmanFile, setPostmanFile] = useState<File | null>(null);
-  const [postmanTargetEnv, setPostmanTargetEnv] = useState('');
-  const [postmanPathPrefix, setPostmanPathPrefix] = useState('');
-  const [postmanResult, setPostmanResult] = useState<{ created: number; errors: string[] } | null>(null);
-  const [isPostmanImporting, setIsPostmanImporting] = useState(false);
-  const [duplicateForId, setDuplicateForId] = useState<string | null>(null);
   const [verifyPath, setVerifyPath] = useState('/');
   const [verifyPathMatchType, setVerifyPathMatchType] = useState(0);
   const [verifyBodyMatchType, setVerifyBodyMatchType] = useState(0);
@@ -597,6 +425,61 @@ const Mocks: React.FC = () => {
     return `Expect between ${verifyMinCount} and ${verifyMaxCount} matching requests`;
   }, [verifyCountMode, verifyExactCount, verifyMinCount, verifyMaxCount]);
 
+  const enabledRate = mockStats.totalExpectations > 0
+    ? Math.round((mockStats.enabledExpectations / mockStats.totalExpectations) * 100)
+    : 0;
+
+  const tabMeta: Record<'expectations' | 'logs' | 'verify', { label: string; eyebrow: string; description: string }> = {
+    expectations: {
+      label: 'Expectations',
+      eyebrow: 'Routing Rules',
+      description: 'Create and tune matchers, priorities, and response behavior per environment.'
+    },
+    logs: {
+      label: 'Request Logs',
+      eyebrow: 'Traffic Review',
+      description: 'Inspect request flow, filter by path and status, and trace unmatched traffic quickly.'
+    },
+    verify: {
+      label: 'Verify',
+      eyebrow: 'Assertion Runner',
+      description: 'Codify expected traffic patterns and reuse verification presets during testing.'
+    }
+  };
+
+  const activeTabMeta = tabMeta[activeTab];
+
+  const statCards = [
+    {
+      label: 'Live Expectations',
+      value: String(mockStats.totalExpectations),
+      detail: `${mockStats.enabledExpectations} enabled · ${mockStats.disabledExpectations} disabled`,
+      accent: 'from-cyan-500/20 via-cyan-500/5 to-transparent',
+      valueClass: 'text-cyan-100'
+    },
+    {
+      label: 'Enablement',
+      value: `${enabledRate}%`,
+      detail: mockStats.totalExpectations > 0 ? 'of rules currently serving traffic' : 'no expectations configured yet',
+      accent: 'from-emerald-500/20 via-emerald-500/5 to-transparent',
+      valueClass: 'text-emerald-100'
+    },
+    {
+      label: 'Fetched Traffic',
+      value: String(mockStats.totalLogs),
+      detail: `${mockStats.matchedLogs} matched · ${mockStats.unmatchedLogs} unmatched`,
+      accent: 'from-amber-500/20 via-amber-500/5 to-transparent',
+      valueClass: 'text-amber-100'
+    },
+    {
+      label: 'Active Context',
+      value: environment || '-',
+      detail: activeTab === 'logs' ? logRangeMeta[logsTimeRange].label : activeTabMeta.label,
+      accent: 'from-slate-400/20 via-slate-400/5 to-transparent',
+      valueClass: 'text-white'
+    }
+  ];
+
   const resetForm = () => {
     setEditingId(null);
     setForm(defaultForm(environment));
@@ -801,38 +684,6 @@ const Mocks: React.FC = () => {
     }
   };
 
-  const handlePostmanImportSubmit = async () => {
-    if (!postmanFile || !postmanTargetEnv.trim()) return;
-    setIsPostmanImporting(true);
-    setPostmanResult(null);
-    try {
-      const result = await apiService.importPostmanExpectations(
-        postmanFile,
-        postmanTargetEnv.trim(),
-        postmanPathPrefix.trim() || undefined
-      );
-      setPostmanResult(result);
-      if (result.created > 0) await loadExpectations();
-    } catch (err) {
-      setPostmanResult({ created: 0, errors: [getErrorMessage(err)] });
-    } finally {
-      setIsPostmanImporting(false);
-    }
-  };
-
-  const handleDuplicateToEnvironment = async (expectationId: string, targetEnvironment: string) => {
-    if (!canWriteMocks) return;
-    setDuplicateForId(null);
-    try {
-      await apiService.duplicateMockExpectation(expectationId, targetEnvironment);
-      setSuccess(`Expectation duplicated to ${targetEnvironment}.`);
-      setTimeout(() => setSuccess(''), 3000);
-      await loadExpectations();
-    } catch (err) {
-      setError(getErrorMessage(err));
-    }
-  };
-
   const applyLogsFilters = () => {
     setLogsPathFilter(logsPathInput);
     setLogsMatchedFilter(logsMatchedInput);
@@ -1002,118 +853,137 @@ const Mocks: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="rounded-xl border border-gray-700 bg-gradient-to-br from-gray-800 to-gray-900 p-5 space-y-5">
-        <div className="space-y-4">
-          <div className="min-w-0">
-            <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-              <Boxes className="w-7 h-7 text-cyan-400 shrink-0" />
-              Mocks
-            </h1>
-            <p className="text-gray-400 mt-1">Manage expectations, inspect traffic, and verify behavior per environment.</p>
+      <div className="overflow-hidden rounded-[28px] border border-slate-700/70 bg-slate-950 shadow-[0_24px_80px_rgba(2,6,23,0.45)]">
+        <div className="border-b border-slate-800 bg-[radial-gradient(circle_at_top_left,_rgba(34,211,238,0.16),_transparent_32%),radial-gradient(circle_at_top_right,_rgba(245,158,11,0.14),_transparent_26%),linear-gradient(180deg,_rgba(15,23,42,0.96),_rgba(2,6,23,1))] px-5 py-5 sm:px-6">
+          <div className="grid gap-5 xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.9fr)]">
+            <div className="space-y-5">
+              <div className="space-y-3">
+                <div className="inline-flex items-center gap-2 rounded-full border border-cyan-400/20 bg-cyan-400/10 px-3 py-1 text-[11px] font-medium uppercase tracking-[0.28em] text-cyan-200">
+                  Mock Operations Console
+                </div>
+                <div className="min-w-0">
+                  <h1 className="flex items-center gap-3 text-3xl font-semibold tracking-tight text-white">
+                    <span className="rounded-2xl border border-cyan-400/20 bg-slate-900/80 p-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
+                      <Boxes className="h-7 w-7 shrink-0 text-cyan-300" />
+                    </span>
+                    Mocks
+                  </h1>
+                  <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-300">
+                    Operate request matching, inspect runtime traffic, and run targeted verification from one screen.
+                    The layout is optimized for fast triage across environments rather than generic CRUD.
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid gap-3 md:grid-cols-[minmax(220px,280px)_1fr]">
+                <label className="rounded-2xl border border-slate-700 bg-slate-900/70 p-4 text-sm text-slate-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
+                  <span className="text-[11px] uppercase tracking-[0.24em] text-slate-500">Environment</span>
+                  <select
+                    value={environment}
+                    onChange={(e) => setEnvironment(e.target.value)}
+                    className="mt-3 block w-full rounded-xl border border-slate-600 bg-slate-800 px-3 py-3 text-white"
+                    disabled={environmentOptions.length === 0}
+                  >
+                    {environmentOptions.length === 0 ? (
+                      <option value="">No environments</option>
+                    ) : (
+                      environmentOptions.map((envName) => (
+                        <option key={envName} value={envName}>{envName}</option>
+                      ))
+                    )}
+                  </select>
+                </label>
+
+                <div className="rounded-2xl border border-slate-700 bg-slate-900/60 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <p className="text-[11px] uppercase tracking-[0.24em] text-slate-500">{activeTabMeta.eyebrow}</p>
+                      <h2 className="mt-2 text-lg font-semibold text-white">{activeTabMeta.label}</h2>
+                      <p className="mt-1 max-w-xl text-sm text-slate-400">{activeTabMeta.description}</p>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      {activeTab === 'expectations' && (
+                        <label className="inline-flex items-center gap-2 rounded-full border border-slate-700 bg-slate-800/90 px-3 py-2 text-xs text-slate-300">
+                          <input
+                            type="checkbox"
+                            checked={includeDisabled}
+                            onChange={(e) => setIncludeDisabled(e.target.checked)}
+                          />
+                          Include disabled
+                        </label>
+                      )}
+                      <button
+                        onClick={handleRefresh}
+                        className="inline-flex items-center justify-center gap-2 rounded-full border border-slate-600 bg-slate-800 px-4 py-2 text-sm text-white hover:border-slate-500 hover:bg-slate-700"
+                      >
+                        <RefreshCw className="h-4 w-4" />
+                        Refresh
+                      </button>
+                      {activeTab === 'expectations' && canWriteMocks && (
+                        <button
+                          onClick={openCreate}
+                          className="inline-flex items-center justify-center gap-2 rounded-full bg-cyan-400 px-4 py-2 text-sm font-medium text-slate-950 hover:bg-cyan-300"
+                        >
+                          <Plus className="h-4 w-4" />
+                          New Expectation
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-[24px] border border-slate-700 bg-slate-900/75 p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-[11px] uppercase tracking-[0.24em] text-slate-500">Operational Signal</p>
+                  <h2 className="mt-2 text-lg font-semibold text-white">Current health snapshot</h2>
+                </div>
+                <div className={`rounded-full border px-3 py-1 text-xs ${
+                  mockStats.matchedRate >= 80
+                    ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300'
+                    : mockStats.matchedRate >= 50
+                      ? 'border-amber-500/30 bg-amber-500/10 text-amber-300'
+                      : 'border-rose-500/30 bg-rose-500/10 text-rose-300'
+                }`}>
+                  Match rate {mockStats.matchedRate}%
+                </div>
+              </div>
+              <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                {statCards.map((card) => (
+                  <div
+                    key={card.label}
+                    className={`rounded-2xl border border-slate-700 bg-gradient-to-br ${card.accent} p-4`}
+                  >
+                    <p className="text-[11px] uppercase tracking-[0.24em] text-slate-500">{card.label}</p>
+                    <p className={`mt-3 text-2xl font-semibold ${card.valueClass}`}>{card.value}</p>
+                    <p className="mt-2 text-sm text-slate-400">{card.detail}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
-          <div className="flex flex-wrap items-end gap-3">
-            <label className="text-sm text-gray-300">
-              Environment
-              <select
-                value={environment}
-                onChange={(e) => setEnvironment(e.target.value)}
-                className="mt-1 block min-w-40 px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white"
-                disabled={environmentOptions.length === 0}
+        </div>
+
+        <div className="border-t border-slate-800 bg-slate-950/80 px-4 py-3 sm:px-6">
+          <div className="flex flex-wrap gap-2 rounded-2xl border border-slate-800 bg-slate-900/70 p-2">
+            {(Object.keys(tabMeta) as Array<'expectations' | 'logs' | 'verify'>).map((tabKey) => (
+              <button
+                key={tabKey}
+                onClick={() => setActiveTab(tabKey)}
+                className={`flex-1 min-w-[140px] rounded-xl px-4 py-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/70 ${
+                  activeTab === tabKey
+                    ? 'bg-slate-800 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]'
+                    : 'text-slate-400 hover:bg-slate-800/70 hover:text-white'
+                }`}
               >
-                {environmentOptions.length === 0 ? (
-                  <option value="">No environments</option>
-                ) : (
-                  environmentOptions.map((envName) => (
-                    <option key={envName} value={envName}>{envName}</option>
-                  ))
-                )}
-              </select>
-            </label>
-            {activeTab === 'expectations' && (
-              <label className="text-sm text-gray-300 flex items-center gap-2 mb-2">
-                <input
-                  type="checkbox"
-                  checked={includeDisabled}
-                  onChange={(e) => setIncludeDisabled(e.target.checked)}
-                />
-                Include disabled
-              </label>
-            )}
-            <button
-              onClick={handleRefresh}
-              className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded text-white"
-            >
-              <RefreshCw className="w-4 h-4" />
-              Refresh
-            </button>
-            {activeTab === 'expectations' && canWriteMocks && (
-              <>
-                <button
-                  onClick={() => { setShowPostmanImportModal(true); setPostmanResult(null); setPostmanFile(null); setPostmanTargetEnv(environment || ''); setPostmanPathPrefix(''); }}
-                  className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded text-white"
-                >
-                  <Upload className="w-4 h-4" />
-                  Import from Postman
-                </button>
-                <button
-                  onClick={openCreate}
-                  className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded text-white"
-                >
-                  <Plus className="w-4 h-4" />
-                  Create Expectation
-                </button>
-              </>
-            )}
+                <span className="block text-[11px] uppercase tracking-[0.24em] text-slate-500">{tabMeta[tabKey].eyebrow}</span>
+                <span className="mt-1 block text-sm font-medium">{tabMeta[tabKey].label}</span>
+              </button>
+            ))}
           </div>
         </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
-          <div className="rounded-lg border border-gray-700 bg-gray-800/70 px-4 py-3">
-            <p className="text-xs uppercase tracking-wider text-gray-500">Expectations</p>
-            <p className="text-xl font-semibold text-white mt-1">{mockStats.totalExpectations}</p>
-            <p className="text-xs text-gray-400 mt-1">
-              <span className="text-green-300">{mockStats.enabledExpectations} enabled</span> · <span className="text-gray-300">{mockStats.disabledExpectations} disabled</span>
-            </p>
-          </div>
-          <div className="rounded-lg border border-gray-700 bg-gray-800/70 px-4 py-3">
-            <p className="text-xs uppercase tracking-wider text-gray-500">Traffic Sample</p>
-            <p className="text-xl font-semibold text-white mt-1">{mockStats.totalLogs}</p>
-            <p className="text-xs text-gray-400 mt-1">Current fetched logs set</p>
-          </div>
-          <div className="rounded-lg border border-gray-700 bg-gray-800/70 px-4 py-3">
-            <p className="text-xs uppercase tracking-wider text-gray-500">Matched Rate</p>
-            <p className="text-xl font-semibold text-cyan-300 mt-1">{mockStats.matchedRate}%</p>
-            <p className="text-xs text-gray-400 mt-1">{mockStats.matchedLogs} matched / {mockStats.unmatchedLogs} unmatched</p>
-          </div>
-          <div className="rounded-lg border border-gray-700 bg-gray-800/70 px-4 py-3">
-            <p className="text-xs uppercase tracking-wider text-gray-500">Active Context</p>
-            <p className="text-xl font-semibold text-white mt-1">{environment || '-'}</p>
-            <p className="text-xs text-gray-400 mt-1">
-              {activeTab === 'logs' ? `Range: ${logRangeMeta[logsTimeRange].label}` : `Tab: ${activeTab}`}
-            </p>
-          </div>
-        </div>
-      </div>
-
-      <div className="flex items-center gap-2 border-b border-gray-700">
-        <button
-          onClick={() => setActiveTab('expectations')}
-          className={`px-4 py-2 text-sm font-medium rounded-t-md border-b-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/70 ${activeTab === 'expectations' ? 'border-cyan-400 text-white bg-gray-800/60' : 'border-transparent text-gray-400 hover:text-white hover:bg-gray-800/40'}`}
-        >
-          Expectations
-        </button>
-        <button
-          onClick={() => setActiveTab('logs')}
-          className={`px-4 py-2 text-sm font-medium rounded-t-md border-b-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/70 ${activeTab === 'logs' ? 'border-cyan-400 text-white bg-gray-800/60' : 'border-transparent text-gray-400 hover:text-white hover:bg-gray-800/40'}`}
-        >
-          Request Logs
-        </button>
-        <button
-          onClick={() => setActiveTab('verify')}
-          className={`px-4 py-2 text-sm font-medium rounded-t-md border-b-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/70 ${activeTab === 'verify' ? 'border-cyan-400 text-white bg-gray-800/60' : 'border-transparent text-gray-400 hover:text-white hover:bg-gray-800/40'}`}
-        >
-          Verify
-        </button>
       </div>
 
       {error && <div role="alert" aria-live="assertive" className="p-3 rounded border border-red-500/40 bg-red-500/10 text-red-300">{error}</div>}
@@ -1126,10 +996,13 @@ const Mocks: React.FC = () => {
               You do not have permission to verify mock requests.
             </div>
           ) : (
-            <form onSubmit={handleVerify} className="bg-gray-800 border border-gray-700 rounded-lg p-4 space-y-4">
+            <form onSubmit={handleVerify} className="rounded-[24px] border border-slate-700 bg-slate-900/95 p-5 space-y-4">
               <div className="flex items-center justify-between">
-                <h2 className="text-white text-lg font-semibold">Verification Flow</h2>
-                <p className="text-xs text-gray-400">Guided 3-step verification</p>
+                <div>
+                  <p className="text-[11px] uppercase tracking-[0.24em] text-slate-500">Verification Workspace</p>
+                  <h2 className="mt-2 text-lg font-semibold text-white">Verification Flow</h2>
+                </div>
+                <p className="text-xs text-slate-400">Guided 3-step verification</p>
               </div>
 
               <div className="bg-gray-900/40 border border-gray-700 rounded-lg p-4 space-y-3">
@@ -1366,49 +1239,83 @@ const Mocks: React.FC = () => {
       {activeTab === 'expectations' && (
         <div className="space-y-3">
           {isLoading && (
-            <div className="bg-gray-800 border border-gray-700 rounded-lg px-4 py-8 text-center text-gray-400">
+            <div className="rounded-3xl border border-slate-700 bg-slate-900 px-4 py-10 text-center text-slate-400">
               Loading expectations...
             </div>
           )}
           {!isLoading && sortedExpectations.length === 0 && (
-            <div className="bg-gray-800 border border-gray-700 rounded-lg px-4 py-8 text-center text-gray-400">
+            <div className="rounded-3xl border border-slate-700 bg-slate-900 px-4 py-10 text-center text-slate-400">
               No expectations found for this environment.
             </div>
           )}
           {!isLoading && sortedExpectations.map((expectation) => (
-            <div key={expectation.id} className="bg-gray-800 border border-gray-700 rounded-lg p-4 hover:border-gray-600 transition-colors">
-              <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-                <div className="space-y-2">
+            <div
+              key={expectation.id}
+              className="overflow-hidden rounded-[24px] border border-slate-700 bg-[linear-gradient(180deg,rgba(15,23,42,0.96),rgba(2,6,23,0.98))] p-5 shadow-[0_14px_40px_rgba(2,6,23,0.22)] transition-colors hover:border-slate-500"
+            >
+              <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+                <div className="space-y-4">
                   <div className="flex flex-wrap items-center gap-2">
-                    <h3 className="text-white font-semibold">{expectation.name || '(unnamed)'}</h3>
-                    <span className={`inline-flex px-2 py-1 rounded text-xs border ${expectation.enabled ? 'bg-green-500/15 text-green-300 border-green-500/30' : 'bg-gray-600/40 text-gray-300 border-gray-500/30'}`}>
+                    <span className="rounded-full border border-slate-700 bg-slate-800 px-2.5 py-1 text-[11px] uppercase tracking-[0.24em] text-slate-400">
+                      Priority {expectation.priority}
+                    </span>
+                    <span className={`inline-flex rounded-full border px-2.5 py-1 text-xs ${expectation.enabled ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300' : 'border-slate-600 bg-slate-700/80 text-slate-300'}`}>
                       {expectation.enabled ? 'Enabled' : 'Disabled'}
                     </span>
-                    <span className="inline-flex px-2 py-1 rounded text-xs border bg-gray-700/60 border-gray-600 text-gray-300">
-                      Env: {expectation.environment}
+                    <span className="inline-flex rounded-full border border-slate-600 bg-slate-800/80 px-2.5 py-1 text-xs text-slate-300">
+                      Env {expectation.environment}
                     </span>
+                  </div>
+                  <div className="space-y-2">
+                    <h3 className="text-xl font-semibold text-white">{expectation.name || '(unnamed)'}</h3>
+                    <div className="flex flex-wrap items-center gap-2 text-sm">
+                      <span className={`inline-flex rounded-full border px-2.5 py-1 text-xs ${methodBadgeClass(expectation.requestMatcher?.method)}`}>
+                        {expectation.requestMatcher?.method || 'ANY'}
+                      </span>
+                      <span className="rounded-xl bg-slate-800 px-3 py-1.5 font-mono text-slate-100">
+                        {expectation.requestMatcher?.path}
+                      </span>
+                      <span className="text-xs text-slate-400">
+                        {pathMatchTypeLabel(toIntEnum(expectation.requestMatcher?.pathMatchType as unknown, 0))} path match
+                      </span>
+                    </div>
+                  </div>
+                  <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                    <div className="rounded-2xl border border-slate-800 bg-slate-900/80 px-4 py-3">
+                      <p className="text-[11px] uppercase tracking-[0.24em] text-slate-500">Response</p>
+                      <p className="mt-2 text-sm font-medium text-white">{expectation.responseTemplate?.status ?? 200}</p>
+                      <p className="mt-1 text-xs text-slate-400">delay {expectation.responseTemplate?.delayMs ?? 0}ms</p>
+                    </div>
+                    <div className="rounded-2xl border border-slate-800 bg-slate-900/80 px-4 py-3">
+                      <p className="text-[11px] uppercase tracking-[0.24em] text-slate-500">Execution</p>
+                      <p className="mt-2 text-sm font-medium text-white">
+                        {expectation.times?.unlimited ? 'Unlimited' : `${expectation.times?.remaining ?? 0} remaining`}
+                      </p>
+                      <p className="mt-1 text-xs text-slate-400">consumption policy</p>
+                    </div>
+                    <div className="rounded-2xl border border-slate-800 bg-slate-900/80 px-4 py-3">
+                      <p className="text-[11px] uppercase tracking-[0.24em] text-slate-500">Query Rules</p>
+                      <p className="mt-2 text-sm font-medium text-white">{Object.keys(expectation.requestMatcher?.query || {}).length}</p>
+                      <p className="mt-1 text-xs text-slate-400">matcher entries</p>
+                    </div>
+                    <div className="rounded-2xl border border-slate-800 bg-slate-900/80 px-4 py-3">
+                      <p className="text-[11px] uppercase tracking-[0.24em] text-slate-500">Header Rules</p>
+                      <p className="mt-2 text-sm font-medium text-white">{Object.keys(expectation.requestMatcher?.headers || {}).length}</p>
+                      <p className="mt-1 text-xs text-slate-400">matcher entries</p>
+                    </div>
                   </div>
                   <div className="flex flex-wrap items-center gap-2 text-sm">
-                    <span className={`inline-flex px-2 py-1 rounded border text-xs ${methodBadgeClass(expectation.requestMatcher?.method)}`}>
-                      {expectation.requestMatcher?.method || 'ANY'}
+                    <span className="text-xs text-slate-500">Body matcher:</span>
+                    <span className="rounded-full border border-slate-700 bg-slate-800 px-2.5 py-1 text-xs text-slate-300">
+                      {bodyMatchTypeLabel(toIntEnum(expectation.requestMatcher?.bodyMatchType as unknown, 0))}
                     </span>
-                    <span className="font-mono text-gray-100">{expectation.requestMatcher?.path}</span>
-                    <span className="text-xs text-gray-400">
-                      {pathMatchTypeLabel(toIntEnum(expectation.requestMatcher?.pathMatchType as unknown, 0))}
-                    </span>
-                  </div>
-                  <div className="flex flex-wrap gap-4 text-xs text-gray-400">
-                    <span>Priority: <span className="text-gray-200">{expectation.priority}</span></span>
-                    <span>Times: <span className="text-gray-200">{expectation.times?.unlimited ? 'Unlimited' : `${expectation.times?.remaining ?? 0} left`}</span></span>
-                    <span>Response: <span className="text-gray-200">{expectation.responseTemplate?.status ?? 200}</span></span>
-                    <span>Delay: <span className="text-gray-200">{expectation.responseTemplate?.delayMs ?? 0}ms</span></span>
                   </div>
                 </div>
-                <div className="flex flex-wrap items-center gap-2 lg:justify-end">
+                <div className="flex flex-wrap items-center gap-2 xl:w-[240px] xl:justify-end">
                   <button
                     onClick={() => toggleEnabled(expectation)}
                     disabled={!canWriteMocks}
-                    className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded border border-gray-600 bg-gray-700 hover:bg-gray-600 text-xs text-gray-200 disabled:opacity-50"
+                    className="inline-flex items-center gap-1.5 rounded-full border border-slate-600 bg-slate-800 px-3 py-2 text-xs text-slate-200 disabled:opacity-50"
                     title={expectation.enabled ? 'Disable' : 'Enable'}
                   >
                     {expectation.enabled ? <ToggleRight className="w-3.5 h-3.5" /> : <ToggleLeft className="w-3.5 h-3.5" />}
@@ -1417,7 +1324,7 @@ const Mocks: React.FC = () => {
                   <button
                     onClick={() => openEdit(expectation)}
                     disabled={!canWriteMocks}
-                    className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded border border-gray-600 bg-gray-700 hover:bg-gray-600 text-xs text-gray-200 disabled:opacity-50"
+                    className="inline-flex items-center gap-1.5 rounded-full border border-slate-600 bg-slate-800 px-3 py-2 text-xs text-slate-200 disabled:opacity-50"
                     title="Edit"
                   >
                     <Pencil className="w-3.5 h-3.5" />
@@ -1426,48 +1333,16 @@ const Mocks: React.FC = () => {
                   <button
                     onClick={() => handleClone(expectation)}
                     disabled={!canWriteMocks}
-                    className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded border border-gray-600 bg-gray-700 hover:bg-gray-600 text-xs text-gray-200 disabled:opacity-50"
+                    className="inline-flex items-center gap-1.5 rounded-full border border-slate-600 bg-slate-800 px-3 py-2 text-xs text-slate-200 disabled:opacity-50"
                     title="Clone"
                   >
                     <Copy className="w-3.5 h-3.5" />
                     Clone
                   </button>
-                  <div className="relative inline-block">
-                    <button
-                      onClick={() => setDuplicateForId(duplicateForId === expectation.id ? null : expectation.id || null)}
-                      disabled={!canWriteMocks}
-                      className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded border border-gray-600 bg-gray-700 hover:bg-gray-600 text-xs text-gray-200 disabled:opacity-50"
-                      title="Duplicate to another environment"
-                    >
-                      <CopyPlus className="w-3.5 h-3.5" />
-                      Duplicate to...
-                    </button>
-                    {duplicateForId === expectation.id && (
-                      <>
-                        <div className="fixed inset-0 z-10" onClick={() => setDuplicateForId(null)} />
-                        <div className="absolute right-0 top-full mt-1 w-48 py-1 bg-gray-800 border border-gray-700 rounded shadow-xl z-20 max-h-48 overflow-y-auto">
-                          {environmentOptions
-                            .filter((env) => env !== (expectation.environment || ''))
-                            .map((env) => (
-                              <button
-                                key={env}
-                                onClick={() => handleDuplicateToEnvironment(expectation.id!, env)}
-                                className="w-full px-3 py-2 text-left text-xs text-gray-200 hover:bg-gray-700"
-                              >
-                                {env}
-                              </button>
-                            ))}
-                          {environmentOptions.filter((env) => env !== (expectation.environment || '')).length === 0 && (
-                            <p className="px-3 py-2 text-xs text-gray-500">No other environments</p>
-                          )}
-                        </div>
-                      </>
-                    )}
-                  </div>
                   <button
                     onClick={() => handleDelete(expectation)}
                     disabled={!canWriteMocks}
-                    className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded border border-red-500/40 bg-red-500/10 hover:bg-red-500/20 text-xs text-red-300 disabled:opacity-50"
+                    className="inline-flex items-center gap-1.5 rounded-full border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-xs text-rose-300 disabled:opacity-50"
                     title="Delete"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
@@ -1488,7 +1363,17 @@ const Mocks: React.FC = () => {
             </div>
           ) : (
             <>
-              <div className="bg-gray-800 border border-gray-700 rounded-lg p-4">
+              <div className="rounded-[24px] border border-slate-700 bg-slate-900/95 p-5">
+                <div className="mb-4 flex flex-col gap-2 lg:flex-row lg:items-end lg:justify-between">
+                  <div>
+                    <p className="text-[11px] uppercase tracking-[0.24em] text-slate-500">Filter Console</p>
+                    <h3 className="mt-2 text-lg font-semibold text-white">Slice the request stream</h3>
+                    <p className="mt-1 text-sm text-slate-400">Pinpoint a path, narrow by match status, then inspect the resulting window.</p>
+                  </div>
+                  <div className="rounded-full border border-slate-700 bg-slate-800 px-3 py-1 text-xs text-slate-300">
+                    Applied: {logsMatchedFilter} · {logsLimit} rows
+                  </div>
+                </div>
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
                   <label className="text-sm text-gray-300 md:col-span-5">
                     Path contains
@@ -1545,14 +1430,14 @@ const Mocks: React.FC = () => {
                     <button
                       type="button"
                       onClick={applyLogsFilters}
-                      className="w-full px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded text-white text-sm"
+                      className="w-full rounded-xl bg-cyan-400 px-3 py-2 text-sm font-medium text-slate-950 hover:bg-cyan-300"
                     >
                       Apply
                     </button>
                     <button
                       type="button"
                       onClick={resetLogsFilters}
-                      className="w-full px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded text-white text-sm"
+                      className="w-full rounded-xl bg-slate-800 px-3 py-2 text-sm text-white hover:bg-slate-700"
                     >
                       Reset
                     </button>
@@ -1560,22 +1445,23 @@ const Mocks: React.FC = () => {
                       type="button"
                       onClick={handleClearLogs}
                       disabled={!canDeleteLogs || isClearingLogs}
-                      className="w-full px-3 py-2 bg-red-600/80 hover:bg-red-600 rounded text-white text-sm disabled:opacity-50"
+                      className="w-full rounded-xl bg-red-600/80 px-3 py-2 text-sm text-white hover:bg-red-600 disabled:opacity-50"
                     >
                       {isClearingLogs ? 'Clearing...' : 'Clear'}
                     </button>
                   </div>
-                  <div className="md:col-span-12 text-xs text-gray-400">
-                    Applied filters: path <span className="font-mono text-gray-300">{logsPathFilter || '(any)'}</span> · status <span className="text-gray-300">{logsMatchedFilter}</span> · limit <span className="text-gray-300">{logsLimit}</span>
+                  <div className="md:col-span-12 rounded-2xl border border-slate-800 bg-slate-950/80 px-4 py-3 text-xs text-slate-400">
+                    Applied filters: path <span className="font-mono text-slate-300">{logsPathFilter || '(any)'}</span> · status <span className="text-slate-300">{logsMatchedFilter}</span> · limit <span className="text-slate-300">{logsLimit}</span>
                   </div>
                 </div>
               </div>
 
-              <div className="bg-gray-800 border border-gray-700 rounded-lg p-4 space-y-4">
+              <div className="rounded-[24px] border border-slate-700 bg-slate-900/95 p-5 space-y-4">
                 <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
                   <div>
-                    <h3 className="text-white font-semibold">Request Usage</h3>
-                    <p className="text-xs text-gray-400">
+                    <p className="text-[11px] uppercase tracking-[0.24em] text-slate-500">Traffic Shape</p>
+                    <h3 className="mt-2 text-lg font-semibold text-white">Request usage over time</h3>
+                    <p className="mt-1 text-xs text-slate-400">
                       {logRangeMeta[logsTimeRange].label} · Bucketed over {logChart.range.buckets} intervals
                     </p>
                     <div className="mt-2 flex flex-wrap gap-2">
@@ -1690,33 +1576,38 @@ const Mocks: React.FC = () => {
                 </div>
               </div>
 
-              <div className="bg-gray-800 border border-gray-700 rounded-lg overflow-x-auto">
+              <div className="overflow-hidden rounded-[24px] border border-slate-700 bg-slate-900/95">
+                <div className="border-b border-slate-800 px-5 py-4">
+                  <p className="text-[11px] uppercase tracking-[0.24em] text-slate-500">Event Table</p>
+                  <h3 className="mt-2 text-lg font-semibold text-white">Recent request logs</h3>
+                </div>
+                <div className="overflow-x-auto">
                 <table className="w-full min-w-[1100px]">
-                  <thead className="bg-gray-700/50">
+                  <thead className="bg-slate-800/70">
                     <tr>
-                      <th className="text-left px-4 py-3 text-xs uppercase tracking-wider text-gray-400">Timestamp</th>
-                      <th className="text-center px-4 py-3 text-xs uppercase tracking-wider text-gray-400">Method</th>
-                      <th className="text-left px-4 py-3 text-xs uppercase tracking-wider text-gray-400">Path</th>
-                      <th className="text-center px-4 py-3 text-xs uppercase tracking-wider text-gray-400">Matched</th>
-                      <th className="text-left px-4 py-3 text-xs uppercase tracking-wider text-gray-400">Expectation</th>
-                      <th className="text-center px-4 py-3 text-xs uppercase tracking-wider text-gray-400">Response</th>
+                      <th className="text-left px-4 py-3 text-xs uppercase tracking-wider text-slate-400">Timestamp</th>
+                      <th className="text-center px-4 py-3 text-xs uppercase tracking-wider text-slate-400">Method</th>
+                      <th className="text-left px-4 py-3 text-xs uppercase tracking-wider text-slate-400">Path</th>
+                      <th className="text-center px-4 py-3 text-xs uppercase tracking-wider text-slate-400">Matched</th>
+                      <th className="text-left px-4 py-3 text-xs uppercase tracking-wider text-slate-400">Expectation</th>
+                      <th className="text-center px-4 py-3 text-xs uppercase tracking-wider text-slate-400">Response</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-700">
+                  <tbody className="divide-y divide-slate-800">
                     {isLoadingLogs && (
                       <tr>
-                        <td colSpan={6} className="px-4 py-8 text-center text-gray-400">Loading request logs...</td>
+                        <td colSpan={6} className="px-4 py-8 text-center text-slate-400">Loading request logs...</td>
                       </tr>
                     )}
                     {!isLoadingLogs && logs.length === 0 && (
                       <tr>
-                        <td colSpan={6} className="px-4 py-8 text-center text-gray-400">No request logs found for current filters.</td>
+                        <td colSpan={6} className="px-4 py-8 text-center text-slate-400">No request logs found for current filters.</td>
                       </tr>
                     )}
                     {logs.map((log) => (
                       <tr
                         key={log.id}
-                        className="hover:bg-gray-700/30 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/70 focus-visible:ring-inset"
+                        className="cursor-pointer bg-slate-900/80 hover:bg-slate-800/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/70 focus-visible:ring-inset"
                         onClick={() => setSelectedLog(log)}
                         tabIndex={0}
                         role="button"
@@ -1728,31 +1619,32 @@ const Mocks: React.FC = () => {
                           }
                         }}
                       >
-                        <td className="px-4 py-3 text-sm text-gray-200 whitespace-nowrap">{formatTimestamp(log.timestamp)}</td>
+                        <td className="px-4 py-3 text-sm text-slate-200 whitespace-nowrap">{formatTimestamp(log.timestamp)}</td>
                         <td className="px-4 py-3 text-sm text-center">
                           <span className={`inline-flex px-2 py-1 rounded border text-xs ${methodBadgeClass(log.method)}`}>
                             {log.method || 'ANY'}
                           </span>
                         </td>
-                        <td className="px-4 py-3 text-sm text-gray-200">
+                        <td className="px-4 py-3 text-sm text-slate-200">
                           <span className="font-mono">{log.path}</span>
-                          {log.queryString ? <span className="text-xs text-gray-400 ml-2">{log.queryString}</span> : null}
+                          {log.queryString ? <span className="ml-2 text-xs text-slate-400">{log.queryString}</span> : null}
                         </td>
                         <td className="px-4 py-3 text-center">
                           <span className={`inline-flex px-2 py-1 rounded text-xs border ${log.matched ? 'bg-green-500/15 text-green-300 border-green-500/30' : 'bg-amber-500/15 text-amber-300 border-amber-500/30'}`}>
                             {log.matched ? 'Matched' : 'Unmatched'}
                           </span>
                         </td>
-                        <td className="px-4 py-3 text-sm text-gray-200">
+                        <td className="px-4 py-3 text-sm text-slate-200">
                           {log.matchedExpectationName || '-'}
                         </td>
-                        <td className="px-4 py-3 text-sm text-center text-gray-200">
+                        <td className="px-4 py-3 text-sm text-center text-slate-200">
                           {log.responseStatusCode}
                         </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
+                </div>
               </div>
             </>
           )}
@@ -1955,88 +1847,69 @@ const Mocks: React.FC = () => {
       )}
 
       {activeTab === 'logs' && selectedLog && (
-        <RequestLogDetailSidebar
-          log={selectedLog}
-          onClose={() => setSelectedLog(null)}
-          formatTimestamp={formatTimestamp}
-          methodBadgeClass={methodBadgeClass}
-        />
-      )}
-
-      {showPostmanImportModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-          <div className="bg-gray-800 border border-gray-700 rounded-xl shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6 border-b border-gray-700">
-              <h2 className="text-xl font-semibold text-white">Import from Postman</h2>
-              <p className="text-sm text-gray-400 mt-1">Upload a Postman Collection v2.1 JSON file. Requests will be created as mock expectations for the selected environment.</p>
-            </div>
-            <div className="p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">Collection file (JSON)</label>
-                <input
-                  type="file"
-                  accept=".json"
-                  onChange={(e) => setPostmanFile(e.target.files?.[0] ?? null)}
-                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-sm file:mr-2 file:py-1 file:px-3 file:rounded file:border-0 file:bg-blue-600 file:text-white"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">Target environment</label>
-                <select
-                  value={postmanTargetEnv}
-                  onChange={(e) => setPostmanTargetEnv(e.target.value)}
-                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-sm"
-                >
-                  <option value="">Select environment</option>
-                  {environmentOptions.map((env) => (
-                    <option key={env} value={env}>{env}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">Path prefix (optional)</label>
-                <input
-                  type="text"
-                  value={postmanPathPrefix}
-                  onChange={(e) => setPostmanPathPrefix(e.target.value)}
-                  placeholder="/api"
-                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-sm"
-                />
-              </div>
-              {postmanResult && (
-                <div className="p-4 bg-gray-700/50 rounded-lg border border-gray-600">
-                  <p className="text-sm text-green-400">{postmanResult.created} expectation(s) created.</p>
-                  {postmanResult.errors.length > 0 && (
-                    <ul className="mt-2 text-xs text-red-300 space-y-1">
-                      {postmanResult.errors.map((msg, i) => (
-                        <li key={i}>{msg}</li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-              )}
-            </div>
-            <div className="p-6 border-t border-gray-700 flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => { setShowPostmanImportModal(false); setPostmanResult(null); }}
-                className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg text-sm"
-              >
-                Close
+        <div className="fixed inset-0 z-50 bg-black/40 flex justify-end" onClick={() => setSelectedLog(null)}>
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="mock-log-detail-title"
+            className="h-full w-full max-w-2xl bg-gray-900 border-l border-gray-700 p-6 overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h3 id="mock-log-detail-title" className="text-lg font-semibold text-white">Request Log Details</h3>
+              <button type="button" onClick={() => setSelectedLog(null)} aria-label="Close request log details" className="p-2 rounded hover:bg-gray-800 text-gray-300">
+                <X className="w-4 h-4" />
               </button>
-              <button
-                type="button"
-                onClick={handlePostmanImportSubmit}
-                disabled={!postmanFile || !postmanTargetEnv.trim() || isPostmanImporting}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg text-sm font-medium"
-              >
-                {isPostmanImporting ? 'Importing…' : 'Import'}
-              </button>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm mb-4">
+              <div className="rounded border border-gray-700 bg-gray-800 p-3">
+                <p className="text-gray-400 text-xs mb-1">Timestamp</p>
+                <p className="text-gray-100">{formatTimestamp(selectedLog.timestamp)}</p>
+              </div>
+              <div className="rounded border border-gray-700 bg-gray-800 p-3">
+                <p className="text-gray-400 text-xs mb-1">Environment</p>
+                <p className="text-gray-100">{selectedLog.environment}</p>
+              </div>
+              <div className="rounded border border-gray-700 bg-gray-800 p-3">
+                <p className="text-gray-400 text-xs mb-1">Method</p>
+                <span className={`inline-flex px-2 py-1 rounded border text-xs ${methodBadgeClass(selectedLog.method)}`}>
+                  {selectedLog.method || 'ANY'}
+                </span>
+              </div>
+              <div className="rounded border border-gray-700 bg-gray-800 p-3">
+                <p className="text-gray-400 text-xs mb-1">Matched</p>
+                <span className={`inline-flex px-2 py-1 rounded text-xs border ${selectedLog.matched ? 'bg-green-500/15 text-green-300 border-green-500/30' : 'bg-amber-500/15 text-amber-300 border-amber-500/30'}`}>
+                  {selectedLog.matched ? 'Matched' : 'Unmatched'}
+                </span>
+              </div>
+            </div>
+            <div className="rounded border border-gray-700 bg-gray-800 p-3 mb-3">
+              <p className="text-gray-400 text-xs mb-1">Path</p>
+              <p className="font-mono text-gray-100 break-all">{selectedLog.path}</p>
+            </div>
+            <div className="rounded border border-gray-700 bg-gray-800 p-3 mb-3">
+              <p className="text-gray-400 text-xs mb-1">Query String</p>
+              <p className="font-mono text-gray-100 break-all">{selectedLog.queryString || '-'}</p>
+            </div>
+            <div className="rounded border border-gray-700 bg-gray-800 p-3 mb-3">
+              <p className="text-gray-400 text-xs mb-1">Matched Expectation</p>
+              <p className="text-gray-100">{selectedLog.matchedExpectationName || '-'}</p>
+            </div>
+            <div className="rounded border border-gray-700 bg-gray-800 p-3 mb-3">
+              <p className="text-gray-400 text-xs mb-1">Response Status</p>
+              <p className="text-gray-100">{selectedLog.responseStatusCode}</p>
+            </div>
+            <div className="rounded border border-gray-700 bg-gray-800 p-3 mb-3">
+              <p className="text-gray-400 text-xs mb-1">Headers</p>
+              <pre className="text-xs text-gray-200 overflow-x-auto">{JSON.stringify(selectedLog.headers || {}, null, 2)}</pre>
+            </div>
+            <div className="rounded border border-gray-700 bg-gray-800 p-3">
+              <p className="text-gray-400 text-xs mb-1">Body</p>
+              <pre className="text-xs text-gray-200 whitespace-pre-wrap break-words">{selectedLog.body || '-'}</pre>
             </div>
           </div>
         </div>
       )}
-
       <p className="text-xs text-gray-500">
         Tip: runtime mock URLs use <span className="font-mono">/mock/{environment}/path</span>. Example: <span className="font-mono">/mock/{environment}/orders/123</span>.
       </p>

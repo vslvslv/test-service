@@ -10,6 +10,7 @@ import {
   Database,
   Layers,
   Server,
+  Activity,
   Users,
   Settings,
   LogOut,
@@ -409,209 +410,249 @@ const Layout: React.FC = () => {
     { icon: Database, label: 'Entities', path: '/entities' },
     { icon: Layers, label: 'Schemas', path: '/schemas' },
     { icon: Server, label: 'Environments', path: '/environments' },
+    { icon: Activity, label: 'Activity', path: '/activity' },
     { icon: Users, label: 'Users', path: '/users', requiredPermission: Permissions.UsersRead },
     { icon: Boxes, label: 'Mocks', path: '/mocks', requiredPermission: Permissions.MocksRead },
   ];
 
   const isActive = (path: string) => {
-    return location.pathname === path;
+    if (path === '/') return location.pathname === '/';
+    return location.pathname === path || location.pathname.startsWith(`${path}/`);
   };
 
+  const currentItem = menuItems.find((item) => isActive(item.path))
+    || (location.pathname.startsWith('/settings') ? { label: 'Settings' } : null);
+
   return (
-    <div className="min-h-screen bg-gray-900">
-      {/* Top Navigation Bar */}
-      <header className="bg-gray-800 border-b border-gray-700 fixed top-0 left-0 right-0 z-30 h-16">
-        <div className="flex items-center justify-between h-full px-4">
-          {/* Left side */}
-          <div className="flex items-center gap-4">
-            <button
-              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-              className="p-2 hover:bg-gray-700 rounded-lg transition-colors text-gray-400 hover:text-white"
-            >
-              {isSidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-            </button>
-            
-            <div className="flex items-center gap-2">
-              <Database className="w-6 h-6 text-blue-500" />
-              <span className="text-white font-semibold text-lg">Test Service</span>
+    <div className="min-h-screen bg-transparent text-slate-100">
+      {isSidebarOpen && (
+        <button
+          type="button"
+          aria-label="Close navigation overlay"
+          onClick={() => setIsSidebarOpen(false)}
+          className="fixed inset-0 z-20 bg-black/50 lg:hidden"
+        />
+      )}
+
+      <aside
+        className={`fixed inset-y-0 left-0 z-30 w-80 max-w-[85vw] border-r border-slate-700/70 bg-[linear-gradient(180deg,rgba(2,6,23,0.97),rgba(15,23,42,0.98))] shadow-[0_20px_80px_rgba(2,6,23,0.38)] transition-transform duration-300 lg:translate-x-0 ${
+          isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
+      >
+        <div className="flex h-full flex-col">
+          <div className="border-b border-slate-800 px-5 py-5">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <div className="inline-flex items-center gap-3">
+                  <div className="rounded-2xl border border-blue-400/25 bg-blue-500/10 p-3">
+                    <Database className="h-6 w-6 text-blue-300" />
+                  </div>
+                  <div>
+                    <p className="eyebrow">Enterprise Test Data</p>
+                    <h1 className="mt-2 text-xl font-semibold text-white">Test Service</h1>
+                  </div>
+                </div>
+                <p className="mt-4 text-sm leading-6 text-slate-400">
+                  Unified workspace for schemas, entities, mocks, activity, and operational controls.
+                </p>
+              </div>
+              <button
+                onClick={() => setIsSidebarOpen(false)}
+                className="rounded-xl border border-slate-700 bg-slate-900/70 p-2 text-slate-400 hover:bg-slate-800 hover:text-white lg:hidden"
+              >
+                <X className="h-4 w-4" />
+              </button>
             </div>
           </div>
 
-          {/* Search Bar */}
-          <div className="hidden md:flex flex-1 max-w-2xl mx-8" ref={searchContainerRef}>
-            <div className="relative w-full">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-500 pointer-events-none" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onFocus={() => setShowSearchResults(true)}
-                placeholder="Search entities, schemas, environments, users, mocks, settings..."
-                className="w-full pl-10 pr-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-              {showDropdown && (
-                <div className="absolute top-full left-0 right-0 mt-1 py-2 bg-gray-800 border border-gray-700 rounded-lg shadow-xl z-50 max-h-80 overflow-y-auto">
-                  {searchLoading ? (
-                    <div className="px-4 py-4 text-center text-gray-400 text-sm">
-                      Building global search index...
-                    </div>
-                  ) : !hasQuery ? (
-                    <div className="px-3 py-1.5">
-                      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Quick Access</p>
-                      {quickSuggestions.map((item) => {
-                        const Icon = item.icon;
-                        return (
-                          <button
-                            key={item.id}
-                            type="button"
-                            onClick={() => {
-                              navigate(item.path);
-                              setSearchQuery('');
-                              setShowSearchResults(false);
-                            }}
-                            className="w-full flex items-center gap-2 px-2 py-2 text-left text-white hover:bg-gray-700 rounded-lg transition-colors"
-                          >
-                            <Icon className={`w-4 h-4 flex-shrink-0 ${item.iconClass}`} />
-                            <div className="min-w-0">
-                              <p className="truncate">{item.label}</p>
-                              <p className="text-xs text-gray-400 truncate">{item.description}</p>
-                            </div>
-                            <ChevronRight className="w-4 h-4 text-gray-500 ml-auto" />
-                          </button>
-                        );
-                      })}
-                      <p className="text-xs text-gray-500 px-2 pt-2">Type to search across the system. Activity history is intentionally excluded.</p>
-                    </div>
-                  ) : hasResults ? (
-                    <>
-                      {groupedResults.map((group, groupIndex) => (
-                        <div
-                          key={group.category}
-                          className={`px-3 py-1.5 ${groupIndex > 0 ? 'border-t border-gray-700' : ''}`}
-                        >
-                          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
-                            {categoryLabels[group.category]}
-                          </p>
-                          {group.items.map((item) => {
-                            const Icon = item.icon;
-                            return (
-                              <button
-                                key={item.id}
-                                type="button"
-                                onClick={() => {
-                                  navigate(item.path);
-                                  setSearchQuery('');
-                                  setShowSearchResults(false);
-                                }}
-                                className="w-full flex items-center gap-2 px-2 py-2 text-left text-white hover:bg-gray-700 rounded-lg transition-colors"
-                              >
-                                <Icon className={`w-4 h-4 flex-shrink-0 ${item.iconClass}`} />
-                                <div className="min-w-0">
-                                  <p className="truncate">{item.label}</p>
-                                  <p className="text-xs text-gray-400 truncate">{item.description}</p>
-                                </div>
-                                <ChevronRight className="w-4 h-4 text-gray-500 ml-auto" />
-                              </button>
-                            );
-                          })}
-                        </div>
-                      ))}
-                    </>
-                  ) : (
-                    <div className="px-4 py-4 text-center text-gray-400 text-sm">
-                      No results found for &quot;{searchQuery.trim()}&quot;.
-                    </div>
-                  )}
-                </div>
-              )}
+          <div className="flex-1 overflow-y-auto px-4 py-5">
+            <div className="mb-5 rounded-2xl border border-slate-800 bg-slate-900/60 px-4 py-3">
+              <p className="eyebrow">Current Context</p>
+              <p className="mt-2 text-lg font-semibold text-white">{currentItem?.label || 'Workspace'}</p>
+              <p className="mt-1 text-sm text-slate-400">Use global search or jump directly between operational surfaces.</p>
             </div>
+
+            <nav className="space-y-1">
+              {menuItems.map((item) => {
+                if (item.requiredPermission && !hasPermission(item.requiredPermission)) return null;
+
+                const Icon = item.icon;
+                const active = isActive(item.path);
+
+                return (
+                  <Link
+                    key={item.path}
+                    to={item.path}
+                    onClick={() => setIsSidebarOpen(false)}
+                    className={`group flex items-center gap-3 rounded-2xl px-4 py-3 transition-all ${
+                      active
+                        ? 'border border-blue-400/25 bg-blue-500/15 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]'
+                        : 'border border-transparent text-slate-400 hover:border-slate-700 hover:bg-slate-900/80 hover:text-white'
+                    }`}
+                  >
+                    <div className={`rounded-xl p-2 ${active ? 'bg-blue-500/20 text-blue-200' : 'bg-slate-800/80 text-slate-400 group-hover:text-slate-200'}`}>
+                      <Icon className="h-4 w-4" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="font-medium">{item.label}</p>
+                      <p className="text-xs text-slate-500">{item.label === 'Dashboard' ? 'Overview and status' : 'Manage and inspect'}</p>
+                    </div>
+                  </Link>
+                );
+              })}
+            </nav>
           </div>
 
-          {/* Right side */}
-          <div className="flex items-center gap-3">
-            <NotificationBell ref={bellRef} />
-            
-            <div className="flex items-center gap-3 pl-3 border-l border-gray-700">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
-                  <UserIcon className="w-4 h-4 text-white" />
+          <div className="border-t border-slate-800 p-4">
+            <div className="mb-3 rounded-2xl border border-slate-800 bg-slate-900/70 px-4 py-3">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-500/20 text-blue-200">
+                  <UserIcon className="h-4 w-4" />
                 </div>
-                <div className="hidden lg:block">
-                  <p className="text-sm text-white font-medium">{user?.username}</p>
-                  <p className="text-xs text-gray-400">{user?.role}</p>
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium text-white">{user?.username}</p>
+                  <p className="truncate text-xs text-slate-400">{user?.role}</p>
                 </div>
               </div>
             </div>
+            <div className="space-y-1">
+              {hasPermission(Permissions.SettingsRead) && (
+                <Link
+                  to="/settings"
+                  onClick={() => setIsSidebarOpen(false)}
+                  className={`flex items-center gap-3 rounded-2xl px-4 py-3 transition-colors ${
+                    isActive('/settings')
+                      ? 'border border-blue-400/25 bg-blue-500/15 text-white'
+                      : 'text-slate-400 hover:bg-slate-900/80 hover:text-white'
+                  }`}
+                >
+                  <Settings className="h-4 w-4" />
+                  <span className="font-medium">Settings</span>
+                </Link>
+              )}
+
+              <button
+                onClick={handleLogout}
+                className="flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-slate-400 transition-colors hover:bg-rose-500/10 hover:text-rose-300"
+              >
+                <LogOut className="h-4 w-4" />
+                <span className="font-medium">Logout</span>
+              </button>
+            </div>
           </div>
         </div>
-      </header>
-
-      {/* Sidebar */}
-      <aside
-        className={`fixed left-0 top-16 bottom-0 bg-gray-800 border-r border-gray-700 transition-all duration-300 z-20 ${
-          isSidebarOpen ? 'w-64' : 'w-0'
-        } overflow-hidden`}
-      >
-        <nav className="p-4 space-y-1">
-          {menuItems.map((item) => {
-            if (item.requiredPermission && !hasPermission(item.requiredPermission)) return null;
-            
-            const Icon = item.icon;
-            const active = isActive(item.path);
-
-            return (
-              <Link
-                key={item.path}
-                to={item.path}
-                className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                  active
-                    ? 'bg-blue-600 text-white'
-                    : 'text-gray-400 hover:bg-gray-700 hover:text-white'
-                }`}
-              >
-                <Icon className="w-5 h-5 flex-shrink-0" />
-                <span className="font-medium">{item.label}</span>
-              </Link>
-            );
-          })}
-
-          {/* Bottom Section */}
-          <div className="absolute bottom-4 left-4 right-4 space-y-1 pt-4 border-t border-gray-700">
-            {hasPermission(Permissions.SettingsRead) && (
-              <Link
-                to="/settings"
-                className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                  isActive('/settings')
-                    ? 'bg-blue-600 text-white'
-                    : 'text-gray-400 hover:bg-gray-700 hover:text-white'
-                }`}
-              >
-                <Settings className="w-5 h-5 flex-shrink-0" />
-                <span className="font-medium">Settings</span>
-              </Link>
-            )}
-
-            <button
-              onClick={handleLogout}
-              className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-gray-400 hover:bg-red-600/10 hover:text-red-400 transition-colors"
-            >
-              <LogOut className="w-5 h-5 flex-shrink-0" />
-              <span className="font-medium">Logout</span>
-            </button>
-          </div>
-        </nav>
       </aside>
 
-      {/* Main Content */}
-      <main
-        className={`transition-all duration-300 pt-16 ${
-          isSidebarOpen ? 'ml-64' : 'ml-0'
-        }`}
-      >
-        <div className="p-6">
+      <div className="min-h-screen lg:pl-80">
+        <header className="sticky top-0 z-10 border-b border-slate-800/80 bg-[rgba(7,17,31,0.82)] backdrop-blur-xl">
+          <div className="flex items-center gap-4 px-4 py-4 sm:px-6">
+            <button
+              onClick={() => setIsSidebarOpen((prev) => !prev)}
+              className="rounded-2xl border border-slate-700 bg-slate-900/70 p-3 text-slate-400 hover:bg-slate-800 hover:text-white"
+            >
+              {isSidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            </button>
+
+            <div className="hidden min-w-0 flex-1 md:flex" ref={searchContainerRef}>
+              <div className="relative w-full max-w-3xl">
+                <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-500" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onFocus={() => setShowSearchResults(true)}
+                  placeholder="Search entities, schemas, environments, users, mocks, settings..."
+                  className="w-full rounded-2xl border border-slate-700 bg-slate-900/80 py-3 pl-12 pr-4 text-white placeholder-slate-500 outline-none transition-all focus:border-blue-400/60 focus:ring-4 focus:ring-blue-500/10"
+                />
+                {showDropdown && (
+                  <div className="absolute left-0 right-0 top-full z-50 mt-2 max-h-96 overflow-y-auto rounded-[24px] border border-slate-700 bg-slate-950/95 py-2 shadow-[0_24px_80px_rgba(2,6,23,0.45)]">
+                    {searchLoading ? (
+                      <div className="px-4 py-4 text-center text-sm text-slate-400">
+                        Building global search index...
+                      </div>
+                    ) : !hasQuery ? (
+                      <div className="px-3 py-1.5">
+                        <p className="eyebrow mb-2 px-2">Quick Access</p>
+                        {quickSuggestions.map((item) => {
+                          const Icon = item.icon;
+                          return (
+                            <button
+                              key={item.id}
+                              type="button"
+                              onClick={() => {
+                                navigate(item.path);
+                                setSearchQuery('');
+                                setShowSearchResults(false);
+                              }}
+                              className="flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left text-white transition-colors hover:bg-slate-900"
+                            >
+                              <Icon className={`h-4 w-4 flex-shrink-0 ${item.iconClass}`} />
+                              <div className="min-w-0">
+                                <p className="truncate">{item.label}</p>
+                                <p className="truncate text-xs text-slate-400">{item.description}</p>
+                              </div>
+                              <ChevronRight className="ml-auto h-4 w-4 text-slate-500" />
+                            </button>
+                          );
+                        })}
+                      </div>
+                    ) : hasResults ? (
+                      <>
+                        {groupedResults.map((group, groupIndex) => (
+                          <div
+                            key={group.category}
+                            className={`px-3 py-1.5 ${groupIndex > 0 ? 'border-t border-slate-800' : ''}`}
+                          >
+                            <p className="eyebrow mb-2 px-2">{categoryLabels[group.category]}</p>
+                            {group.items.map((item) => {
+                              const Icon = item.icon;
+                              return (
+                                <button
+                                  key={item.id}
+                                  type="button"
+                                  onClick={() => {
+                                    navigate(item.path);
+                                    setSearchQuery('');
+                                    setShowSearchResults(false);
+                                  }}
+                                  className="flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left text-white transition-colors hover:bg-slate-900"
+                                >
+                                  <Icon className={`h-4 w-4 flex-shrink-0 ${item.iconClass}`} />
+                                  <div className="min-w-0">
+                                    <p className="truncate">{item.label}</p>
+                                    <p className="truncate text-xs text-slate-400">{item.description}</p>
+                                  </div>
+                                  <ChevronRight className="ml-auto h-4 w-4 text-slate-500" />
+                                </button>
+                              );
+                            })}
+                          </div>
+                        ))}
+                      </>
+                    ) : (
+                      <div className="px-4 py-4 text-center text-sm text-slate-400">
+                        No results found for &quot;{searchQuery.trim()}&quot;.
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="ml-auto flex items-center gap-3">
+              <NotificationBell ref={bellRef} />
+              <div className="hidden rounded-2xl border border-slate-700 bg-slate-900/70 px-4 py-2 sm:block">
+                <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Workspace</p>
+                <p className="mt-1 text-sm font-medium text-white">{currentItem?.label || 'Dashboard'}</p>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        <main className="px-4 py-6 sm:px-6">
           <Outlet />
-        </div>
-      </main>
+        </main>
+      </div>
     </div>
   );
 };

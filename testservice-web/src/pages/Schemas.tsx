@@ -1,22 +1,21 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  Layers, 
-  Plus, 
-  Edit, 
-  Trash2,
+import {
   AlertCircle,
-  Search,
-  List,
-  Grid3x3,
-  Filter,
-  Package,
-  ChevronRight,
-  Type,
-  Hash,
-  CheckSquare,
   Calendar,
-  Database
+  CheckSquare,
+  Database,
+  Edit,
+  Filter,
+  Grid3x3,
+  Hash,
+  Layers,
+  List,
+  Package,
+  Plus,
+  Search,
+  Trash2,
+  Type
 } from 'lucide-react';
 import { apiService } from '../services/api';
 import { getErrorMessage, type Schema } from '../types';
@@ -30,7 +29,7 @@ const Schemas: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [error, setError] = useState('');
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
-  const [sortBy, setSortBy] = useState<'name' | 'fields' | 'recent'>('name');
+  const [sortBy, setSortBy] = useState<SortOption>('name');
   const [showAutoConsumeOnly, setShowAutoConsumeOnly] = useState(false);
 
   useEffect(() => {
@@ -42,9 +41,6 @@ const Schemas: React.FC = () => {
     setError('');
     try {
       const data = await apiService.getSchemas();
-      console.log('API returned schemas:', data);
-      console.log('Number of schemas:', data?.length);
-      console.log('First schema:', data?.[0]);
       setSchemas(data);
     } catch (err) {
       setError(getErrorMessage(err));
@@ -54,17 +50,8 @@ const Schemas: React.FC = () => {
     }
   };
 
-  const handleCreateNew = () => {
-    navigate('/schemas/new');
-  };
-
-  const handleSchemaClick = (schemaEntityName: string) => {
-    navigate(`/schemas/${schemaEntityName}`);
-  };
-
   const handleDelete = async (schemaEntityName: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    
     if (!confirm(`Are you sure you want to delete the schema "${schemaEntityName}"?\n\nThis will also affect any entities using this schema.`)) {
       return;
     }
@@ -74,7 +61,6 @@ const Schemas: React.FC = () => {
         method: 'DELETE',
         url: `/api/schemas/${schemaEntityName}`
       });
-      
       await loadSchemas();
     } catch (err) {
       alert(getErrorMessage(err));
@@ -83,8 +69,7 @@ const Schemas: React.FC = () => {
 
   const handleDeleteAllEntities = async (schemaEntityName: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    
-    if (!confirm(`Are you sure you want to delete ALL entities of type "${schemaEntityName}"?\n\nThis will permanently delete all entities, but the schema will remain intact.\n\nThis action cannot be undone!`)) {
+    if (!confirm(`Are you sure you want to delete ALL entities of type "${schemaEntityName}"?\n\nThis action cannot be undone.`)) {
       return;
     }
 
@@ -99,382 +84,343 @@ const Schemas: React.FC = () => {
 
   const getFieldTypeIcon = (type: string) => {
     switch (type) {
-      case 'string': return <Type className="w-3 h-3" />;
-      case 'number': return <Hash className="w-3 h-3" />;
-      case 'boolean': return <CheckSquare className="w-3 h-3" />;
-      case 'date': return <Calendar className="w-3 h-3" />;
-      default: return <Package className="w-3 h-3" />;
+      case 'string':
+        return <Type className="h-3.5 w-3.5" />;
+      case 'number':
+        return <Hash className="h-3.5 w-3.5" />;
+      case 'boolean':
+        return <CheckSquare className="h-3.5 w-3.5" />;
+      case 'date':
+      case 'datetime':
+        return <Calendar className="h-3.5 w-3.5" />;
+      default:
+        return <Package className="h-3.5 w-3.5" />;
     }
   };
 
   const getFieldTypeColor = (type: string) => {
     switch (type) {
-      case 'string': return 'bg-blue-500/10 text-blue-400 border-blue-500/30';
-      case 'number': return 'bg-green-500/10 text-green-400 border-green-500/30';
-      case 'boolean': return 'bg-purple-500/10 text-purple-400 border-purple-500/30';
-      case 'date': return 'bg-orange-500/10 text-orange-400 border-orange-500/30';
-      case 'array': return 'bg-pink-500/10 text-pink-400 border-pink-500/30';
-      case 'object': return 'bg-yellow-500/10 text-yellow-400 border-yellow-500/30';
-      default: return 'bg-gray-500/10 text-gray-400 border-gray-500/30';
+      case 'string':
+        return 'border-blue-500/20 bg-blue-500/10 text-blue-200';
+      case 'number':
+        return 'border-emerald-500/20 bg-emerald-500/10 text-emerald-200';
+      case 'boolean':
+        return 'border-violet-500/20 bg-violet-500/10 text-violet-200';
+      case 'date':
+      case 'datetime':
+        return 'border-amber-500/20 bg-amber-500/10 text-amber-200';
+      default:
+        return 'border-slate-700 bg-slate-900/70 text-slate-300';
     }
   };
 
-  // Filter and sort schemas
-  let filteredSchemas = schemas.filter(schema => {
-    // Skip schemas without entityName
-    if (!schema.entityName) return false;
-    
-    // If there's a search term, filter by entityName
-    if (searchTerm) {
-      return schema.entityName.toLowerCase().includes(searchTerm.toLowerCase());
-    }
-    
-    // No search term, include all schemas with entityName
-    return true;
-  });
+  const filteredSchemas = schemas
+    .filter((schema) => schema.entityName)
+    .filter((schema) => schema.entityName.toLowerCase().includes(searchTerm.toLowerCase()))
+    .filter((schema) => !showAutoConsumeOnly || schema.excludeOnFetch);
 
-  console.log('After filtering:', filteredSchemas.length, 'schemas');
-  console.log('Search term:', searchTerm);
-  console.log('Show auto-consume only:', showAutoConsumeOnly);
-
-  if (showAutoConsumeOnly) {
-    filteredSchemas = filteredSchemas.filter(s => s.excludeOnFetch);
-  }
-
-  // Sort schemas
   const sortedSchemas = [...filteredSchemas].sort((a, b) => {
     switch (sortBy) {
-      case 'name':
-        return (a.entityName || '').localeCompare(b.entityName || '');
       case 'fields':
         return (b.fields?.length || 0) - (a.fields?.length || 0);
       case 'recent':
         return (b.createdAt || '').localeCompare(a.createdAt || '');
+      case 'name':
       default:
-        return 0;
+        return (a.entityName || '').localeCompare(b.entityName || '');
     }
   });
 
-  console.log('After sorting:', sortedSchemas.length, 'schemas');
-  console.log('Sorted schemas:', sortedSchemas.map(s => s.entityName));
+  const totalFields = schemas.reduce((sum, schema) => sum + (schema.fields?.length || 0), 0);
+  const autoConsumeCount = schemas.filter((schema) => schema.excludeOnFetch).length;
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+      <div className="flex h-64 items-center justify-center">
+        <div className="h-12 w-12 animate-spin rounded-full border-b-2 border-blue-500" />
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-            <Layers className="w-8 h-8" />
-            Schemas
-          </h1>
-          <p className="text-gray-400 mt-1">Manage entity type definitions</p>
-        </div>
-        <button
-          onClick={handleCreateNew}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium"
-        >
-          <Plus className="w-5 h-5" />
-          Create Schema
-        </button>
-      </div>
+    <div className="app-page">
+      <section className="page-hero">
+        <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+          <div className="max-w-3xl">
+            <div className="inline-flex items-center gap-3">
+              <div className="page-hero-icon">
+                <Layers className="h-7 w-7 text-blue-300" />
+              </div>
+              <div>
+                <p className="eyebrow">Schema Control Plane</p>
+                <h1 className="mt-2 text-3xl font-semibold tracking-tight text-white">Define the structure behind every entity workflow</h1>
+              </div>
+            </div>
+            <p className="mt-4 max-w-2xl text-sm leading-6 text-slate-300">
+              Maintain field contracts, auto-consume behavior, and entity cleanup actions from one operational schema workspace.
+            </p>
+          </div>
 
-      {/* Error Message */}
+          <div className="flex flex-wrap gap-3">
+            <button type="button" onClick={() => navigate('/schemas/new')} className="button-primary">
+              <Plus className="h-4 w-4" />
+              Create Schema
+            </button>
+          </div>
+        </div>
+      </section>
+
       {error && (
-        <div className="p-4 bg-red-500/10 border border-red-500/50 rounded-lg flex items-center gap-2 text-red-400">
-          <AlertCircle className="w-5 h-5 flex-shrink-0" />
-          <span>{error}</span>
+        <div className="rounded-2xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="h-4 w-4" />
+            <span>{error}</span>
+          </div>
         </div>
       )}
 
-      {/* Search and Filters */}
-      <div className="bg-gray-800 rounded-lg border border-gray-700 p-4">
-        <div className="flex flex-col md:flex-row gap-4">
-          {/* Search */}
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-500" />
+      <section className="panel p-5">
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+          <div className="relative flex-1">
+            <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
             <input
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search schemas by name..."
-              className="w-full pl-10 pr-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              placeholder="Search schemas by entity name"
+              className="field-shell pl-11"
             />
           </div>
 
-          {/* Sort */}
-          <select
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value as SortOption)}
-            className="px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="name">Sort by Name</option>
-            <option value="fields">Sort by Fields Count</option>
-            <option value="recent">Sort by Recent</option>
-          </select>
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as SortOption)}
+              className="field-shell sm:min-w-[180px]"
+            >
+              <option value="name">Sort by name</option>
+              <option value="fields">Sort by field count</option>
+              <option value="recent">Sort by most recent</option>
+            </select>
 
-          {/* View Mode Toggle */}
-          <div className="flex items-center gap-1 bg-gray-700 rounded-lg p-1">
-            <button
-              onClick={() => setViewMode('list')}
-              className={`p-2 rounded transition-colors ${
-                viewMode === 'list' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white'
-              }`}
-              title="List view"
-            >
-              <List className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => setViewMode('grid')}
-              className={`p-2 rounded transition-colors ${
-                viewMode === 'grid' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white'
-              }`}
-              title="Grid view"
-            >
-              <Grid3x3 className="w-4 h-4" />
-            </button>
+            <div className="inline-flex items-center rounded-full border border-slate-700/80 bg-slate-900/80 p-1">
+              <button
+                type="button"
+                onClick={() => setViewMode('list')}
+                className={`rounded-full px-3 py-2 text-sm transition-colors ${viewMode === 'list' ? 'bg-blue-500 text-slate-950' : 'text-slate-300 hover:text-white'}`}
+              >
+                <span className="inline-flex items-center gap-2">
+                  <List className="h-4 w-4" />
+                  List
+                </span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode('grid')}
+                className={`rounded-full px-3 py-2 text-sm transition-colors ${viewMode === 'grid' ? 'bg-blue-500 text-slate-950' : 'text-slate-300 hover:text-white'}`}
+              >
+                <span className="inline-flex items-center gap-2">
+                  <Grid3x3 className="h-4 w-4" />
+                  Grid
+                </span>
+              </button>
+            </div>
           </div>
         </div>
 
-        {/* Auto-consume filter */}
-        <div className="mt-3 pt-3 border-t border-gray-700">
-          <label className="flex items-center gap-2 cursor-pointer w-fit">
+        <div className="mt-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <label className="inline-flex items-center gap-3 rounded-2xl border border-slate-700/70 bg-slate-900/70 px-4 py-3 text-sm text-slate-300">
+            <Filter className="h-4 w-4 text-slate-400" />
             <input
               type="checkbox"
               checked={showAutoConsumeOnly}
               onChange={(e) => setShowAutoConsumeOnly(e.target.checked)}
-              className="w-4 h-4 bg-gray-700 border-gray-600 rounded focus:ring-2 focus:ring-blue-500"
+              className="h-4 w-4 rounded border-slate-600 bg-slate-800 text-blue-500 focus:ring-blue-500"
             />
-            <span className="text-sm text-gray-300 flex items-center gap-2">
-              <Filter className="w-4 h-4" />
-              Show only auto-consume schemas
-            </span>
+            <span>Show auto-consume schemas only</span>
           </label>
-        </div>
-      </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-gray-800 rounded-lg border border-gray-700 p-4">
-          <p className="text-gray-400 text-sm">Total Schemas</p>
-          <p className="text-2xl font-bold text-white mt-1">{schemas.length}</p>
+          <div className="grid gap-3 sm:grid-cols-3 lg:min-w-[520px]">
+            <div className="rounded-2xl border border-slate-800 bg-slate-950/35 px-4 py-4">
+              <p className="text-sm text-slate-400">Total schemas</p>
+              <p className="mt-2 text-2xl font-semibold text-white">{schemas.length}</p>
+            </div>
+            <div className="rounded-2xl border border-slate-800 bg-slate-950/35 px-4 py-4">
+              <p className="text-sm text-slate-400">Auto-consume enabled</p>
+              <p className="mt-2 text-2xl font-semibold text-amber-300">{autoConsumeCount}</p>
+            </div>
+            <div className="rounded-2xl border border-slate-800 bg-slate-950/35 px-4 py-4">
+              <p className="text-sm text-slate-400">Total fields tracked</p>
+              <p className="mt-2 text-2xl font-semibold text-white">{totalFields}</p>
+            </div>
+          </div>
         </div>
-        <div className="bg-gray-800 rounded-lg border border-gray-700 p-4">
-          <p className="text-gray-400 text-sm">Auto-Consume</p>
-          <p className="text-2xl font-bold text-white mt-1">
-            {schemas.filter(s => s.excludeOnFetch).length}
-          </p>
-        </div>
-        <div className="bg-gray-800 rounded-lg border border-gray-700 p-4">
-          <p className="text-gray-400 text-sm">Total Fields</p>
-          <p className="text-2xl font-bold text-white mt-1">
-            {schemas.reduce((sum, s) => sum + (s.fields?.length || 0), 0)}
-          </p>
-        </div>
-        <div className="bg-gray-800 rounded-lg border border-gray-700 p-4">
-          <p className="text-gray-400 text-sm">Filtered Results</p>
-          <p className="text-2xl font-bold text-white mt-1">{sortedSchemas.length}</p>
-        </div>
-      </div>
+      </section>
 
-      {/* Schema List/Grid */}
       {sortedSchemas.length > 0 ? (
         viewMode === 'list' ? (
-          // List View
-          <div className="bg-gray-800 rounded-lg border border-gray-700 overflow-hidden">
-            <div className="divide-y divide-gray-700">
-              {sortedSchemas.map((schema, index) => (
+          <section className="table-shell">
+            <div className="panel-header">
+              <p className="eyebrow">Definitions</p>
+              <h2 className="mt-2 text-xl font-semibold text-white">{sortedSchemas.length} schemas in view</h2>
+            </div>
+            <div className="divide-y divide-slate-800/80">
+              {sortedSchemas.map((schema) => (
                 <div
-                  key={index}
-                  className="p-6 hover:bg-gray-700 transition-colors group"
+                  key={schema.entityName}
+                  className="group flex flex-col gap-4 px-5 py-5 transition-colors hover:bg-slate-900/45 xl:flex-row xl:items-start xl:justify-between"
                 >
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex items-center gap-4 flex-1">
-                      <div className="p-3 bg-blue-500/10 rounded-lg border border-blue-500/20">
-                        <Package className="w-6 h-6 text-blue-500" />
+                  <button
+                    type="button"
+                    onClick={() => navigate(`/schemas/${schema.entityName}`)}
+                    className="flex min-w-0 flex-1 items-start gap-4 text-left"
+                  >
+                    <div className="rounded-2xl border border-blue-500/20 bg-blue-500/10 p-3">
+                      <Package className="h-6 w-6 text-blue-300" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h3 className="text-lg font-semibold text-white">{schema.entityName}</h3>
+                        {schema.excludeOnFetch && (
+                          <span className="badge-soft border-amber-500/25 bg-amber-500/10 text-amber-300">Auto-consume</span>
+                        )}
                       </div>
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <h3 className="text-lg font-semibold text-white">{schema.entityName}</h3>
-                          {schema.excludeOnFetch && (
-                            <span className="text-xs px-2 py-0.5 bg-orange-500/20 text-orange-400 rounded border border-orange-500/30">
-                              Auto-consume
-                            </span>
+                      <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-slate-400">
+                        <span className="badge-soft">{schema.fields?.length || 0} fields</span>
+                        <span className="badge-soft">{schema.fields?.filter((field) => field.required).length || 0} required</span>
+                      </div>
+                      {schema.fields && schema.fields.length > 0 && (
+                        <div className="mt-4 flex flex-wrap gap-2">
+                          {schema.fields.slice(0, 6).map((field) => (
+                            <div
+                              key={`${schema.entityName}-${field.name}`}
+                              className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs ${getFieldTypeColor(field.type || 'string')}`}
+                            >
+                              {getFieldTypeIcon(field.type || 'string')}
+                              <span>{field.name}</span>
+                              {field.required && <span className="text-red-300">*</span>}
+                            </div>
+                          ))}
+                          {schema.fields.length > 6 && (
+                            <span className="badge-soft">+{schema.fields.length - 6} more</span>
                           )}
-                        </div>
-                        <p className="text-sm text-gray-400">
-                          {schema.fields?.length || 0} fields � {schema.fields?.filter(f => f.required).length || 0} required
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={(e) => handleDeleteAllEntities(schema.entityName, e)}
-                        className="p-2 hover:bg-orange-500/10 rounded-lg transition-colors"
-                        title="Delete All Entities"
-                      >
-                        <Database className="w-5 h-5 text-gray-400 hover:text-orange-400" />
-                      </button>
-                      <button
-                        onClick={() => handleSchemaClick(schema.entityName)}
-                        className="p-2 hover:bg-gray-600 rounded-lg transition-colors"
-                        title="View/Edit"
-                      >
-                        <Edit className="w-5 h-5 text-gray-400 hover:text-white" />
-                      </button>
-                      <button
-                        onClick={(e) => handleDelete(schema.entityName, e)}
-                        className="p-2 hover:bg-red-500/10 rounded-lg transition-colors"
-                        title="Delete Schema"
-                      >
-                        <Trash2 className="w-5 h-5 text-gray-400 hover:text-red-400" />
-                      </button>
-                      <button
-                        onClick={() => handleSchemaClick(schema.entityName)}
-                        className="p-2 hover:bg-gray-600 rounded-lg transition-colors"
-                      >
-                        <ChevronRight className="w-5 h-5 text-gray-500 group-hover:text-white transition-colors" />
-                      </button>
-                    </div>
-                  </div>
-                  
-                  {/* Fields Preview */}
-                  {schema.fields && schema.fields.length > 0 && (
-                    <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-gray-700">
-                      {schema.fields.slice(0, 6).map((field, fieldIndex) => (
-                        field && field.name ? (
-                          <div
-                            key={fieldIndex}
-                            className={`flex items-center gap-1.5 px-2 py-1 rounded border text-xs ${getFieldTypeColor(field.type || 'string')}`}
-                          >
-                            {getFieldTypeIcon(field.type || 'string')}
-                            <span className="font-medium">{field.name}</span>
-                            {field.required && <span className="text-red-400">*</span>}
-                          </div>
-                        ) : null
-                      ))}
-                      {schema.fields.length > 6 && (
-                        <div className="px-2 py-1 text-xs text-gray-400">
-                          +{schema.fields.length - 6} more
                         </div>
                       )}
                     </div>
-                  )}
+                  </button>
+
+                  <div className="flex flex-wrap items-center gap-2 xl:justify-end">
+                    <button
+                      type="button"
+                      onClick={(e) => handleDeleteAllEntities(schema.entityName, e)}
+                      className="button-secondary"
+                    >
+                      <Database className="h-4 w-4" />
+                      Delete Entities
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => navigate(`/schemas/${schema.entityName}`)}
+                      className="button-secondary"
+                    >
+                      <Edit className="h-4 w-4" />
+                      Edit
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => handleDelete(schema.entityName, e)}
+                      className="inline-flex items-center justify-center gap-2 rounded-full border border-red-500/30 bg-red-500/10 px-4 py-2 text-sm text-red-200 transition-colors hover:bg-red-500/15"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      Delete
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
-          </div>
+          </section>
         ) : (
-          // Grid View
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {sortedSchemas.map((schema, index) => (
-              <div
-                key={index}
-                className="bg-gray-800 rounded-lg border border-gray-700 p-6 hover:border-blue-500/50 transition-all group cursor-pointer"
-                onClick={() => handleSchemaClick(schema.entityName)}
+          <section className="grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
+            {sortedSchemas.map((schema) => (
+              <button
+                key={schema.entityName}
+                type="button"
+                onClick={() => navigate(`/schemas/${schema.entityName}`)}
+                className="panel group p-5 text-left transition-colors hover:bg-slate-900/70"
               >
-                <div className="flex items-start justify-between mb-4">
-                  <div className="p-3 bg-blue-500/10 rounded-lg border border-blue-500/20">
-                    <Package className="w-6 h-6 text-blue-500" />
+                <div className="flex items-start justify-between gap-3">
+                  <div className="rounded-2xl border border-blue-500/20 bg-blue-500/10 p-3">
+                    <Package className="h-6 w-6 text-blue-300" />
                   </div>
-                  <div className="flex gap-1">
+                  <div className="flex gap-2">
                     <button
+                      type="button"
                       onClick={(e) => handleDeleteAllEntities(schema.entityName, e)}
-                      className="p-1.5 hover:bg-orange-500/10 rounded transition-colors"
-                      title="Delete All Entities"
+                      className="rounded-full border border-slate-700/70 bg-slate-900/70 p-2 text-slate-400 transition-colors hover:text-amber-300"
                     >
-                      <Database className="w-4 h-4 text-gray-400 hover:text-orange-400" />
+                      <Database className="h-4 w-4" />
                     </button>
                     <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleSchemaClick(schema.entityName);
-                      }}
-                      className="p-1.5 hover:bg-gray-700 rounded transition-colors"
-                      title="Edit"
-                    >
-                      <Edit className="w-4 h-4 text-gray-400 hover:text-white" />
-                    </button>
-                    <button
+                      type="button"
                       onClick={(e) => handleDelete(schema.entityName, e)}
-                      className="p-1.5 hover:bg-red-500/10 rounded transition-colors"
-                      title="Delete Schema"
+                      className="rounded-full border border-slate-700/70 bg-slate-900/70 p-2 text-slate-400 transition-colors hover:text-red-300"
                     >
-                      <Trash2 className="w-4 h-4 text-gray-400 hover:text-red-400" />
+                      <Trash2 className="h-4 w-4" />
                     </button>
                   </div>
                 </div>
 
-                <h3 className="text-lg font-semibold text-white mb-2 truncate">
-                  {schema.entityName}
-                </h3>
-
-                {schema.excludeOnFetch && (
-                  <span className="inline-block text-xs px-2 py-0.5 bg-orange-500/20 text-orange-400 rounded border border-orange-500/30 mb-3">
-                    Auto-consume
-                  </span>
-                )}
-
-                <div className="space-y-2 mb-4">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-400">Fields</span>
-                    <span className="text-white font-medium">{schema.fields?.length || 0}</span>
+                <div className="mt-4">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h3 className="text-xl font-semibold text-white">{schema.entityName}</h3>
+                    {schema.excludeOnFetch && (
+                      <span className="badge-soft border-amber-500/25 bg-amber-500/10 text-amber-300">Auto-consume</span>
+                    )}
                   </div>
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-400">Required</span>
-                    <span className="text-white font-medium">
-                      {schema.fields?.filter(f => f.required).length || 0}
-                    </span>
+                  <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                    <div className="rounded-2xl border border-slate-800 bg-slate-950/35 px-4 py-3">
+                      <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Fields</p>
+                      <p className="mt-2 text-xl font-semibold text-white">{schema.fields?.length || 0}</p>
+                    </div>
+                    <div className="rounded-2xl border border-slate-800 bg-slate-950/35 px-4 py-3">
+                      <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Required</p>
+                      <p className="mt-2 text-xl font-semibold text-white">{schema.fields?.filter((field) => field.required).length || 0}</p>
+                    </div>
                   </div>
-                </div>
 
-                {/* Field Types Summary */}
-                {schema.fields && schema.fields.length > 0 && (
-                  <div className="flex flex-wrap gap-1 pt-3 border-t border-gray-700">
-                    {Array.from(new Set(schema.fields.map(f => f?.type || 'string'))).slice(0, 4).map((type, i) => (
-                      <div
-                        key={i}
-                        className={`flex items-center gap-1 px-2 py-0.5 rounded border text-xs ${getFieldTypeColor(type)}`}
-                      >
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    {Array.from(new Set(schema.fields.map((field) => field?.type || 'string'))).slice(0, 4).map((type) => (
+                      <span key={`${schema.entityName}-${type}`} className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs ${getFieldTypeColor(type)}`}>
                         {getFieldTypeIcon(type)}
                         <span>{type}</span>
-                      </div>
+                      </span>
                     ))}
                   </div>
-                )}
-              </div>
+                </div>
+              </button>
             ))}
-          </div>
+          </section>
         )
       ) : (
-        // Empty State
-        <div className="bg-gray-800 rounded-lg border border-gray-700 p-12 text-center">
-          <Layers className="w-16 h-16 mx-auto mb-4 opacity-50 text-gray-500" />
-          <h3 className="text-lg font-medium text-gray-400 mb-2">
-            {searchTerm || showAutoConsumeOnly ? 'No schemas found' : 'No schemas yet'}
+        <section className="panel p-12 text-center">
+          <Layers className="mx-auto h-14 w-14 text-slate-600" />
+          <h3 className="mt-4 text-lg font-medium text-white">
+            {searchTerm || showAutoConsumeOnly ? 'No schemas match the current filters' : 'No schemas yet'}
           </h3>
-          <p className="text-sm text-gray-500 mb-4">
+          <p className="mt-2 text-sm text-slate-400">
             {searchTerm || showAutoConsumeOnly
-              ? 'Try adjusting your search or filters'
-              : 'Create your first schema to define entity types'}
+              ? 'Try changing the search or filter criteria.'
+              : 'Create your first schema to define a reusable entity contract.'}
           </p>
           {!searchTerm && !showAutoConsumeOnly && (
-            <button
-              onClick={handleCreateNew}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium"
-            >
-              <Plus className="w-5 h-5" />
-              Create Schema
-            </button>
+            <div className="mt-6">
+              <button type="button" onClick={() => navigate('/schemas/new')} className="button-primary">
+                <Plus className="h-4 w-4" />
+                Create Schema
+              </button>
+            </div>
           )}
-        </div>
+        </section>
       )}
     </div>
   );

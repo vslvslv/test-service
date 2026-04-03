@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  Plus, 
-  Save,
-  ArrowLeft,
+import {
   AlertCircle,
-  Trash2,
-  GripVertical
+  ArrowLeft,
+  GripVertical,
+  Layers,
+  Plus,
+  Save,
+  Trash2
 } from 'lucide-react';
 import { apiService } from '../services/api';
 import { getErrorMessage } from '../types';
@@ -20,26 +21,36 @@ interface SchemaField {
 }
 
 const fieldTypes = [
-  { value: 'string', label: 'String (Text)' },
+  { value: 'string', label: 'String' },
   { value: 'number', label: 'Number' },
-  { value: 'boolean', label: 'Boolean (True/False)' },
+  { value: 'boolean', label: 'Boolean' },
   { value: 'date', label: 'Date' },
-  { value: 'array', label: 'Array (List)' },
-  { value: 'object', label: 'Object (JSON)' },
+  { value: 'array', label: 'Array' },
+  { value: 'object', label: 'Object' }
 ];
+
+const emptyField = (): SchemaField => ({
+  name: '',
+  type: 'string',
+  required: false,
+  isUnique: false,
+  defaultValue: ''
+});
 
 const CreateSchema: React.FC = () => {
   const navigate = useNavigate();
   const [schemaName, setSchemaName] = useState('');
   const [excludeOnFetch, setExcludeOnFetch] = useState(false);
-  const [fields, setFields] = useState<SchemaField[]>([
-    { name: '', type: 'string', required: false, isUnique: false, defaultValue: '' }
-  ]);
+  const [fields, setFields] = useState<SchemaField[]>([emptyField()]);
   const [error, setError] = useState('');
   const [isCreating, setIsCreating] = useState(false);
 
+  const updateField = (index: number, field: Partial<SchemaField>) => {
+    setFields((current) => current.map((item, itemIndex) => (itemIndex === index ? { ...item, ...field } : item)));
+  };
+
   const addField = () => {
-    setFields([...fields, { name: '', type: 'string', required: false, isUnique: false, defaultValue: '' }]);
+    setFields((current) => [...current, emptyField()]);
   };
 
   const removeField = (index: number) => {
@@ -47,43 +58,27 @@ const CreateSchema: React.FC = () => {
       alert('Schema must have at least one field');
       return;
     }
-    setFields(fields.filter((_, i) => i !== index));
-  };
-
-  const updateField = (index: number, field: Partial<SchemaField>) => {
-    const newFields = [...fields];
-    newFields[index] = { ...newFields[index], ...field };
-    setFields(newFields);
+    setFields((current) => current.filter((_, itemIndex) => itemIndex !== index));
   };
 
   const validateForm = (): string | null => {
-    if (!schemaName.trim()) {
-      return 'Schema name is required';
-    }
-
+    if (!schemaName.trim()) return 'Schema name is required';
     if (!/^[a-zA-Z0-9-_]+$/.test(schemaName)) {
       return 'Schema name can only contain letters, numbers, hyphens, and underscores';
     }
+    if (fields.length === 0) return 'At least one field is required';
 
-    if (fields.length === 0) {
-      return 'At least one field is required';
-    }
-
-    for (let i = 0; i < fields.length; i++) {
-      if (!fields[i].name.trim()) {
-        return `Field ${i + 1}: Field name is required`;
-      }
-      if (!/^[a-zA-Z0-9_]+$/.test(fields[i].name)) {
-        return `Field ${i + 1}: Field name can only contain letters, numbers, and underscores`;
+    for (let index = 0; index < fields.length; index += 1) {
+      const field = fields[index];
+      if (!field.name.trim()) return `Field ${index + 1}: Field name is required`;
+      if (!/^[a-zA-Z0-9_]+$/.test(field.name)) {
+        return `Field ${index + 1}: Field name can only contain letters, numbers, and underscores`;
       }
     }
 
-    // Check for duplicate field names
-    const fieldNames = fields.map(f => f.name.toLowerCase());
-    const duplicates = fieldNames.filter((name, index) => fieldNames.indexOf(name) !== index);
-    if (duplicates.length > 0) {
-      return `Duplicate field name: ${duplicates[0]}`;
-    }
+    const names = fields.map((field) => field.name.toLowerCase());
+    const duplicate = names.find((name, index) => names.indexOf(name) !== index);
+    if (duplicate) return `Duplicate field name: ${duplicate}`;
 
     return null;
   };
@@ -99,24 +94,18 @@ const CreateSchema: React.FC = () => {
     }
 
     setIsCreating(true);
-
     try {
-      // Prepare schema data
-      const schemaData = {
+      await apiService.createSchema({
         entityName: schemaName.trim(),
-        fields: fields.map(f => ({
-          name: f.name.trim(),
-          type: f.type,
-          required: f.required,
-          isUnique: f.isUnique,
-          ...(f.defaultValue && { defaultValue: f.defaultValue })
+        fields: fields.map((field) => ({
+          name: field.name.trim(),
+          type: field.type,
+          required: field.required,
+          isUnique: field.isUnique,
+          ...(field.defaultValue ? { defaultValue: field.defaultValue } : {})
         })),
         excludeOnFetch
-      };
-
-      await apiService.createSchema(schemaData);
-      
-      // Navigate to schemas list on success
+      });
       navigate('/schemas');
     } catch (err: any) {
       setError(getErrorMessage(err));
@@ -127,249 +116,228 @@ const CreateSchema: React.FC = () => {
   };
 
   const handleCancel = () => {
-    if (schemaName || fields.some(f => f.name)) {
-      if (confirm('Are you sure you want to cancel? All changes will be lost.')) {
-        navigate('/schemas');
+    if (schemaName || fields.some((field) => field.name || field.defaultValue)) {
+      if (!confirm('Are you sure you want to cancel? All changes will be lost.')) {
+        return;
       }
-    } else {
-      navigate('/schemas');
     }
+    navigate('/schemas');
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <button
-            onClick={handleCancel}
-            className="p-2 hover:bg-gray-700 rounded-lg transition-colors"
-            title="Back to schemas"
-          >
-            <ArrowLeft className="w-6 h-6 text-gray-400 hover:text-white" />
-          </button>
-          <div>
-            <h1 className="text-2xl font-bold text-white">Create New Schema</h1>
-            <p className="text-gray-400 mt-1">Define a new entity type with custom fields</p>
+    <div className="app-page">
+      <section className="page-hero">
+        <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+          <div className="max-w-3xl">
+            <div className="inline-flex items-center gap-3">
+              <button
+                type="button"
+                onClick={handleCancel}
+                className="page-hero-icon text-slate-300 transition-colors hover:text-white"
+                title="Back to schemas"
+              >
+                <ArrowLeft className="h-5 w-5" />
+              </button>
+              <div>
+                <p className="eyebrow">Create Schema</p>
+                <h1 className="mt-2 text-3xl font-semibold tracking-tight text-white">Design a new entity contract</h1>
+              </div>
+            </div>
+            <p className="mt-4 max-w-2xl text-sm leading-6 text-slate-300">
+              Define field shape, validation intent, and auto-consume behavior before the schema starts receiving data.
+            </p>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-3 lg:min-w-[440px]">
+            <div className="stat-card">
+              <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Fields</p>
+              <p className="mt-3 text-3xl font-semibold text-white">{fields.length}</p>
+            </div>
+            <div className="stat-card">
+              <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Required</p>
+              <p className="mt-3 text-3xl font-semibold text-white">{fields.filter((field) => field.required).length}</p>
+            </div>
+            <div className="stat-card">
+              <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Unique</p>
+              <p className="mt-3 text-3xl font-semibold text-white">{fields.filter((field) => field.isUnique).length}</p>
+            </div>
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* Error Message */}
       {error && (
-        <div className="p-4 bg-red-500/10 border border-red-500/50 rounded-lg flex items-center gap-2 text-red-400">
-          <AlertCircle className="w-5 h-5 flex-shrink-0" />
-          <span>{error}</span>
+        <div className="rounded-2xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="h-4 w-4" />
+            <span>{error}</span>
+          </div>
         </div>
       )}
 
-      {/* Form */}
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Schema Details Card */}
-        <div className="bg-gray-800 rounded-lg border border-gray-700 p-6">
-          <h2 className="text-lg font-semibold text-white mb-4">Schema Details</h2>
-          
-          <div className="space-y-4">
-            {/* Schema Name */}
+        <section className="panel p-5">
+          <div className="mb-5">
+            <p className="eyebrow">Definition</p>
+            <h2 className="mt-2 text-xl font-semibold text-white">Schema details</h2>
+          </div>
+
+          <div className="grid gap-5 lg:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)]">
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Schema Name *
-              </label>
+              <label className="mb-2 block text-sm font-medium text-slate-300">Schema name</label>
               <input
                 type="text"
                 value={schemaName}
                 onChange={(e) => setSchemaName(e.target.value)}
-                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="e.g., test-agent, user-account"
+                className="field-shell"
+                placeholder="e.g. user-account, test-agent"
                 required
               />
-              <p className="mt-1 text-xs text-gray-400">
-                Use lowercase letters, numbers, hyphens, and underscores only
-              </p>
+              <p className="mt-2 text-xs text-slate-500">Use letters, numbers, hyphens, and underscores only.</p>
             </div>
 
-            {/* Exclude On Fetch */}
-            <div className="flex items-start gap-3">
-              <input
-                type="checkbox"
-                id="excludeOnFetch"
-                checked={excludeOnFetch}
-                onChange={(e) => setExcludeOnFetch(e.target.checked)}
-                className="mt-1 w-4 h-4 bg-gray-700 border-gray-600 rounded focus:ring-2 focus:ring-blue-500"
-              />
-              <div className="flex-1">
-                <label htmlFor="excludeOnFetch" className="text-sm font-medium text-gray-300 cursor-pointer">
-                  Auto-consume on fetch
-                </label>
-                <p className="mt-1 text-xs text-gray-400">
-                  Automatically mark entities as consumed when fetched. Useful for test data that should only be used once.
-                </p>
+            <div className="rounded-2xl border border-slate-800 bg-slate-950/35 p-4">
+              <div className="flex items-start gap-3">
+                <input
+                  id="excludeOnFetch"
+                  type="checkbox"
+                  checked={excludeOnFetch}
+                  onChange={(e) => setExcludeOnFetch(e.target.checked)}
+                  className="mt-1 h-4 w-4 rounded border-slate-600 bg-slate-800 text-blue-500 focus:ring-blue-500"
+                />
+                <div>
+                  <label htmlFor="excludeOnFetch" className="text-sm font-medium text-white">
+                    Auto-consume on fetch
+                  </label>
+                  <p className="mt-2 text-sm leading-6 text-slate-400">
+                    Mark entities as consumed immediately after retrieval. Use this for one-time credentials or single-use test records.
+                  </p>
+                </div>
               </div>
             </div>
           </div>
-        </div>
+        </section>
 
-        {/* Fields Card */}
-        <div className="bg-gray-800 rounded-lg border border-gray-700 p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-white">Fields</h2>
-            <button
-              type="button"
-              onClick={addField}
-              className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg transition-colors"
-            >
-              <Plus className="w-4 h-4" />
+        <section className="panel-strong p-5">
+          <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="eyebrow">Fields</p>
+              <h2 className="mt-2 text-xl font-semibold text-white">Structure definition</h2>
+            </div>
+            <button type="button" onClick={addField} className="button-secondary">
+              <Plus className="h-4 w-4" />
               Add Field
             </button>
           </div>
 
-          <div className="space-y-3">
+          <div className="space-y-4">
             {fields.map((field, index) => (
-              <div
-                key={index}
-                className="bg-gray-700/50 border border-gray-600 rounded-lg p-4"
-              >
-                <div className="flex items-start gap-3">
-                  {/* Drag Handle */}
-                  <div className="pt-2 cursor-move opacity-50 hover:opacity-100">
-                    <GripVertical className="w-5 h-5 text-gray-400" />
-                  </div>
-
-                  {/* Field Configuration */}
-                  <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {/* Field Name */}
-                    <div>
-                      <label className="block text-xs font-medium text-gray-400 mb-1">
-                        Field Name *
-                      </label>
-                      <input
-                        type="text"
-                        value={field.name}
-                        onChange={(e) => updateField(index, { name: e.target.value })}
-                        className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="e.g., username, email"
-                        required
-                      />
+              <div key={`${field.name}-${index}`} className="rounded-[24px] border border-slate-800 bg-slate-950/35 p-4">
+                <div className="mb-4 flex items-center justify-between">
+                  <div className="inline-flex items-center gap-3">
+                    <div className="rounded-2xl border border-slate-700/70 bg-slate-900/70 p-2 text-slate-400">
+                      <GripVertical className="h-4 w-4" />
                     </div>
-
-                    {/* Field Type */}
                     <div>
-                      <label className="block text-xs font-medium text-gray-400 mb-1">
-                        Field Type *
-                      </label>
-                      <select
-                        value={field.type}
-                        onChange={(e) => updateField(index, { type: e.target.value })}
-                        className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      >
-                        {fieldTypes.map(type => (
-                          <option key={type.value} value={type.value}>
-                            {type.label}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    {/* Default Value */}
-                    <div>
-                      <label className="block text-xs font-medium text-gray-400 mb-1">
-                        Default Value (Optional)
-                      </label>
-                      <input
-                        type="text"
-                        value={field.defaultValue || ''}
-                        onChange={(e) => updateField(index, { defaultValue: e.target.value })}
-                        className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="Optional default value"
-                      />
-                    </div>
-
-                    {/* Checkboxes Container */}
-                    <div className="flex flex-col gap-2">
-                      {/* Required Checkbox */}
-                      <label className="flex items-center gap-2 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={field.required}
-                          onChange={(e) => updateField(index, { required: e.target.checked })}
-                          className="w-4 h-4 bg-gray-700 border-gray-600 rounded focus:ring-2 focus:ring-blue-500"
-                        />
-                        <span className="text-sm text-gray-300">Required field</span>
-                      </label>
-
-                      {/* Unique Checkbox */}
-                      <label className="flex items-center gap-2 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={field.isUnique}
-                          onChange={(e) => updateField(index, { isUnique: e.target.checked })}
-                          className="w-4 h-4 bg-gray-700 border-gray-600 rounded focus:ring-2 focus:ring-blue-500"
-                        />
-                        <span className="text-sm text-gray-300">Unique field</span>
-                      </label>
+                      <p className="text-sm font-medium text-white">Field {index + 1}</p>
+                      <p className="text-xs text-slate-500">Configure name, type, and validation rules.</p>
                     </div>
                   </div>
-
-                  {/* Delete Button */}
                   <button
                     type="button"
                     onClick={() => removeField(index)}
-                    className="p-2 hover:bg-red-500/10 rounded-lg transition-colors mt-5"
+                    className="rounded-full border border-red-500/20 bg-red-500/10 p-2 text-red-200 transition-colors hover:bg-red-500/15"
                     title="Remove field"
                   >
-                    <Trash2 className="w-4 h-4 text-gray-400 hover:text-red-400" />
+                    <Trash2 className="h-4 w-4" />
                   </button>
+                </div>
+
+                <div className="grid gap-4 xl:grid-cols-2">
+                  <div>
+                    <label className="mb-2 block text-sm font-medium text-slate-300">Field name</label>
+                    <input
+                      type="text"
+                      value={field.name}
+                      onChange={(e) => updateField(index, { name: e.target.value })}
+                      className="field-shell"
+                      placeholder="e.g. username"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-2 block text-sm font-medium text-slate-300">Field type</label>
+                    <select
+                      value={field.type}
+                      onChange={(e) => updateField(index, { type: e.target.value })}
+                      className="field-shell"
+                    >
+                      {fieldTypes.map((type) => (
+                        <option key={type.value} value={type.value}>
+                          {type.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="mb-2 block text-sm font-medium text-slate-300">Default value</label>
+                    <input
+                      type="text"
+                      value={field.defaultValue || ''}
+                      onChange={(e) => updateField(index, { defaultValue: e.target.value })}
+                      className="field-shell"
+                      placeholder="Optional default value"
+                    />
+                  </div>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <label className="flex items-center gap-3 rounded-2xl border border-slate-800 bg-slate-900/60 px-4 py-3 text-sm text-slate-300">
+                      <input
+                        type="checkbox"
+                        checked={field.required}
+                        onChange={(e) => updateField(index, { required: e.target.checked })}
+                        className="h-4 w-4 rounded border-slate-600 bg-slate-800 text-blue-500 focus:ring-blue-500"
+                      />
+                      <span>Required field</span>
+                    </label>
+                    <label className="flex items-center gap-3 rounded-2xl border border-slate-800 bg-slate-900/60 px-4 py-3 text-sm text-slate-300">
+                      <input
+                        type="checkbox"
+                        checked={field.isUnique}
+                        onChange={(e) => updateField(index, { isUnique: e.target.checked })}
+                        className="h-4 w-4 rounded border-slate-600 bg-slate-800 text-blue-500 focus:ring-blue-500"
+                      />
+                      <span>Unique field</span>
+                    </label>
+                  </div>
                 </div>
               </div>
             ))}
           </div>
 
-          {fields.length === 0 && (
-            <div className="text-center py-8 text-gray-500">
-              <p className="mb-3">No fields added yet</p>
-              <button
-                type="button"
-                onClick={addField}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
-              >
-                <Plus className="w-4 h-4" />
-                Add First Field
-              </button>
+          <div className="mt-6 rounded-[24px] border border-blue-500/20 bg-blue-500/10 p-5">
+            <div className="inline-flex items-center gap-3">
+              <div className="rounded-2xl border border-blue-500/20 bg-slate-950/40 p-3">
+                <Layers className="h-5 w-5 text-blue-300" />
+              </div>
+              <div>
+                <h3 className="text-base font-semibold text-white">Schema design guidance</h3>
+                <p className="mt-1 text-sm text-blue-100/80">
+                  Prefer stable field names, reserve unique constraints for true business identifiers, and enable auto-consume only where reuse creates risk.
+                </p>
+              </div>
             </div>
-          )}
-        </div>
+          </div>
+        </section>
 
-        {/* Action Buttons */}
-        <div className="flex gap-3 justify-end sticky bottom-6 bg-gray-900 p-4 rounded-lg border border-gray-700">
-          <button
-            type="button"
-            onClick={handleCancel}
-            className="px-6 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors font-medium"
-          >
+        <div className="sticky bottom-6 flex flex-wrap justify-end gap-3 rounded-[24px] border border-slate-800 bg-slate-950/90 p-4 backdrop-blur">
+          <button type="button" onClick={handleCancel} className="button-secondary">
             Cancel
           </button>
-          <button
-            type="submit"
-            disabled={isCreating}
-            className="flex items-center gap-2 px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <Save className="w-4 h-4" />
+          <button type="submit" disabled={isCreating} className="button-primary disabled:cursor-not-allowed disabled:opacity-60">
+            <Save className="h-4 w-4" />
             {isCreating ? 'Creating...' : 'Create Schema'}
           </button>
         </div>
       </form>
-
-      {/* Help Section */}
-      <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
-        <h3 className="text-sm font-semibold text-blue-400 mb-2">💡 Tips</h3>
-        <ul className="space-y-1 text-xs text-blue-300">
-          <li>📝 Schema names should be descriptive and follow a naming convention (e.g., kebab-case)</li>
-          <li>✅ Required fields must be provided when creating entities</li>
-          <li>🔑 Unique fields ensure no duplicate values exist (e.g., username, email)</li>
-          <li>💾 Default values are used when a field is not specified during entity creation</li>
-          <li>🔄 Auto-consume is useful for test data that should only be used once (e.g., unique accounts)</li>
-        </ul>
-      </div>
     </div>
   );
 };

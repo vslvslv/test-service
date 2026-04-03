@@ -1,11 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { 
-  X,
-  Plus,
+import {
   AlertCircle,
+  CheckCircle,
   Loader,
   Package,
-  CheckCircle
+  Plus,
+  X,
 } from 'lucide-react';
 import { apiService } from '../services/api';
 import type { Environment } from '../types';
@@ -23,7 +23,7 @@ const EntityCreateDialog: React.FC<EntityCreateDialogProps> = ({
   onClose,
   onSuccess,
   schema,
-  entityType
+  entityType,
 }) => {
   const [formData, setFormData] = useState<Record<string, any>>({});
   const [environment, setEnvironment] = useState('');
@@ -35,15 +35,16 @@ const EntityCreateDialog: React.FC<EntityCreateDialogProps> = ({
   useEffect(() => {
     if (!isOpen) return;
     let cancelled = false;
+
     const loadEnvironments = async () => {
       try {
         const data = await apiService.getEnvironments();
-        if (cancelled) return;
-        setAvailableEnvironments(data || []);
+        if (!cancelled) setAvailableEnvironments(data || []);
       } catch {
         if (!cancelled) setAvailableEnvironments([]);
       }
     };
+
     loadEnvironments();
     return () => {
       cancelled = true;
@@ -51,19 +52,16 @@ const EntityCreateDialog: React.FC<EntityCreateDialogProps> = ({
   }, [isOpen]);
 
   const environmentOptions = useMemo(() => {
-    const fromDb = availableEnvironments
+    const names = availableEnvironments
       .map((env) => env.name)
       .filter((name): name is string => !!name && name.trim().length > 0);
-    const extras = environment.trim() ? [environment] : [];
-    return Array.from(new Set([...fromDb, ...extras]));
+    return Array.from(new Set(environment.trim() ? [...names, environment] : names));
   }, [availableEnvironments, environment]);
 
   if (!isOpen || !schema) return null;
 
   const coerceFieldValue = (field: any, rawValue: string) => {
-    if (rawValue === '') {
-      return '';
-    }
+    if (rawValue === '') return '';
 
     switch (field.type) {
       case 'number': {
@@ -72,74 +70,58 @@ const EntityCreateDialog: React.FC<EntityCreateDialogProps> = ({
       }
       case 'boolean':
         return rawValue === 'true';
-      case 'date':
-      case 'datetime':
-        return rawValue;
       default:
         return rawValue;
     }
   };
 
   const handleFieldChange = (fieldName: string, value: any) => {
-    setFormData(prev => ({
-      ...prev,
-      [fieldName]: value
-    }));
-    
-    // Clear error for this field
+    setFormData((prev) => ({ ...prev, [fieldName]: value }));
     if (errors[fieldName]) {
-      setErrors(prev => {
-        const newErrors = { ...prev };
-        delete newErrors[fieldName];
-        return newErrors;
+      setErrors((prev) => {
+        const next = { ...prev };
+        delete next[fieldName];
+        return next;
       });
     }
   };
 
-  const validateForm = (): boolean => {
-    const newErrors: Record<string, string> = {};
-    
-    // Check required fields
+  const validateForm = () => {
+    const nextErrors: Record<string, string> = {};
     schema.fields.forEach((field: any) => {
       if (field.required) {
         const value = formData[field.name];
         if (value === undefined || value === null || value === '') {
-          newErrors[field.name] = 'This field is required';
+          nextErrors[field.name] = 'This field is required';
         }
       }
     });
+    setErrors(nextErrors);
+    return Object.keys(nextErrors).length === 0;
+  };
 
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+  const resetState = () => {
+    setFormData({});
+    setEnvironment('');
+    setErrors({});
+    setSubmitError('');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitError('');
 
-    if (!validateForm()) {
-      return;
-    }
+    if (!validateForm()) return;
 
     setIsSubmitting(true);
-
     try {
-      const entityData: any = {
-        fields: formData
-      };
-
+      const entityData: Record<string, any> = { fields: formData };
       if (environment) {
         entityData.environment = environment;
       }
 
       await apiService.createEntity(entityType, entityData);
-      
-      // Reset form
-      setFormData({});
-      setEnvironment('');
-      setErrors({});
-      
-      // Notify success
+      resetState();
       onSuccess();
       onClose();
     } catch (err: any) {
@@ -156,15 +138,11 @@ const EntityCreateDialog: React.FC<EntityCreateDialogProps> = ({
         return;
       }
     }
-    
-    setFormData({});
-    setEnvironment('');
-    setErrors({});
-    setSubmitError('');
+    resetState();
     onClose();
   };
 
-  const getInputType = (fieldType: string): string => {
+  const getInputType = (fieldType: string) => {
     switch (fieldType) {
       case 'number':
         return 'number';
@@ -180,38 +158,33 @@ const EntityCreateDialog: React.FC<EntityCreateDialogProps> = ({
   };
 
   const renderField = (field: any) => {
-    const inputType = getInputType(field.type);
     const value = formData[field.name] ?? field.defaultValue ?? '';
     const hasError = !!errors[field.name];
 
     if (field.type === 'boolean') {
       return (
-        <div key={field.name} className="space-y-2">
-          <label className="flex items-center gap-2 cursor-pointer">
+        <div key={field.name} className="rounded-[24px] border border-slate-800 bg-slate-950/35 p-4">
+          <label className="flex cursor-pointer items-start gap-3">
             <input
               type="checkbox"
               checked={!!formData[field.name]}
               onChange={(e) => handleFieldChange(field.name, e.target.checked)}
-              className="w-4 h-4 bg-gray-700 border-gray-600 rounded focus:ring-2 focus:ring-blue-500"
+              className="mt-1 h-4 w-4 rounded border-slate-600 bg-slate-800 text-blue-500 focus:ring-blue-500"
             />
             <div className="flex-1">
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium text-gray-300">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-sm font-medium text-white">
                   {field.name}
-                  {field.required && <span className="text-red-400 ml-1">*</span>}
+                  {field.required && <span className="ml-1 text-red-300">*</span>}
                 </span>
-                <span className="text-xs px-1.5 py-0.5 bg-purple-500/20 text-purple-400 rounded border border-purple-500/30">
-                  {field.type}
-                </span>
+                <span className="badge-soft border-violet-500/25 bg-violet-500/10 text-violet-300">{field.type}</span>
               </div>
-              {field.description && (
-                <p className="text-xs text-gray-500 mt-0.5">{field.description}</p>
-              )}
+              {field.description && <p className="mt-2 text-xs leading-5 text-slate-500">{field.description}</p>}
             </div>
           </label>
           {hasError && (
-            <p className="text-xs text-red-400 flex items-center gap-1">
-              <AlertCircle className="w-3 h-3" />
+            <p className="mt-3 flex items-center gap-1 text-xs text-red-300">
+              <AlertCircle className="h-3.5 w-3.5" />
               {errors[field.name]}
             </p>
           )}
@@ -221,40 +194,31 @@ const EntityCreateDialog: React.FC<EntityCreateDialogProps> = ({
 
     if (field.type === 'array' || field.type === 'object') {
       return (
-        <div key={field.name} className="space-y-2">
-          <label className="block">
-            <div className="flex items-center gap-2 mb-2">
-              <span className="text-sm font-medium text-gray-300">
-                {field.name}
-                {field.required && <span className="text-red-400 ml-1">*</span>}
-              </span>
-              <span className="text-xs px-1.5 py-0.5 bg-yellow-500/20 text-yellow-400 rounded border border-yellow-500/30">
-                {field.type}
-              </span>
-            </div>
-            {field.description && (
-              <p className="text-xs text-gray-500 mb-2">{field.description}</p>
-            )}
-            <textarea
-              value={typeof value === 'string' ? value : JSON.stringify(value, null, 2)}
-              onChange={(e) => {
-                try {
-                  const parsed = JSON.parse(e.target.value);
-                  handleFieldChange(field.name, parsed);
-                } catch {
-                  handleFieldChange(field.name, e.target.value);
-                }
-              }}
-              placeholder={`Enter JSON ${field.type}`}
-              rows={4}
-              className={`w-full px-3 py-2 bg-gray-700 border ${
-                hasError ? 'border-red-500' : 'border-gray-600'
-              } rounded-lg text-white placeholder-gray-400 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500`}
-            />
-          </label>
+        <div key={field.name} className="rounded-[24px] border border-slate-800 bg-slate-950/35 p-4">
+          <div className="mb-3 flex flex-wrap items-center gap-2">
+            <span className="text-sm font-medium text-white">
+              {field.name}
+              {field.required && <span className="ml-1 text-red-300">*</span>}
+            </span>
+            <span className="badge-soft border-amber-500/25 bg-amber-500/10 text-amber-300">{field.type}</span>
+          </div>
+          {field.description && <p className="mb-3 text-xs leading-5 text-slate-500">{field.description}</p>}
+          <textarea
+            value={typeof value === 'string' ? value : JSON.stringify(value, null, 2)}
+            onChange={(e) => {
+              try {
+                handleFieldChange(field.name, JSON.parse(e.target.value));
+              } catch {
+                handleFieldChange(field.name, e.target.value);
+              }
+            }}
+            placeholder={`Enter JSON ${field.type}`}
+            rows={5}
+            className={`field-shell min-h-[140px] font-mono text-sm ${hasError ? '!border-red-500' : ''}`}
+          />
           {hasError && (
-            <p className="text-xs text-red-400 flex items-center gap-1">
-              <AlertCircle className="w-3 h-3" />
+            <p className="mt-3 flex items-center gap-1 text-xs text-red-300">
+              <AlertCircle className="h-3.5 w-3.5" />
               {errors[field.name]}
             </p>
           )}
@@ -263,38 +227,35 @@ const EntityCreateDialog: React.FC<EntityCreateDialogProps> = ({
     }
 
     return (
-      <div key={field.name} className="space-y-2">
-        <label className="block">
-          <div className="flex items-center gap-2 mb-2">
-            <span className="text-sm font-medium text-gray-300">
-              {field.name}
-              {field.required && <span className="text-red-400 ml-1">*</span>}
-            </span>
-            <span className={`text-xs px-1.5 py-0.5 rounded border ${
-              field.type === 'string' ? 'bg-blue-500/20 text-blue-400 border-blue-500/30' :
-              field.type === 'number' ? 'bg-green-500/20 text-green-400 border-green-500/30' :
-              field.type === 'date' ? 'bg-orange-500/20 text-orange-400 border-orange-500/30' :
-              'bg-gray-500/20 text-gray-400 border-gray-500/30'
-            }`}>
-              {field.type}
-            </span>
-          </div>
-          {field.description && (
-            <p className="text-xs text-gray-500 mb-2">{field.description}</p>
-          )}
-          <input
-            type={inputType}
-            value={value}
-            onChange={(e) => handleFieldChange(field.name, coerceFieldValue(field, e.target.value))}
-            placeholder={field.defaultValue ? `Default: ${field.defaultValue}` : `Enter ${field.name}`}
-            className={`w-full px-3 py-2 bg-gray-700 border ${
-              hasError ? 'border-red-500' : 'border-gray-600'
-            } rounded-lg text-white placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500`}
-          />
-        </label>
+      <div key={field.name} className="rounded-[24px] border border-slate-800 bg-slate-950/35 p-4">
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          <span className="text-sm font-medium text-white">
+            {field.name}
+            {field.required && <span className="ml-1 text-red-300">*</span>}
+          </span>
+          <span className={`badge-soft ${
+            field.type === 'string'
+              ? 'border-blue-500/25 bg-blue-500/10 text-blue-300'
+              : field.type === 'number'
+                ? 'border-emerald-500/25 bg-emerald-500/10 text-emerald-300'
+                : field.type === 'date'
+                  ? 'border-amber-500/25 bg-amber-500/10 text-amber-300'
+                  : 'border-slate-700 bg-slate-900/70 text-slate-300'
+          }`}>
+            {field.type}
+          </span>
+        </div>
+        {field.description && <p className="mb-3 text-xs leading-5 text-slate-500">{field.description}</p>}
+        <input
+          type={getInputType(field.type)}
+          value={value}
+          onChange={(e) => handleFieldChange(field.name, coerceFieldValue(field, e.target.value))}
+          placeholder={field.defaultValue ? `Default: ${field.defaultValue}` : `Enter ${field.name}`}
+          className={`field-shell ${hasError ? '!border-red-500' : ''}`}
+        />
         {hasError && (
-          <p className="text-xs text-red-400 flex items-center gap-1">
-            <AlertCircle className="w-3 h-3" />
+          <p className="mt-3 flex items-center gap-1 text-xs text-red-300">
+            <AlertCircle className="h-3.5 w-3.5" />
             {errors[field.name]}
           </p>
         )}
@@ -303,120 +264,88 @@ const EntityCreateDialog: React.FC<EntityCreateDialogProps> = ({
   };
 
   return (
-    <>
-      {/* Backdrop */}
-      <div 
-        className="fixed inset-0 bg-black/50 z-40 animate-fadeIn"
-        onClick={handleCancel}
-      />
-      
-      {/* Dialog */}
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-        <div 
-          className="bg-gray-800 rounded-lg border border-gray-700 max-w-3xl w-full max-h-[90vh] overflow-hidden animate-slideUp"
-          onClick={(e) => e.stopPropagation()}
-        >
-          {/* Header */}
-          <div className="flex items-center justify-between p-6 border-b border-gray-700">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-500/10 rounded-lg border border-blue-500/20">
-                <Plus className="w-6 h-6 text-blue-500" />
-              </div>
-              <div>
-                <h2 className="text-xl font-bold text-white">Create {entityType}</h2>
-                <p className="text-sm text-gray-400">Fill in the fields to create a new entity</p>
-              </div>
+    <div className="modal-backdrop" onClick={handleCancel}>
+      <div className="modal-shell max-h-[90vh] max-w-4xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between border-b border-slate-800 px-6 py-5">
+          <div className="flex items-center gap-3">
+            <div className="page-hero-icon !p-2.5">
+              <Plus className="h-5 w-5 text-blue-300" />
             </div>
-            <button
-              onClick={handleCancel}
-              className="p-2 hover:bg-gray-700 rounded-lg transition-colors"
-              disabled={isSubmitting}
-            >
-              <X className="w-5 h-5 text-gray-400 hover:text-white" />
-            </button>
+            <div>
+              <h2 className="text-xl font-semibold text-white">Create {entityType}</h2>
+              <p className="mt-1 text-sm text-slate-400">Define field values and assign an optional environment before adding this record.</p>
+            </div>
           </div>
+          <button type="button" onClick={handleCancel} className="rounded-xl p-2 text-slate-400 transition-colors hover:bg-slate-800 hover:text-white" disabled={isSubmitting}>
+            <X className="h-5 w-5" />
+          </button>
+        </div>
 
-          {/* Content */}
-          <form onSubmit={handleSubmit}>
-            <div className="p-6 overflow-y-auto max-h-[calc(90vh-180px)]">
-              {/* Submit Error */}
-              {submitError && (
-                <div className="mb-4 p-4 bg-red-500/10 border border-red-500/50 rounded-lg flex items-center gap-2 text-red-400">
-                  <AlertCircle className="w-5 h-5 flex-shrink-0" />
+        <form onSubmit={handleSubmit}>
+          <div className="max-h-[calc(90vh-170px)] overflow-y-auto px-6 py-5">
+            {submitError && (
+              <div className="mb-5 rounded-2xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+                <div className="flex items-center gap-2">
+                  <AlertCircle className="h-4 w-4" />
                   <span>{submitError}</span>
                 </div>
-              )}
-
-              {/* Environment Field (Optional) */}
-              <div className="mb-6 p-4 bg-gray-700/50 rounded-lg border border-gray-600">
-                <label className="block">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-sm font-medium text-gray-300">Environment</span>
-                    <span className="text-xs text-gray-500">(Optional)</span>
-                  </div>
-                  <select
-                    value={environment}
-                    onChange={(e) => setEnvironment(e.target.value)}
-                    className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="">No environment</option>
-                    {environmentOptions.map((envName) => (
-                      <option key={envName} value={envName}>{envName}</option>
-                    ))}
-                  </select>
-                </label>
               </div>
+            )}
 
-              {/* Schema Fields */}
+            <div className="mb-5 rounded-[24px] border border-slate-800 bg-slate-950/35 p-5">
+              <div className="mb-3 flex items-center gap-2">
+                <Package className="h-4 w-4 text-slate-400" />
+                <p className="text-sm font-medium text-white">Allocation context</p>
+              </div>
+              <label className="block text-sm text-slate-300">
+                Environment
+                <select value={environment} onChange={(e) => setEnvironment(e.target.value)} className="field-shell mt-2">
+                  <option value="">No environment</option>
+                  {environmentOptions.map((envName) => (
+                    <option key={envName} value={envName}>{envName}</option>
+                  ))}
+                </select>
+                <span className="mt-2 block text-xs text-slate-500">Attach the entity to a target environment if this pool is segmented.</span>
+              </label>
+            </div>
+
+            <div>
+              <div className="mb-4 flex items-center gap-2">
+                <Package className="h-5 w-5 text-slate-400" />
+                <h3 className="text-lg font-semibold text-white">Entity fields</h3>
+              </div>
               <div className="space-y-4">
-                <div className="flex items-center gap-2 mb-4">
-                  <Package className="w-5 h-5 text-gray-400" />
-                  <h3 className="text-lg font-semibold text-white">Entity Fields</h3>
-                </div>
                 {schema.fields.map((field: any) => renderField(field))}
               </div>
-
-              {/* Helper Text */}
-              <div className="mt-6 p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
-                <p className="text-xs text-blue-300">
-                  <strong>Tip:</strong> Fields marked with <span className="text-red-400">*</span> are required. 
-                  {schema.excludeOnFetch && ' This entity will be marked as available and can be consumed by tests.'}
-                </p>
-              </div>
             </div>
 
-            {/* Footer Actions */}
-            <div className="flex items-center justify-end gap-3 p-6 border-t border-gray-700 bg-gray-800/50">
-              <button
-                type="button"
-                onClick={handleCancel}
-                disabled={isSubmitting}
-                className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="flex items-center gap-2 px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed shadow-sm hover:shadow-md"
-              >
-                {isSubmitting ? (
-                  <>
-                    <Loader className="w-4 h-4 animate-spin" />
-                    Creating...
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle className="w-4 h-4" />
-                    Create Entity
-                  </>
-                )}
-              </button>
+            <div className="mt-5 rounded-[24px] border border-blue-500/25 bg-blue-500/10 p-4 text-sm leading-6 text-blue-100/80">
+              Fields marked with <span className="text-red-300">*</span> are required.
+              {schema.excludeOnFetch && ' This schema uses auto-consume, so created records will participate in one-time allocation flows.'}
             </div>
-          </form>
-        </div>
+          </div>
+
+          <div className="flex items-center justify-end gap-3 border-t border-slate-800 px-6 py-5">
+            <button type="button" onClick={handleCancel} disabled={isSubmitting} className="button-secondary disabled:cursor-not-allowed disabled:opacity-60">
+              Cancel
+            </button>
+            <button type="submit" disabled={isSubmitting} className="button-primary disabled:cursor-not-allowed disabled:opacity-60">
+              {isSubmitting ? (
+                <>
+                  <Loader className="h-4 w-4 animate-spin" />
+                  Creating...
+                </>
+              ) : (
+                <>
+                  <CheckCircle className="h-4 w-4" />
+                  Create Entity
+                </>
+              )}
+            </button>
+          </div>
+        </form>
       </div>
-    </>
+    </div>
   );
 };
 

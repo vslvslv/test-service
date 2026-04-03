@@ -1,16 +1,15 @@
 import React from 'react';
 import { formatDistanceToNow } from 'date-fns';
-import { 
-  CheckCircle, 
-  XCircle, 
-  Edit, 
-  Trash2, 
-  RefreshCw, 
-  Plus,
-  User,
+import {
+  Activity as ActivityIcon,
+  CheckCircle,
   Database,
+  Edit,
+  Plus,
+  RefreshCw,
   Settings,
-  Activity as ActivityIcon
+  Trash2,
+  User,
 } from 'lucide-react';
 import type { Activity } from '../types';
 
@@ -20,35 +19,35 @@ interface ActivityTimelineProps {
 
 const ActivityTimeline: React.FC<ActivityTimelineProps> = ({ activities }) => {
   const getActivityIcon = (type: string, action: string) => {
-    if (action === 'created') return <Plus className="w-4 h-4" />;
-    if (action === 'updated') return <Edit className="w-4 h-4" />;
-    if (action === 'deleted') return <Trash2 className="w-4 h-4" />;
-    if (action === 'consumed') return <CheckCircle className="w-4 h-4" />;
-    if (action === 'reset' || action === 'bulk-reset') return <RefreshCw className="w-4 h-4" />;
-    if (type === 'user') return <User className="w-4 h-4" />;
-    if (type === 'schema') return <Database className="w-4 h-4" />;
-    if (type === 'environment') return <Settings className="w-4 h-4" />;
-    return <ActivityIcon className="w-4 h-4" />;
+    if (action === 'created') return <Plus className="h-4 w-4" />;
+    if (action === 'updated') return <Edit className="h-4 w-4" />;
+    if (action === 'deleted') return <Trash2 className="h-4 w-4" />;
+    if (action === 'consumed') return <CheckCircle className="h-4 w-4" />;
+    if (action === 'reset' || action === 'bulk-reset') return <RefreshCw className="h-4 w-4" />;
+    if (type === 'user') return <User className="h-4 w-4" />;
+    if (type === 'schema') return <Database className="h-4 w-4" />;
+    if (type === 'environment') return <Settings className="h-4 w-4" />;
+    return <ActivityIcon className="h-4 w-4" />;
   };
 
   const getActivityColor = (action: string) => {
     switch (action) {
       case 'created':
-        return 'bg-green-500/20 border-green-500/30 text-green-400';
+        return 'border-emerald-500/25 bg-emerald-500/10 text-emerald-300';
       case 'updated':
-        return 'bg-blue-500/20 border-blue-500/30 text-blue-400';
+        return 'border-blue-500/25 bg-blue-500/10 text-blue-300';
       case 'deleted':
-        return 'bg-red-500/20 border-red-500/30 text-red-400';
+        return 'border-red-500/25 bg-red-500/10 text-red-300';
       case 'consumed':
-        return 'bg-purple-500/20 border-purple-500/30 text-purple-400';
+        return 'border-violet-500/25 bg-violet-500/10 text-violet-300';
       case 'reset':
       case 'bulk-reset':
-        return 'bg-yellow-500/20 border-yellow-500/30 text-yellow-400';
+        return 'border-amber-500/25 bg-amber-500/10 text-amber-300';
       case 'logged-in':
       case 'logged-out':
-        return 'bg-cyan-500/20 border-cyan-500/30 text-cyan-400';
+        return 'border-cyan-500/25 bg-cyan-500/10 text-cyan-300';
       default:
-        return 'bg-gray-500/20 border-gray-500/30 text-gray-400';
+        return 'border-slate-700 bg-slate-900/70 text-slate-300';
     }
   };
 
@@ -75,34 +74,34 @@ const ActivityTimeline: React.FC<ActivityTimelineProps> = ({ activities }) => {
     }
   };
 
-  const groupActivitiesByDate = (activities: Activity[]) => {
-    const groups: { [key: string]: Activity[] } = {};
-    
-    activities.forEach((activity) => {
+  const groupActivitiesByDate = (items: Activity[]) => {
+    const groups: Record<string, Activity[]> = {};
+
+    items.forEach((activity) => {
       const date = new Date(activity.timestamp);
       const today = new Date();
-      const yesterday = new Date(today);
-      yesterday.setDate(yesterday.getDate() - 1);
-      
+      const yesterday = new Date();
+      yesterday.setDate(today.getDate() - 1);
+
       let groupKey: string;
       if (date.toDateString() === today.toDateString()) {
         groupKey = 'Today';
       } else if (date.toDateString() === yesterday.toDateString()) {
         groupKey = 'Yesterday';
       } else {
-        groupKey = date.toLocaleDateString('en-US', { 
-          weekday: 'long', 
-          month: 'short', 
-          day: 'numeric' 
+        groupKey = date.toLocaleDateString('en-US', {
+          weekday: 'long',
+          month: 'short',
+          day: 'numeric',
         });
       }
-      
+
       if (!groups[groupKey]) {
         groups[groupKey] = [];
       }
       groups[groupKey].push(activity);
     });
-    
+
     return groups;
   };
 
@@ -111,98 +110,65 @@ const ActivityTimeline: React.FC<ActivityTimelineProps> = ({ activities }) => {
   return (
     <div className="space-y-8">
       {Object.entries(groupedActivities).map(([dateLabel, dateActivities]) => (
-        <div key={dateLabel} className="space-y-4">
-          {/* Date Header */}
-          <div className="flex items-center gap-3">
-            <div className="h-px bg-gray-700 flex-1" />
-            <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider">
-              {dateLabel}
-            </h3>
-            <div className="h-px bg-gray-700 flex-1" />
+        <section key={dateLabel} className="space-y-4">
+          <div className="flex items-center gap-4">
+            <div className="h-px flex-1 bg-slate-800" />
+            <h3 className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">{dateLabel}</h3>
+            <div className="h-px flex-1 bg-slate-800" />
           </div>
 
-          {/* Activities for this date */}
           <div className="relative space-y-4 pl-8">
-            {/* Timeline line */}
-            <div className="absolute left-2 top-0 bottom-0 w-px bg-gray-700" />
+            <div className="absolute left-2 top-0 bottom-0 w-px bg-slate-800" />
 
-            {dateActivities.map((activity, index) => {
+            {dateActivities.map((activity) => {
               const colorClasses = getActivityColor(activity.action);
-              const icon = getActivityIcon(activity.type, activity.action);
               const timeAgo = formatDistanceToNow(new Date(activity.timestamp), { addSuffix: true });
-              
+
               return (
                 <div key={activity.id} className="relative">
-                  {/* Timeline dot */}
-                  <div className={`absolute -left-6 top-3 w-4 h-4 rounded-full border-2 ${colorClasses} flex items-center justify-center z-10`}>
-                    <div className="w-2 h-2 rounded-full bg-current" />
+                  <div className={`absolute -left-6 top-6 z-10 flex h-4 w-4 items-center justify-center rounded-full border-2 ${colorClasses}`}>
+                    <div className="h-2 w-2 rounded-full bg-current" />
                   </div>
 
-                  {/* Activity Card */}
-                  <div className="bg-gray-800 border border-gray-700 rounded-lg p-4 hover:border-gray-600 transition-colors">
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1">
-                        {/* Header with icon and label */}
-                        <div className="flex items-center gap-3 mb-2">
-                          <div className={`p-2 rounded-lg border ${colorClasses}`}>
-                            {icon}
+                  <div className="panel p-5 transition-colors hover:bg-slate-900/70">
+                    <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                      <div className="min-w-0 flex-1">
+                        <div className="mb-3 flex flex-wrap items-center gap-2">
+                          <div className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium ${colorClasses}`}>
+                            {getActivityIcon(activity.type, activity.action)}
+                            <span>{getActivityLabel(activity.action)}</span>
                           </div>
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <span className={`text-xs font-semibold px-2 py-1 rounded-md border ${colorClasses}`}>
-                                {getActivityLabel(activity.action)}
-                              </span>
-                              {activity.entityType && (
-                                <span className="text-xs px-2 py-1 bg-gray-700 text-gray-300 rounded-md border border-gray-600">
-                                  {activity.entityType}
-                                </span>
-                              )}
-                              {activity.environment && (
-                                <span className="text-xs px-2 py-1 bg-blue-500/10 text-blue-400 rounded-md border border-blue-500/30">
-                                  {activity.environment}
-                                </span>
-                              )}
-                            </div>
-                          </div>
+                          {activity.entityType && <span className="badge-soft">{activity.entityType}</span>}
+                          {activity.environment && <span className="badge-soft border-blue-500/25 bg-blue-500/10 text-blue-300">{activity.environment}</span>}
                         </div>
 
-                        {/* Description */}
-                        <p className="text-gray-300 text-sm mb-2">
-                          {activity.description}
-                        </p>
+                        <p className="text-sm leading-6 text-slate-200">{activity.description}</p>
 
-                        {/* Metadata */}
-                        <div className="flex items-center gap-4 text-xs text-gray-500">
-                          <div className="flex items-center gap-1">
-                            <User className="w-3 h-3" />
-                            <span>{activity.user}</span>
-                          </div>
+                        <div className="mt-4 flex flex-wrap items-center gap-3 text-xs text-slate-500">
+                          <span className="inline-flex items-center gap-1.5">
+                            <User className="h-3.5 w-3.5" />
+                            {activity.user}
+                          </span>
                           {activity.entityId && (
-                            <div className="flex items-center gap-1">
-                              <Database className="w-3 h-3" />
-                              <span className="font-mono">{activity.entityId.substring(0, 8)}...</span>
-                            </div>
+                            <span className="inline-flex items-center gap-1.5">
+                              <Database className="h-3.5 w-3.5" />
+                              <code className="rounded bg-slate-950/70 px-2 py-1 text-slate-300">{activity.entityId.substring(0, 8)}...</code>
+                            </span>
                           )}
                           {activity.details?.count !== undefined && (
-                            <div className="flex items-center gap-1">
-                              <span className="font-semibold">{activity.details.count}</span>
-                              <span>items</span>
-                            </div>
+                            <span className="badge-soft">{activity.details.count} items</span>
                           )}
                         </div>
                       </div>
 
-                      {/* Timestamp */}
-                      <div className="text-xs text-gray-500 whitespace-nowrap">
-                        {timeAgo}
-                      </div>
+                      <div className="text-xs uppercase tracking-[0.18em] text-slate-500">{timeAgo}</div>
                     </div>
                   </div>
                 </div>
               );
             })}
           </div>
-        </div>
+        </section>
       ))}
     </div>
   );

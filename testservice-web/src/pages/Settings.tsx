@@ -1,24 +1,24 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
-  Settings as SettingsIcon,
-  Database,
-  Key,
-  Save,
   AlertCircle,
+  Calendar,
   CheckCircle,
-  Trash2,
-  Plus,
   Copy,
+  Database,
   Eye,
   EyeOff,
-  Calendar,
-  Info
+  Info,
+  Key,
+  Plus,
+  Save,
+  Settings as SettingsIcon,
+  Trash2,
 } from 'lucide-react';
 import { apiService } from '../services/api';
 
 interface DataRetentionSettings {
-  schemaRetentionDays: number | null; // null = infinity
-  entityRetentionDays: number | null; // null = infinity
+  schemaRetentionDays: number | null;
+  entityRetentionDays: number | null;
   autoCleanupEnabled: boolean;
 }
 
@@ -32,21 +32,16 @@ interface ApiKey {
 }
 
 const Settings: React.FC = () => {
-  // Data Retention State
   const [dataRetention, setDataRetention] = useState<DataRetentionSettings>({
     schemaRetentionDays: null,
     entityRetentionDays: 30,
     autoCleanupEnabled: true,
   });
-
-  // API Keys State
   const [apiKeys, setApiKeys] = useState<ApiKey[]>([]);
   const [showCreateKeyDialog, setShowCreateKeyDialog] = useState(false);
   const [newKeyName, setNewKeyName] = useState('');
   const [newKeyExpiration, setNewKeyExpiration] = useState<number | null>(90);
   const [visibleKeys, setVisibleKeys] = useState<Set<string>>(new Set());
-
-  // UI State
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [error, setError] = useState('');
@@ -84,10 +79,8 @@ const Settings: React.FC = () => {
 
     try {
       await apiService.updateSettings({ dataRetention });
-      
       setSaveSuccess(true);
       setHasUnsavedChanges(false);
-      
       setTimeout(() => setSaveSuccess(false), 3000);
     } catch (err) {
       setError('Failed to save settings');
@@ -109,7 +102,7 @@ const Settings: React.FC = () => {
         expirationDays: newKeyExpiration
       });
 
-      setApiKeys([...apiKeys, newKey]);
+      setApiKeys((current) => [...current, newKey]);
       setShowCreateKeyDialog(false);
       setNewKeyName('');
       setNewKeyExpiration(90);
@@ -127,7 +120,7 @@ const Settings: React.FC = () => {
 
     try {
       await apiService.deleteApiKey(id);
-      setApiKeys(apiKeys.filter(key => key.id !== id));
+      setApiKeys((current) => current.filter((key) => key.id !== id));
     } catch (err) {
       setError('Failed to delete API key');
       console.error(err);
@@ -135,22 +128,23 @@ const Settings: React.FC = () => {
   };
 
   const toggleKeyVisibility = (id: string) => {
-    const newVisible = new Set(visibleKeys);
-    if (newVisible.has(id)) {
-      newVisible.delete(id);
-    } else {
-      newVisible.add(id);
-    }
-    setVisibleKeys(newVisible);
+    setVisibleKeys((current) => {
+      const next = new Set(current);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
   };
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
-    // Could add a toast notification here
   };
 
-  const handleRetentionChange = (field: keyof DataRetentionSettings, value: any) => {
-    setDataRetention(prev => ({ ...prev, [field]: value }));
+  const handleRetentionChange = (field: keyof DataRetentionSettings, value: boolean | number | null) => {
+    setDataRetention((prev) => ({ ...prev, [field]: value }));
     setHasUnsavedChanges(true);
   };
 
@@ -164,383 +158,331 @@ const Settings: React.FC = () => {
   };
 
   const getRetentionDisplay = (days: number | null) => {
-    if (days === null) return 'Never (Keep Forever)';
+    if (days === null) return 'Never';
     if (days === 1) return '1 day';
     return `${days} days`;
   };
 
   return (
-    <div className="space-y-6 max-w-6xl">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-            <SettingsIcon className="w-8 h-8" />
-            Settings
-          </h1>
-          <p className="text-gray-400 mt-1">Manage application configuration and preferences</p>
-        </div>
-        {hasUnsavedChanges && (
-          <button
-            onClick={handleSaveSettings}
-            disabled={isSaving}
-            className="flex items-center gap-2 px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isSaving ? (
-              <>
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                Saving...
-              </>
-            ) : (
-              <>
-                <Save className="w-5 h-5" />
-                Save Changes
-              </>
-            )}
-          </button>
-        )}
-      </div>
-
-      {/* Success Message */}
-      {saveSuccess && (
-        <div className="p-4 bg-green-500/10 border border-green-500/50 rounded-lg flex items-center gap-2 text-green-400">
-          <CheckCircle className="w-5 h-5 flex-shrink-0" />
-          <span>Settings saved successfully!</span>
-        </div>
-      )}
-
-      {/* Error Message */}
-      {error && (
-        <div className="p-4 bg-red-500/10 border border-red-500/50 rounded-lg flex items-center gap-2 text-red-400">
-          <AlertCircle className="w-5 h-5 flex-shrink-0" />
-          <span>{error}</span>
-        </div>
-      )}
-
-      {/* Data Retention Section */}
-      <div className="bg-gray-800 rounded-lg border border-gray-700 overflow-hidden">
-        <div className="p-6 border-b border-gray-700 bg-gray-800/50">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-purple-500/10 rounded-lg border border-purple-500/20">
-              <Database className="w-6 h-6 text-purple-500" />
-            </div>
-            <div>
-              <h2 className="text-xl font-semibold text-white">Data Retention</h2>
-              <p className="text-sm text-gray-400 mt-1">Configure how long data is stored before automatic cleanup</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="p-6 space-y-6">
-          {/* Auto Cleanup Toggle */}
-          <div className="flex items-start justify-between p-4 bg-gray-700/30 rounded-lg border border-gray-600">
-            <div className="flex-1">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={dataRetention.autoCleanupEnabled}
-                  onChange={(e) => handleRetentionChange('autoCleanupEnabled', e.target.checked)}
-                  className="w-5 h-5 bg-gray-700 border-gray-600 rounded focus:ring-2 focus:ring-purple-500"
-                />
-                <div>
-                  <span className="text-white font-medium">Enable Automatic Cleanup</span>
-                  <p className="text-sm text-gray-400 mt-1">
-                    Automatically delete expired data based on retention periods
-                  </p>
-                </div>
-              </label>
-            </div>
-            <div className="ml-4">
-              <div className={`px-3 py-1 rounded-full text-sm font-medium ${
-                dataRetention.autoCleanupEnabled 
-                  ? 'bg-green-500/20 text-green-400' 
-                  : 'bg-gray-600/50 text-gray-400'
-              }`}>
-                {dataRetention.autoCleanupEnabled ? 'Active' : 'Inactive'}
+    <div className="app-page">
+      <section className="page-hero">
+        <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
+          <div className="max-w-3xl">
+            <div className="inline-flex items-center gap-3">
+              <div className="page-hero-icon">
+                <SettingsIcon className="h-7 w-7 text-blue-300" />
+              </div>
+              <div>
+                <p className="eyebrow">Platform Configuration</p>
+                <h1 className="mt-2 text-3xl font-semibold tracking-tight text-white">Control retention rules and integration access</h1>
               </div>
             </div>
+            <p className="mt-4 max-w-2xl text-sm leading-6 text-slate-300">
+              Tune cleanup behavior, review data lifecycle risk, and manage API credentials used by external consumers.
+            </p>
           </div>
 
-          {/* Schema Retention */}
-          <div className="space-y-3">
-            <label className="block">
-              <div className="flex items-center gap-2 mb-3">
-                <span className="text-white font-medium">Schema Retention Period</span>
-                <div className="group relative">
-                  <Info className="w-4 h-4 text-gray-400 cursor-help" />
-                  <div className="absolute left-0 bottom-full mb-2 hidden group-hover:block w-64 p-2 bg-gray-900 border border-gray-700 rounded text-xs text-gray-300 z-10">
-                    How long to keep schema definitions before deletion. Set to "Never" to keep schemas indefinitely.
+          <div className="grid gap-3 sm:grid-cols-3 xl:min-w-[520px]">
+            <div className="stat-card">
+              <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Cleanup</p>
+              <p className={`mt-3 text-xl font-semibold ${dataRetention.autoCleanupEnabled ? 'text-emerald-300' : 'text-slate-300'}`}>
+                {dataRetention.autoCleanupEnabled ? 'Enabled' : 'Disabled'}
+              </p>
+            </div>
+            <div className="stat-card">
+              <p className="text-xs uppercase tracking-[0.18em] text-slate-500">API Keys</p>
+              <p className="mt-3 text-3xl font-semibold text-white">{apiKeys.length}</p>
+            </div>
+            <div className="stat-card">
+              <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Pending Changes</p>
+              <p className="mt-3 text-3xl font-semibold text-white">{hasUnsavedChanges ? 1 : 0}</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {saveSuccess && (
+        <div className="rounded-2xl border border-emerald-500/40 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-300">
+          <div className="flex items-center gap-2">
+            <CheckCircle className="h-4 w-4" />
+            <span>Settings saved successfully.</span>
+          </div>
+        </div>
+      )}
+
+      {error && (
+        <div className="rounded-2xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="h-4 w-4" />
+            <span>{error}</span>
+          </div>
+        </div>
+      )}
+
+      <section className="panel p-5">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <p className="eyebrow">Retention Policy</p>
+            <h2 className="mt-2 text-xl font-semibold text-white">Data lifecycle controls</h2>
+          </div>
+          {hasUnsavedChanges && (
+            <button type="button" onClick={handleSaveSettings} disabled={isSaving} className="button-primary disabled:cursor-not-allowed disabled:opacity-60">
+              <Save className="h-4 w-4" />
+              {isSaving ? 'Saving...' : 'Save Changes'}
+            </button>
+          )}
+        </div>
+
+        <div className="mt-5 space-y-5">
+          <div className="rounded-[24px] border border-slate-800 bg-slate-950/35 p-5">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+              <div className="max-w-2xl">
+                <div className="flex items-start gap-3">
+                  <input
+                    type="checkbox"
+                    checked={dataRetention.autoCleanupEnabled}
+                    onChange={(e) => handleRetentionChange('autoCleanupEnabled', e.target.checked)}
+                    className="mt-1 h-4 w-4 rounded border-slate-600 bg-slate-800 text-blue-500 focus:ring-blue-500"
+                  />
+                  <div>
+                    <p className="text-base font-medium text-white">Enable automatic cleanup</p>
+                    <p className="mt-2 text-sm leading-6 text-slate-400">
+                      Automatically remove data after its configured retention period. Disable this if your environment requires manual cleanup only.
+                    </p>
                   </div>
                 </div>
               </div>
-              <div className="flex gap-3">
-                <div className="flex-1">
-                  <select
-                    value={dataRetention.schemaRetentionDays === null ? 'never' : dataRetention.schemaRetentionDays}
-                    onChange={(e) => handleRetentionChange('schemaRetentionDays', e.target.value === 'never' ? null : parseInt(e.target.value))}
-                    className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
-                  >
-                    <option value="never">Never (Keep Forever)</option>
-                    <option value="7">7 days</option>
-                    <option value="30">30 days</option>
-                    <option value="60">60 days</option>
-                    <option value="90">90 days</option>
-                    <option value="180">180 days</option>
-                    <option value="365">1 year</option>
-                  </select>
+              <span className={`badge-soft ${dataRetention.autoCleanupEnabled ? 'border-emerald-500/25 bg-emerald-500/10 text-emerald-300' : ''}`}>
+                {dataRetention.autoCleanupEnabled ? 'Active' : 'Inactive'}
+              </span>
+            </div>
+          </div>
+
+          <div className="grid gap-5 xl:grid-cols-2">
+            <div className="rounded-[24px] border border-slate-800 bg-slate-950/35 p-5">
+              <div className="mb-4 flex items-center gap-2">
+                <span className="text-sm font-medium text-white">Schema retention period</span>
+                <div className="group relative">
+                  <Info className="h-4 w-4 text-slate-500" />
+                  <div className="absolute left-0 top-full z-10 mt-2 hidden w-64 rounded-xl border border-slate-700 bg-slate-950 p-3 text-xs leading-5 text-slate-300 group-hover:block">
+                    Controls how long schema definitions remain available before cleanup.
+                  </div>
                 </div>
-                <div className="px-4 py-2 bg-gray-700/50 border border-gray-600 rounded-lg text-gray-300 min-w-[180px] flex items-center">
-                  <Calendar className="w-4 h-4 mr-2 text-gray-400" />
+              </div>
+              <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_180px]">
+                <select
+                  value={dataRetention.schemaRetentionDays === null ? 'never' : dataRetention.schemaRetentionDays}
+                  onChange={(e) => handleRetentionChange('schemaRetentionDays', e.target.value === 'never' ? null : parseInt(e.target.value, 10))}
+                  className="field-shell"
+                >
+                  <option value="never">Never</option>
+                  <option value="7">7 days</option>
+                  <option value="30">30 days</option>
+                  <option value="60">60 days</option>
+                  <option value="90">90 days</option>
+                  <option value="180">180 days</option>
+                  <option value="365">1 year</option>
+                </select>
+                <div className="inline-flex items-center gap-2 rounded-2xl border border-slate-800 bg-slate-900/70 px-4 py-3 text-sm text-slate-300">
+                  <Calendar className="h-4 w-4 text-slate-500" />
                   {getRetentionDisplay(dataRetention.schemaRetentionDays)}
                 </div>
               </div>
-            </label>
-          </div>
+            </div>
 
-          {/* Entity Retention */}
-          <div className="space-y-3">
-            <label className="block">
-              <div className="flex items-center gap-2 mb-3">
-                <span className="text-white font-medium">Entity Retention Period</span>
+            <div className="rounded-[24px] border border-slate-800 bg-slate-950/35 p-5">
+              <div className="mb-4 flex items-center gap-2">
+                <span className="text-sm font-medium text-white">Entity retention period</span>
                 <div className="group relative">
-                  <Info className="w-4 h-4 text-gray-400 cursor-help" />
-                  <div className="absolute left-0 bottom-full mb-2 hidden group-hover:block w-64 p-2 bg-gray-900 border border-gray-700 rounded text-xs text-gray-300 z-10">
-                    How long to keep entity data before deletion. Applies to both consumed and available entities.
+                  <Info className="h-4 w-4 text-slate-500" />
+                  <div className="absolute left-0 top-full z-10 mt-2 hidden w-64 rounded-xl border border-slate-700 bg-slate-950 p-3 text-xs leading-5 text-slate-300 group-hover:block">
+                    Applies to both available and consumed entities stored in the system.
                   </div>
                 </div>
               </div>
-              <div className="flex gap-3">
-                <div className="flex-1">
-                  <select
-                    value={dataRetention.entityRetentionDays === null ? 'never' : dataRetention.entityRetentionDays}
-                    onChange={(e) => handleRetentionChange('entityRetentionDays', e.target.value === 'never' ? null : parseInt(e.target.value))}
-                    className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
-                  >
-                    <option value="never">Never (Keep Forever)</option>
-                    <option value="1">1 day</option>
-                    <option value="7">7 days</option>
-                    <option value="14">14 days</option>
-                    <option value="30">30 days</option>
-                    <option value="60">60 days</option>
-                    <option value="90">90 days</option>
-                    <option value="180">180 days</option>
-                  </select>
-                </div>
-                <div className="px-4 py-2 bg-gray-700/50 border border-gray-600 rounded-lg text-gray-300 min-w-[180px] flex items-center">
-                  <Calendar className="w-4 h-4 mr-2 text-gray-400" />
+              <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_180px]">
+                <select
+                  value={dataRetention.entityRetentionDays === null ? 'never' : dataRetention.entityRetentionDays}
+                  onChange={(e) => handleRetentionChange('entityRetentionDays', e.target.value === 'never' ? null : parseInt(e.target.value, 10))}
+                  className="field-shell"
+                >
+                  <option value="never">Never</option>
+                  <option value="1">1 day</option>
+                  <option value="7">7 days</option>
+                  <option value="14">14 days</option>
+                  <option value="30">30 days</option>
+                  <option value="60">60 days</option>
+                  <option value="90">90 days</option>
+                  <option value="180">180 days</option>
+                </select>
+                <div className="inline-flex items-center gap-2 rounded-2xl border border-slate-800 bg-slate-900/70 px-4 py-3 text-sm text-slate-300">
+                  <Calendar className="h-4 w-4 text-slate-500" />
                   {getRetentionDisplay(dataRetention.entityRetentionDays)}
                 </div>
               </div>
-            </label>
+            </div>
           </div>
 
-          {/* Warning Message */}
           {dataRetention.autoCleanupEnabled && (dataRetention.schemaRetentionDays !== null || dataRetention.entityRetentionDays !== null) && (
-            <div className="p-4 bg-orange-500/10 border border-orange-500/30 rounded-lg">
+            <div className="rounded-[24px] border border-amber-500/30 bg-amber-500/10 p-5">
               <div className="flex gap-3">
-                <AlertCircle className="w-5 h-5 text-orange-400 flex-shrink-0 mt-0.5" />
-                <div className="flex-1">
-                  <p className="text-orange-400 font-medium mb-1">Automatic Cleanup Enabled</p>
-                  <p className="text-sm text-orange-300/80">
-                    Data older than the configured retention period will be permanently deleted. 
-                    This action cannot be undone. Make sure you have backups if needed.
+                <AlertCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-amber-300" />
+                <div>
+                  <p className="text-sm font-medium text-amber-200">Automatic deletion is active</p>
+                  <p className="mt-2 text-sm leading-6 text-amber-100/80">
+                    Data older than the configured retention thresholds will be permanently removed. Verify backup and recovery expectations before shortening these windows.
                   </p>
                 </div>
               </div>
             </div>
           )}
         </div>
-      </div>
+      </section>
 
-      {/* API Keys Section */}
-      <div className="bg-gray-800 rounded-lg border border-gray-700 overflow-hidden">
-        <div className="p-6 border-b border-gray-700 bg-gray-800/50">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-500/10 rounded-lg border border-blue-500/20">
-                <Key className="w-6 h-6 text-blue-500" />
-              </div>
-              <div>
-                <h2 className="text-xl font-semibold text-white">API Keys</h2>
-                <p className="text-sm text-gray-400">Manage API keys for external integrations</p>
-              </div>
-            </div>
-            <button
-              onClick={() => setShowCreateKeyDialog(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium"
-            >
-              <Plus className="w-4 h-4" />
-              Generate Key
-            </button>
+      <section className="table-shell">
+        <div className="panel-header flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <p className="eyebrow">Integration Access</p>
+            <h2 className="mt-2 text-xl font-semibold text-white">API key management</h2>
           </div>
+          <button type="button" onClick={() => setShowCreateKeyDialog(true)} className="button-primary">
+            <Plus className="h-4 w-4" />
+            Generate Key
+          </button>
         </div>
 
-        <div className="p-6">
+        <div className="p-5">
           {apiKeys.length === 0 ? (
-            <div className="text-center py-12">
-              <Key className="w-16 h-16 mx-auto mb-4 opacity-50 text-gray-500" />
-              <h3 className="text-lg font-medium text-gray-400 mb-2">No API Keys</h3>
-              <p className="text-sm text-gray-500 mb-4">
-                Generate your first API key to start integrating with external services
-              </p>
-              <button
-                onClick={() => setShowCreateKeyDialog(true)}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
-              >
-                <Plus className="w-4 h-4" />
-                Generate API Key
-              </button>
+            <div className="py-12 text-center">
+              <Key className="mx-auto h-14 w-14 text-slate-600" />
+              <h3 className="mt-4 text-lg font-medium text-white">No API keys</h3>
+              <p className="mt-2 text-sm text-slate-400">Generate your first key to enable external integrations or automation flows.</p>
+              <div className="mt-6">
+                <button type="button" onClick={() => setShowCreateKeyDialog(true)} className="button-primary">
+                  <Plus className="h-4 w-4" />
+                  Generate API Key
+                </button>
+              </div>
             </div>
           ) : (
             <div className="space-y-4">
               {apiKeys.map((apiKey) => (
-                <div
-                  key={apiKey.id}
-                  className="p-4 bg-gray-700/30 rounded-lg border border-gray-600 hover:border-gray-500 transition-colors"
-                >
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex-1">
-                      <h3 className="text-white font-medium mb-1">{apiKey.name}</h3>
-                      <div className="flex items-center gap-4 text-sm text-gray-400">
-                        <span>Created {formatDate(apiKey.createdAt)}</span>
-                        {apiKey.lastUsed && (
-                          <span>Last used {formatDate(apiKey.lastUsed)}</span>
+                <div key={apiKey.id} className="rounded-[24px] border border-slate-800 bg-slate-950/35 p-5">
+                  <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h3 className="text-lg font-semibold text-white">{apiKey.name}</h3>
+                        {apiKey.expiresAt ? (
+                          <span className="badge-soft border-amber-500/25 bg-amber-500/10 text-amber-300">Expires {formatDate(apiKey.expiresAt)}</span>
+                        ) : (
+                          <span className="badge-soft border-emerald-500/25 bg-emerald-500/10 text-emerald-300">No Expiration</span>
                         )}
                       </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {apiKey.expiresAt && (
-                        <div className="px-3 py-1 bg-orange-500/20 text-orange-400 rounded-md text-sm font-medium">
-                          Expires {formatDate(apiKey.expiresAt)}
-                        </div>
-                      )}
-                      {!apiKey.expiresAt && (
-                        <div className="px-3 py-1 bg-green-500/20 text-green-400 rounded-md text-sm font-medium">
-                          Never Expires
-                        </div>
-                      )}
+                      <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-slate-500">
+                        <span>Created {formatDate(apiKey.createdAt)}</span>
+                        {apiKey.lastUsed && <span>Last used {formatDate(apiKey.lastUsed)}</span>}
+                      </div>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2">
-                    <div className="flex-1 flex items-center gap-2 px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg font-mono text-sm">
-                      <code className="flex-1 text-gray-300">
-                        {visibleKeys.has(apiKey.id) ? apiKey.key : '••••••••••••••••••••'}
-                      </code>
+                  <div className="mt-4 flex flex-col gap-3 lg:flex-row lg:items-center">
+                    <div className="flex-1 rounded-2xl border border-slate-800 bg-slate-900/80 px-4 py-3 font-mono text-sm text-slate-300">
+                      {visibleKeys.has(apiKey.id) ? apiKey.key : 'â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢'}
                     </div>
-                    <button
-                      onClick={() => toggleKeyVisibility(apiKey.id)}
-                      className="p-2 hover:bg-gray-600 rounded-lg transition-colors"
-                      title={visibleKeys.has(apiKey.id) ? 'Hide key' : 'Show key'}
-                    >
-                      {visibleKeys.has(apiKey.id) ? (
-                        <EyeOff className="w-5 h-5 text-gray-400 hover:text-white" />
-                      ) : (
-                        <Eye className="w-5 h-5 text-gray-400 hover:text-white" />
-                      )}
-                    </button>
-                    <button
-                      onClick={() => copyToClipboard(apiKey.key)}
-                      className="p-2 hover:bg-gray-600 rounded-lg transition-colors"
-                      title="Copy to clipboard"
-                    >
-                      <Copy className="w-5 h-5 text-gray-400 hover:text-white" />
-                    </button>
-                    <button
-                      onClick={() => handleDeleteApiKey(apiKey.id)}
-                      className="p-2 hover:bg-red-500/10 rounded-lg transition-colors"
-                      title="Delete key"
-                    >
-                      <Trash2 className="w-5 h-5 text-gray-400 hover:text-red-400" />
-                    </button>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => toggleKeyVisibility(apiKey.id)}
+                        className="button-secondary !rounded-xl !px-3 !py-2"
+                        title={visibleKeys.has(apiKey.id) ? 'Hide key' : 'Show key'}
+                      >
+                        {visibleKeys.has(apiKey.id) ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                      <button type="button" onClick={() => copyToClipboard(apiKey.key)} className="button-secondary !rounded-xl !px-3 !py-2" title="Copy to clipboard">
+                        <Copy className="h-4 w-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteApiKey(apiKey.id)}
+                        className="inline-flex items-center justify-center rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-red-200 transition-colors hover:bg-red-500/15"
+                        title="Delete key"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}
             </div>
           )}
         </div>
-      </div>
+      </section>
 
-      {/* Create API Key Dialog */}
       {showCreateKeyDialog && (
-        <>
-          <div 
-            className="fixed inset-0 bg-black/50 z-40"
-            onClick={() => setShowCreateKeyDialog(false)}
-          />
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <div 
-              className="bg-gray-800 rounded-lg border border-gray-700 max-w-md w-full"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="p-6 border-b border-gray-700">
-                <h3 className="text-xl font-semibold text-white">Generate API Key</h3>
-                <p className="text-sm text-gray-400 mt-1">Create a new API key for external integrations</p>
+        <div className="modal-backdrop" onClick={() => setShowCreateKeyDialog(false)}>
+          <div className="modal-shell max-w-xl" onClick={(e) => e.stopPropagation()}>
+            <div className="border-b border-slate-800 px-6 py-5">
+              <h3 className="text-xl font-semibold text-white">Generate API key</h3>
+              <p className="mt-2 text-sm text-slate-400">Create a credential for automation, integrations, or CI consumers.</p>
+            </div>
+
+            <div className="space-y-4 px-6 py-5">
+              <div>
+                <label className="mb-2 block text-sm font-medium text-slate-300">Key name</label>
+                <input
+                  type="text"
+                  value={newKeyName}
+                  onChange={(e) => setNewKeyName(e.target.value)}
+                  placeholder="e.g. CI Pipeline, Prod Sync"
+                  className="field-shell"
+                  autoFocus
+                />
               </div>
 
-              <div className="p-6 space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Key Name *
-                  </label>
-                  <input
-                    type="text"
-                    value={newKeyName}
-                    onChange={(e) => setNewKeyName(e.target.value)}
-                    placeholder="e.g., Production API, CI/CD Pipeline"
-                    className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    autoFocus
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Expiration Period
-                  </label>
-                  <select
-                    value={newKeyExpiration === null ? 'never' : newKeyExpiration}
-                    onChange={(e) => setNewKeyExpiration(e.target.value === 'never' ? null : parseInt(e.target.value))}
-                    className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="30">30 days</option>
-                    <option value="60">60 days</option>
-                    <option value="90">90 days</option>
-                    <option value="180">180 days</option>
-                    <option value="365">1 year</option>
-                    <option value="never">Never (No expiration)</option>
-                  </select>
-                </div>
-
-                <div className="p-3 bg-blue-500/10 border border-blue-500/30 rounded-lg">
-                  <p className="text-sm text-blue-300">
-                    <strong>Note:</strong> Make sure to copy your API key after creation. 
-                    You won't be able to see it again for security reasons.
-                  </p>
-                </div>
+              <div>
+                <label className="mb-2 block text-sm font-medium text-slate-300">Expiration</label>
+                <select
+                  value={newKeyExpiration === null ? 'never' : newKeyExpiration}
+                  onChange={(e) => setNewKeyExpiration(e.target.value === 'never' ? null : parseInt(e.target.value, 10))}
+                  className="field-shell"
+                >
+                  <option value="30">30 days</option>
+                  <option value="60">60 days</option>
+                  <option value="90">90 days</option>
+                  <option value="180">180 days</option>
+                  <option value="365">1 year</option>
+                  <option value="never">Never</option>
+                </select>
               </div>
 
-              <div className="flex items-center justify-end gap-3 p-6 border-t border-gray-700">
-                <button
-                  onClick={() => {
-                    setShowCreateKeyDialog(false);
-                    setNewKeyName('');
-                    setNewKeyExpiration(90);
-                  }}
-                  className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleCreateApiKey}
-                  disabled={!newKeyName.trim()}
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Generate Key
-                </button>
+              <div className="rounded-[24px] border border-blue-500/25 bg-blue-500/10 p-4 text-sm leading-6 text-blue-100/80">
+                Copy the generated secret after creation. For security reasons, this is the only place where the raw key may be visible.
               </div>
             </div>
+
+            <div className="flex justify-end gap-3 border-t border-slate-800 px-6 py-5">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowCreateKeyDialog(false);
+                  setNewKeyName('');
+                  setNewKeyExpiration(90);
+                }}
+                className="button-secondary"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleCreateApiKey}
+                disabled={!newKeyName.trim()}
+                className="button-primary disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                Generate Key
+              </button>
+            </div>
           </div>
-        </>
+        </div>
       )}
     </div>
   );

@@ -169,63 +169,85 @@ const Users: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-            <UsersIcon className="w-8 h-8" />
-            Users & Permissions
-          </h1>
-          <p className="text-gray-400 mt-1">Manage users, roles, and custom permission overrides.</p>
+    <div className="app-page">
+      <section className="page-hero">
+        <div className="grid gap-5 xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.9fr)]">
+          <div className="space-y-4">
+            <p className="eyebrow">Access Control</p>
+            <div className="flex items-start gap-4">
+              <div className="page-hero-icon">
+                <UsersIcon className="h-7 w-7 text-blue-300" />
+              </div>
+              <div>
+                <h1 className="text-3xl font-semibold tracking-tight text-white">Users & Permissions</h1>
+                <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-300">
+                  Manage users, roles, and explicit permission overrides with a clearer administrative workflow.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="panel p-5">
+            <p className="eyebrow">Access Snapshot</p>
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <div className="stat-card">
+                <p className="text-sm text-slate-400">Users</p>
+                <p className="mt-2 text-3xl font-semibold text-white">{users.length}</p>
+                <p className="mt-2 text-xs text-slate-500">active directory entries</p>
+              </div>
+              <div className="stat-card">
+                <p className="text-sm text-slate-400">Permission catalog</p>
+                <p className="mt-2 text-3xl font-semibold text-white">{permissions.length}</p>
+                <p className="mt-2 text-xs text-slate-500">assignable permission keys</p>
+              </div>
+            </div>
+            <button onClick={openCreate} className="button-primary mt-5 w-full">
+              <Plus className="h-4 w-4" />
+              Create User
+            </button>
+          </div>
         </div>
-        <button
-          onClick={openCreate}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-white font-medium"
-        >
-          <Plus className="w-4 h-4" />
-          Create User
-        </button>
-      </div>
+      </section>
 
       {error && (
-        <div className="p-4 bg-red-500/10 border border-red-500/50 rounded-lg text-red-400 flex items-center gap-2">
+        <div className="flex items-center gap-2 rounded-2xl border border-red-500/40 bg-red-500/10 p-4 text-red-300">
           <AlertCircle className="w-5 h-5" />
           <span>{error}</span>
         </div>
       )}
 
       {success && (
-        <div className="p-4 bg-green-500/10 border border-green-500/50 rounded-lg text-green-400 flex items-center gap-2">
+        <div className="flex items-center gap-2 rounded-2xl border border-green-500/40 bg-green-500/10 p-4 text-green-300">
           <CheckCircle className="w-5 h-5" />
           <span>{success}</span>
         </div>
       )}
 
-      <div className="bg-gray-800 border border-gray-700 rounded-lg overflow-x-auto">
+      <div className="table-shell">
         <table className="w-full min-w-[760px]">
-          <thead className="bg-gray-700/50">
+          <thead>
             <tr>
-              <th className="text-left px-4 py-3 text-xs uppercase tracking-wider text-gray-400">User</th>
-              <th className="text-center px-4 py-3 text-xs uppercase tracking-wider text-gray-400">Role</th>
-              <th className="text-center px-4 py-3 text-xs uppercase tracking-wider text-gray-400">Status</th>
-              <th className="text-center px-4 py-3 text-xs uppercase tracking-wider text-gray-400">Permissions</th>
-              <th className="text-center px-4 py-3 text-xs uppercase tracking-wider text-gray-400">Actions</th>
+              <th className="px-4 py-3 text-left text-xs uppercase tracking-wider text-slate-400">User</th>
+              <th className="px-4 py-3 text-center text-xs uppercase tracking-wider text-slate-400">Role</th>
+              <th className="px-4 py-3 text-center text-xs uppercase tracking-wider text-slate-400">Status</th>
+              <th className="px-4 py-3 text-center text-xs uppercase tracking-wider text-slate-400">Permissions</th>
+              <th className="px-4 py-3 text-center text-xs uppercase tracking-wider text-slate-400">Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-700">
+          <tbody>
             {users.map((user) => (
-              <tr key={user.id} className="hover:bg-gray-700/30">
+              <tr key={user.id} className="bg-slate-950/35 transition-colors hover:bg-slate-900/75">
                 <td className="px-4 py-3 text-sm text-white">
                   <div>{user.username}</div>
-                  <div className="text-xs text-gray-400">{user.email}</div>
+                  <div className="text-xs text-slate-400">{user.email}</div>
                 </td>
-                <td className="px-4 py-3 text-sm text-gray-200 text-center">{normalizeRole(user.role)}</td>
+                <td className="px-4 py-3 text-center text-sm text-slate-200">{normalizeRole(user.role)}</td>
                 <td className="px-4 py-3 text-sm text-center">
-                  <span className={`inline-flex px-2 py-1 rounded text-xs border ${user.isActive !== false ? 'bg-green-500/15 text-green-300 border-green-500/30' : 'bg-red-500/15 text-red-300 border-red-500/30'}`}>
+                  <span className={`inline-flex rounded-full border px-2.5 py-1 text-xs ${user.isActive !== false ? 'bg-green-500/15 text-green-300 border-green-500/30' : 'bg-red-500/15 text-red-300 border-red-500/30'}`}>
                     {user.isActive !== false ? 'Active' : 'Inactive'}
                   </span>
                 </td>
-                <td className="px-4 py-3 text-xs text-gray-300 text-center">
+                <td className="px-4 py-3 text-center text-xs text-slate-300">
                   {(user.permissions || []).length} effective
                   {(user.customPermissions || []).length > 0 && (
                     <span className="text-blue-300"> • {(user.customPermissions || []).length} custom</span>
@@ -235,14 +257,14 @@ const Users: React.FC = () => {
                   <div className="flex items-center justify-center gap-2">
                     <button
                       onClick={() => openEdit(user)}
-                      className="p-1.5 rounded hover:bg-gray-600"
+                      className="rounded-xl p-2 hover:bg-slate-800"
                       title="Edit user"
                     >
                       <Pencil className="w-4 h-4 text-gray-300" />
                     </button>
                     <button
                       onClick={() => handleDelete(user)}
-                      className="p-1.5 rounded hover:bg-red-600/20"
+                      className="rounded-xl p-2 hover:bg-red-600/20"
                       title="Delete user"
                     >
                       <Trash2 className="w-4 h-4 text-red-300" />
@@ -253,7 +275,7 @@ const Users: React.FC = () => {
             ))}
             {users.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-4 py-8 text-center text-sm text-gray-400">
+                <td colSpan={5} className="px-4 py-8 text-center text-sm text-slate-400">
                   No users found.
                 </td>
               </tr>
@@ -263,19 +285,19 @@ const Users: React.FC = () => {
       </div>
 
       {showCreate && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-gray-800 border border-gray-700 rounded-lg w-full max-w-4xl max-h-[90vh] overflow-hidden">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-700">
+        <div className="modal-backdrop">
+          <div className="modal-shell max-h-[90vh] max-w-4xl overflow-hidden">
+            <div className="flex items-center justify-between border-b border-slate-800 px-6 py-4">
               <h2 className="text-xl text-white font-semibold">
                 {editingUser ? `Edit User: ${editingUser.username}` : 'Create User'}
               </h2>
-              <button onClick={closeDialog} className="p-2 rounded hover:bg-gray-700">
-                <X className="w-5 h-5 text-gray-300" />
+              <button onClick={closeDialog} className="rounded-xl p-2 hover:bg-slate-800">
+                <X className="w-5 h-5 text-slate-300" />
               </button>
             </div>
             <form onSubmit={handleSubmit} className="p-6 space-y-6 overflow-y-auto max-h-[calc(90vh-80px)]">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <label className="text-sm text-gray-300">
+                <label className="text-sm text-slate-300">
                   Username
                   <input
                     type="text"
@@ -283,62 +305,62 @@ const Users: React.FC = () => {
                     onChange={(e) => setField('username', e.target.value)}
                     disabled={!!editingUser}
                     required
-                    className="mt-1 w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white disabled:opacity-60"
+                    className="field-shell mt-1 disabled:opacity-60"
                   />
                 </label>
-                <label className="text-sm text-gray-300">
+                <label className="text-sm text-slate-300">
                   Email
                   <input
                     type="email"
                     value={form.email}
                     onChange={(e) => setField('email', e.target.value)}
                     required
-                    className="mt-1 w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white"
+                    className="field-shell mt-1"
                   />
                 </label>
                 {!editingUser && (
-                  <label className="text-sm text-gray-300">
+                  <label className="text-sm text-slate-300">
                     Password
                     <input
                       type="password"
                       value={form.password}
                       onChange={(e) => setField('password', e.target.value)}
                       required
-                      className="mt-1 w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white"
+                      className="field-shell mt-1"
                     />
                   </label>
                 )}
-                <label className="text-sm text-gray-300">
+                <label className="text-sm text-slate-300">
                   Role
                   <select
                     value={form.role}
                     onChange={(e) => setField('role', e.target.value as 'Contributor' | 'Admin')}
-                    className="mt-1 w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white"
+                    className="field-shell mt-1"
                   >
                     <option value="Contributor">Contributor</option>
                     <option value="Admin">Admin</option>
                   </select>
                 </label>
-                <label className="text-sm text-gray-300">
+                <label className="text-sm text-slate-300">
                   First Name
                   <input
                     type="text"
                     value={form.firstName}
                     onChange={(e) => setField('firstName', e.target.value)}
-                    className="mt-1 w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white"
+                    className="field-shell mt-1"
                   />
                 </label>
-                <label className="text-sm text-gray-300">
+                <label className="text-sm text-slate-300">
                   Last Name
                   <input
                     type="text"
                     value={form.lastName}
                     onChange={(e) => setField('lastName', e.target.value)}
-                    className="mt-1 w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white"
+                    className="field-shell mt-1"
                   />
                 </label>
                 {editingUser && (
-                  <label className="text-sm text-gray-300 flex items-center gap-2 mt-6">
+                  <label className="mt-6 flex items-center gap-2 text-sm text-slate-300">
                     <input
                       type="checkbox"
                       checked={form.isActive}
@@ -350,14 +372,14 @@ const Users: React.FC = () => {
                 )}
               </div>
 
-              <div className="bg-gray-900/40 border border-gray-700 rounded-lg p-4">
+              <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
                 <div className="flex items-start justify-between gap-4 mb-4">
                   <div>
                     <h3 className="text-white font-medium flex items-center gap-2">
                       <Shield className="w-4 h-4" />
                       Custom Permission Overrides
                     </h3>
-                    <p className="text-xs text-gray-400 mt-1">
+                    <p className="mt-1 text-xs text-slate-400">
                       Role defaults are always applied. Choose additional explicit permissions for this user.
                     </p>
                   </div>
@@ -367,10 +389,10 @@ const Users: React.FC = () => {
                 </div>
                 <div className="space-y-4">
                   {groupedPermissions.map(([group, groupPermissions]) => (
-                    <div key={group} className="bg-gray-800/50 border border-gray-700 rounded-lg p-3">
+                    <div key={group} className="rounded-2xl border border-slate-800 bg-slate-900/60 p-3">
                       <div className="flex items-center justify-between mb-3">
-                        <p className="text-xs uppercase tracking-wider text-gray-500">{group}</p>
-                        <span className="text-[11px] text-gray-500">{groupPermissions.length} permissions</span>
+                        <p className="text-xs uppercase tracking-wider text-slate-500">{group}</p>
+                        <span className="text-[11px] text-slate-500">{groupPermissions.length} permissions</span>
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
                         {groupPermissions.map((permission) => (
@@ -379,7 +401,7 @@ const Users: React.FC = () => {
                             className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
                               form.customPermissions.includes(permission.key)
                                 ? 'bg-blue-500/10 border-blue-500/40'
-                                : 'bg-gray-900/40 border-gray-700 hover:bg-gray-700/40 hover:border-gray-600'
+                                : 'bg-slate-950/40 border-slate-800 hover:bg-slate-800/40 hover:border-slate-700'
                             }`}
                           >
                             <input
@@ -390,7 +412,7 @@ const Users: React.FC = () => {
                             />
                             <span className="min-w-0">
                               <span className="text-xs text-blue-300 font-mono break-all">{permission.key}</span>
-                              <span className="block text-xs text-gray-400 mt-1">{permission.description}</span>
+                              <span className="block text-xs text-slate-400 mt-1">{permission.description}</span>
                             </span>
                           </label>
                         ))}
@@ -401,10 +423,10 @@ const Users: React.FC = () => {
               </div>
 
               <div className="flex justify-end gap-3">
-                <button type="button" onClick={closeDialog} className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded text-white">
+                <button type="button" onClick={closeDialog} className="button-secondary">
                   Cancel
                 </button>
-                <button type="submit" disabled={isSubmitting} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded text-white disabled:opacity-50">
+                <button type="submit" disabled={isSubmitting} className="button-primary disabled:opacity-50">
                   {isSubmitting ? 'Saving...' : editingUser ? 'Save Changes' : 'Create User'}
                 </button>
               </div>

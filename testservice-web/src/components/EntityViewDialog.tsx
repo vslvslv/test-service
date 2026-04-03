@@ -1,14 +1,17 @@
-import React, { useEffect, useState } from 'react';
-import { 
-  X,
+import React, { useEffect, useMemo, useState } from 'react';
+import {
   Calendar,
-  Package,
   CheckCircle,
-  XCircle,
   Copy,
   Download,
   Edit,
-  RefreshCw
+  Eye,
+  EyeOff,
+  Package,
+  RefreshCw,
+  Save,
+  X,
+  XCircle,
 } from 'lucide-react';
 import { apiService } from '../services/api';
 import type { Environment } from '../types';
@@ -28,13 +31,14 @@ const EntityViewDialog: React.FC<EntityViewDialogProps> = ({
   entity,
   schema,
   onReset,
-  onEdit
+  onEdit,
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [draftFields, setDraftFields] = useState<Record<string, any>>({});
   const [draftEnvironment, setDraftEnvironment] = useState('');
   const [availableEnvironments, setAvailableEnvironments] = useState<Environment[]>([]);
   const [isSaving, setIsSaving] = useState(false);
+  const [showRawJson, setShowRawJson] = useState(false);
 
   useEffect(() => {
     if (!isOpen || !entity) return;
@@ -60,16 +64,21 @@ const EntityViewDialog: React.FC<EntityViewDialogProps> = ({
     };
   }, [isOpen]);
 
+  const environmentOptions = useMemo(() => {
+    const names = availableEnvironments
+      .map((env) => env.name)
+      .filter((name): name is string => !!name && name.trim().length > 0);
+    return Array.from(new Set(draftEnvironment.trim() ? [...names, draftEnvironment] : names));
+  }, [availableEnvironments, draftEnvironment]);
+
   if (!isOpen || !entity) return null;
 
   const handleCopyField = (value: string) => {
     navigator.clipboard.writeText(value);
-    // Could add a toast notification here
   };
 
   const handleCopyAll = () => {
-    const allFields = JSON.stringify(entity.fields, null, 2);
-    navigator.clipboard.writeText(allFields);
+    navigator.clipboard.writeText(JSON.stringify(entity.fields, null, 2));
   };
 
   const handleExportJson = () => {
@@ -85,7 +94,6 @@ const EntityViewDialog: React.FC<EntityViewDialogProps> = ({
 
   const handleFieldChange = (fieldName: string, value: string, fieldType?: string) => {
     let parsedValue: any = value;
-
     if (fieldType === 'number') {
       parsedValue = value === '' ? '' : Number(value);
     } else if (fieldType === 'boolean') {
@@ -97,11 +105,7 @@ const EntityViewDialog: React.FC<EntityViewDialogProps> = ({
         parsedValue = value;
       }
     }
-
-    setDraftFields((prev) => ({
-      ...prev,
-      [fieldName]: parsedValue
-    }));
+    setDraftFields((prev) => ({ ...prev, [fieldName]: parsedValue }));
   };
 
   const handleSave = async () => {
@@ -110,7 +114,7 @@ const EntityViewDialog: React.FC<EntityViewDialogProps> = ({
     try {
       await onEdit({
         fields: draftFields,
-        environment: draftEnvironment || undefined
+        environment: draftEnvironment || undefined,
       });
       setIsEditing(false);
     } finally {
@@ -124,271 +128,212 @@ const EntityViewDialog: React.FC<EntityViewDialogProps> = ({
     setIsEditing(false);
   };
 
-  return (
-    <>
-      {/* Backdrop */}
-      <div 
-        className="fixed inset-0 bg-black/50 z-40 animate-fadeIn"
-        onClick={onClose}
-      />
-      
-      {/* Dialog */}
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-        <div 
-          className="bg-gray-800 rounded-lg border border-gray-700 max-w-3xl w-full max-h-[90vh] overflow-hidden animate-slideUp"
-          onClick={(e) => e.stopPropagation()}
-        >
-          {/* Header */}
-          <div className="flex items-center justify-between p-6 border-b border-gray-700">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-purple-500/10 rounded-lg border border-purple-500/20">
-                <Package className="w-6 h-6 text-purple-500" />
-              </div>
-              <div>
-                <h2 className="text-xl font-bold text-white">{entity.entityType}</h2>
-                <p className="text-sm text-gray-400 font-mono">{entity.id}</p>
-              </div>
-            </div>
-            <button
-              onClick={onClose}
-              className="p-2 hover:bg-gray-700 rounded-lg transition-colors"
-            >
-              <X className="w-5 h-5 text-gray-400 hover:text-white" />
-            </button>
-          </div>
+  const rawJson = JSON.stringify(
+    {
+      ...entity,
+      fields: isEditing ? draftFields : entity.fields,
+      environment: isEditing ? draftEnvironment || undefined : entity.environment,
+    },
+    null,
+    2
+  );
 
-          {/* Content */}
-          <div className="p-6 overflow-y-auto max-h-[calc(90vh-180px)]">
-            {/* Status and Metadata */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-              {/* Status */}
-              <div className="bg-gray-700/50 rounded-lg border border-gray-600 p-4">
-                <p className="text-xs text-gray-400 mb-2">Status</p>
+  return (
+    <div className="modal-backdrop" onClick={onClose}>
+      <div className="modal-shell max-h-[90vh] max-w-5xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between border-b border-slate-800 px-6 py-5">
+          <div className="flex items-center gap-3">
+            <div className="page-hero-icon !p-2.5">
+              <Package className="h-5 w-5 text-blue-300" />
+            </div>
+            <div>
+              <h2 className="text-xl font-semibold text-white">{entity.entityType}</h2>
+              <p className="mt-1 font-mono text-sm text-slate-400">{entity.id}</p>
+            </div>
+          </div>
+          <button type="button" onClick={onClose} className="rounded-xl p-2 text-slate-400 transition-colors hover:bg-slate-800 hover:text-white">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        <div className="max-h-[calc(90vh-170px)] overflow-y-auto px-6 py-5">
+          <div className="mb-5 grid gap-4 lg:grid-cols-2 xl:grid-cols-4">
+            <div className="stat-card">
+              <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Status</p>
+              <div className="mt-3">
                 {entity.isConsumed ? (
-                  <div className="flex items-center gap-2">
-                    <XCircle className="w-5 h-5 text-orange-400" />
-                    <span className="text-orange-400 font-medium">Consumed</span>
-                  </div>
+                  <span className="inline-flex items-center gap-2 text-amber-300">
+                    <XCircle className="h-4 w-4" />
+                    Consumed
+                  </span>
                 ) : (
-                  <div className="flex items-center gap-2">
-                    <CheckCircle className="w-5 h-5 text-green-400" />
-                    <span className="text-green-400 font-medium">Available</span>
-                  </div>
+                  <span className="inline-flex items-center gap-2 text-emerald-300">
+                    <CheckCircle className="h-4 w-4" />
+                    Available
+                  </span>
                 )}
               </div>
-
-              {/* Environment */}
-              <div className="bg-gray-700/50 rounded-lg border border-gray-600 p-4">
-                <p className="text-xs text-gray-400 mb-2">Environment</p>
+            </div>
+            <div className="stat-card">
+              <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Environment</p>
+              <div className="mt-3">
                 {isEditing ? (
-                  <select
-                    value={draftEnvironment}
-                    onChange={(e) => setDraftEnvironment(e.target.value)}
-                    className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
+                  <select value={draftEnvironment} onChange={(e) => setDraftEnvironment(e.target.value)} className="field-shell">
                     <option value="">No environment</option>
-                    {Array.from(new Set([
-                      ...availableEnvironments
-                        .map((env) => env.name)
-                        .filter((name): name is string => !!name && name.trim().length > 0),
-                      ...(draftEnvironment.trim() ? [draftEnvironment] : [])
-                    ])).map((envName) => (
+                    {environmentOptions.map((envName) => (
                       <option key={envName} value={envName}>{envName}</option>
                     ))}
                   </select>
                 ) : (
-                  <p className="text-white font-medium">{entity.environment || '-'}</p>
+                  <p className="text-white">{entity.environment || '-'}</p>
                 )}
               </div>
-
-              {/* Created At */}
-              {entity.createdAt && (
-                <div className="bg-gray-700/50 rounded-lg border border-gray-600 p-4">
-                  <p className="text-xs text-gray-400 mb-2 flex items-center gap-1">
-                    <Calendar className="w-3 h-3" />
-                    Created
-                  </p>
-                  <p className="text-white text-sm">
-                    {new Date(entity.createdAt).toLocaleString()}
-                  </p>
-                </div>
-              )}
-
-              {/* Updated At */}
-              {entity.updatedAt && (
-                <div className="bg-gray-700/50 rounded-lg border border-gray-600 p-4">
-                  <p className="text-xs text-gray-400 mb-2 flex items-center gap-1">
-                    <Calendar className="w-3 h-3" />
-                    Updated
-                  </p>
-                  <p className="text-white text-sm">
-                    {new Date(entity.updatedAt).toLocaleString()}
-                  </p>
-                </div>
-              )}
             </div>
+            {entity.createdAt && (
+              <div className="stat-card">
+                <p className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.18em] text-slate-500">
+                  <Calendar className="h-3.5 w-3.5" />
+                  Created
+                </p>
+                <p className="mt-3 text-sm text-white">{new Date(entity.createdAt).toLocaleString()}</p>
+              </div>
+            )}
+            {entity.updatedAt && (
+              <div className="stat-card">
+                <p className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.18em] text-slate-500">
+                  <Calendar className="h-3.5 w-3.5" />
+                  Updated
+                </p>
+                <p className="mt-3 text-sm text-white">{new Date(entity.updatedAt).toLocaleString()}</p>
+              </div>
+            )}
+          </div>
 
-            {/* Fields */}
-            <div className="bg-gray-700/50 rounded-lg border border-gray-600 p-4">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-white">Fields</h3>
-                <button
-                  onClick={handleCopyAll}
-                  className="flex items-center gap-2 px-3 py-1.5 text-sm bg-gray-600 hover:bg-gray-500 text-white rounded-lg transition-colors"
-                >
-                  <Copy className="w-4 h-4" />
+          <div className="panel p-5">
+            <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="eyebrow">Field Values</p>
+                <h3 className="mt-2 text-lg font-semibold text-white">Entity payload</h3>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button type="button" onClick={handleCopyAll} className="button-secondary">
+                  <Copy className="h-4 w-4" />
                   Copy All
                 </button>
+                <button type="button" onClick={handleExportJson} className="button-secondary">
+                  <Download className="h-4 w-4" />
+                  Export JSON
+                </button>
+                <button type="button" onClick={() => setShowRawJson((prev) => !prev)} className="button-secondary">
+                  {showRawJson ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  {showRawJson ? 'Hide Raw JSON' : 'Show Raw JSON'}
+                </button>
               </div>
+            </div>
 
-              <div className="space-y-3">
-                {schema?.fields?.map((field: any, index: number) => {
-                  const value = isEditing ? draftFields[field.name] : entity.fields[field.name];
-                  const hasValue = value !== undefined && value !== null && value !== '';
+            <div className="space-y-3">
+              {schema?.fields?.map((field: any) => {
+                const value = isEditing ? draftFields[field.name] : entity.fields[field.name];
+                const hasValue = value !== undefined && value !== null && value !== '';
 
-                  return (
-                    <div
-                      key={index}
-                      className="flex items-start justify-between p-3 bg-gray-800 rounded-lg border border-gray-600 hover:border-gray-500 transition-colors group"
-                    >
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <p className="text-sm font-medium text-gray-300">
+                return (
+                  <div key={field.name} className="rounded-[24px] border border-slate-800 bg-slate-950/35 p-4">
+                    <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                      <div className="min-w-0 flex-1">
+                        <div className="mb-2 flex flex-wrap items-center gap-2">
+                          <p className="text-sm font-medium text-white">
                             {field.name}
-                            {field.required && (
-                              <span className="text-red-400 ml-1">*</span>
-                            )}
+                            {field.required && <span className="ml-1 text-red-300">*</span>}
                           </p>
-                          <span className="text-xs px-1.5 py-0.5 bg-blue-500/20 text-blue-400 rounded border border-blue-500/30">
-                            {field.type}
-                          </span>
+                          <span className="badge-soft border-blue-500/25 bg-blue-500/10 text-blue-300">{field.type}</span>
                         </div>
-                        {field.description && (
-                          <p className="text-xs text-gray-500 mb-2">{field.description}</p>
-                        )}
-                        <div className="flex items-center gap-2">
-                          {isEditing ? (
-                            field.type === 'boolean' ? (
-                              <select
-                                value={String(Boolean(value))}
-                                onChange={(e) => handleFieldChange(field.name, e.target.value, field.type)}
-                                className="w-full px-3 py-2 bg-gray-900 border border-gray-600 rounded text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                              >
-                                <option value="false">false</option>
-                                <option value="true">true</option>
-                              </select>
-                            ) : (
-                              <input
-                                type={field.type === 'number' ? 'number' : 'text'}
-                                value={typeof value === 'object' ? JSON.stringify(value) : (value ?? '')}
-                                onChange={(e) => handleFieldChange(field.name, e.target.value, field.type)}
-                                className="w-full px-3 py-2 bg-gray-900 border border-gray-600 rounded text-sm text-white font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
-                              />
-                            )
-                          ) : hasValue ? (
-                            <p className="text-white font-mono text-sm break-all">
-                              {typeof value === 'object' 
-                                ? JSON.stringify(value) 
-                                : String(value)}
-                            </p>
+                        {field.description && <p className="mb-3 text-xs leading-5 text-slate-500">{field.description}</p>}
+                        {isEditing ? (
+                          field.type === 'boolean' ? (
+                            <select
+                              value={String(Boolean(value))}
+                              onChange={(e) => handleFieldChange(field.name, e.target.value, field.type)}
+                              className="field-shell"
+                            >
+                              <option value="false">false</option>
+                              <option value="true">true</option>
+                            </select>
                           ) : (
-                            <p className="text-gray-500 text-sm italic">
-                              {field.defaultValue ? `Default: ${field.defaultValue}` : 'No value'}
-                            </p>
-                          )}
-                        </div>
+                            <input
+                              type={field.type === 'number' ? 'number' : 'text'}
+                              value={typeof value === 'object' ? JSON.stringify(value) : (value ?? '')}
+                              onChange={(e) => handleFieldChange(field.name, e.target.value, field.type)}
+                              className="field-shell font-mono text-sm"
+                            />
+                          )
+                        ) : hasValue ? (
+                          <p className="break-all font-mono text-sm text-slate-200">
+                            {typeof value === 'object' ? JSON.stringify(value) : String(value)}
+                          </p>
+                        ) : (
+                          <p className="text-sm italic text-slate-500">
+                            {field.defaultValue ? `Default: ${field.defaultValue}` : 'No value'}
+                          </p>
+                        )}
                       </div>
                       {!isEditing && hasValue && (
                         <button
-                          onClick={() => handleCopyField(String(value))}
-                          className="p-1.5 opacity-0 group-hover:opacity-100 hover:bg-gray-700 rounded transition-all ml-2"
+                          type="button"
+                          onClick={() => handleCopyField(typeof value === 'object' ? JSON.stringify(value) : String(value))}
+                          className="rounded-full border border-slate-700/70 bg-slate-900/70 p-2 text-slate-400 transition-colors hover:text-white"
                           title="Copy value"
                         >
-                          <Copy className="w-4 h-4 text-gray-400 hover:text-white" />
+                          <Copy className="h-4 w-4" />
                         </button>
                       )}
                     </div>
-                  );
-                })}
-              </div>
+                  </div>
+                );
+              })}
             </div>
 
-            {/* Raw JSON View */}
-            <details className="mt-4 bg-gray-700/50 rounded-lg border border-gray-600">
-              <summary className="p-4 cursor-pointer hover:bg-gray-700/70 transition-colors text-sm font-medium text-gray-300">
-                View Raw JSON
-              </summary>
-              <div className="p-4 pt-0">
-                <pre className="bg-gray-900 rounded p-4 overflow-x-auto text-xs text-gray-300 border border-gray-700">
-                  {JSON.stringify({
-                    ...entity,
-                    fields: isEditing ? draftFields : entity.fields,
-                    environment: isEditing ? (draftEnvironment || undefined) : entity.environment
-                  }, null, 2)}
-                </pre>
+            {showRawJson && (
+              <div className="mt-4 rounded-[24px] border border-slate-800 bg-slate-950/60 p-4">
+                <pre className="overflow-x-auto text-xs text-slate-300">{rawJson}</pre>
               </div>
-            </details>
+            )}
           </div>
+        </div>
 
-          {/* Footer Actions */}
-          <div className="flex items-center justify-between gap-3 p-6 border-t border-gray-700 bg-gray-800/50">
-            <div className="flex gap-2">
-              <button
-                onClick={handleExportJson}
-                className="flex items-center gap-2 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors text-sm"
-              >
-                <Download className="w-4 h-4" />
-                Export JSON
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-800 px-6 py-5">
+          <div className="flex gap-2">
+            {entity.isConsumed && schema?.excludeOnFetch && onReset && (
+              <button type="button" onClick={onReset} className="button-secondary">
+                <RefreshCw className="h-4 w-4" />
+                Reset
               </button>
-            </div>
-            <div className="flex gap-2">
-              {entity.isConsumed && schema?.excludeOnFetch && onReset && (
-                <button
-                  onClick={onReset}
-                  className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
-                >
-                  <RefreshCw className="w-4 h-4" />
-                  Reset
-                </button>
-              )}
-              {onEdit && !isEditing && (
-                <button
-                  onClick={() => setIsEditing(true)}
-                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
-                >
-                  <Edit className="w-4 h-4" />
-                  Edit
-                </button>
-              )}
-              {onEdit && isEditing && (
-                <>
-                  <button
-                    onClick={handleCancelEdit}
-                    disabled={isSaving}
-                    className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors disabled:opacity-50"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleSave}
-                    disabled={isSaving}
-                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors disabled:opacity-50"
-                  >
-                    {isSaving ? 'Saving...' : 'Save'}
-                  </button>
-                </>
-              )}
-              <button
-                onClick={onClose}
-                className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors"
-              >
-                Close
+            )}
+          </div>
+          <div className="flex flex-wrap gap-3">
+            {onEdit && !isEditing && (
+              <button type="button" onClick={() => setIsEditing(true)} className="button-primary">
+                <Edit className="h-4 w-4" />
+                Edit
               </button>
-            </div>
+            )}
+            {onEdit && isEditing && (
+              <>
+                <button type="button" onClick={handleCancelEdit} disabled={isSaving} className="button-secondary disabled:cursor-not-allowed disabled:opacity-60">
+                  Cancel
+                </button>
+                <button type="button" onClick={handleSave} disabled={isSaving} className="button-primary disabled:cursor-not-allowed disabled:opacity-60">
+                  <Save className="h-4 w-4" />
+                  {isSaving ? 'Saving...' : 'Save'}
+                </button>
+              </>
+            )}
+            <button type="button" onClick={onClose} className="button-secondary">
+              Close
+            </button>
           </div>
         </div>
       </div>
-    </>
+    </div>
   );
 };
 
