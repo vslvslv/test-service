@@ -15,9 +15,10 @@
 4. [Environments](#4-environments)
 5. [Settings & API Keys](#5-settings--api-keys)
 6. [Users](#6-users)
-7. [Data Models](#7-data-models)
-8. [Error Handling](#8-error-handling)
-9. [Integration Examples](#9-integration-examples)
+7. [Mocks (Import & Duplicate)](#7-mocks-import--duplicate)
+8. [Data Models](#8-data-models)
+9. [Error Handling](#9-error-handling)
+10. [Integration Examples](#10-integration-examples)
 
 ---
 
@@ -413,6 +414,43 @@ Entity deleted successfully.
 }
 ```
 
+### 3.10 Export Entities (Bulk)
+**Endpoint:** `GET /api/entities/{entityType}/export?environment={env}&format={csv|json}`  
+**Authorization:** Bearer Token Required (Entities Read)  
+**Description:** Export all entities of a type as JSON array or CSV. CSV header row is derived from schema field names; optional `environment` column when entities have environment set.
+
+**Example:** `GET /api/entities/test-agent/export?format=csv&environment=qa`
+
+#### Response (200 OK):
+- `format=json`: application/json — array of entity objects (same structure as GET entities).
+- `format=csv`: text/csv — header row plus one row per entity. File name: `{entityType}-export.{csv|json}`.
+
+### 3.11 Import Entities (Bulk)
+**Endpoint:** `POST /api/entities/{entityType}/import?environment={env}&mode={append|upsert}`  
+**Authorization:** Bearer Token Required (Entities Write)  
+**Description:** Bulk import entities from a CSV or JSON file (multipart form, field name `file`).
+
+- **environment** (optional): Default environment for imported rows (can be overridden per row in data).
+- **mode**: `append` — always create new entities; `upsert` — update existing if unique key matches (schema’s unique/compound unique fields), otherwise create.
+
+**JSON format:** Array of objects. Each object can have `fields` (object with field names and values) and optional `environment`. Alternatively, flat objects with field names at root and optional `environment`.
+
+**CSV format:** First row = headers (field names; optional `environment` column). Subsequent rows = values. Headers must match schema field names.
+
+**Limits:** Max file size 5 MB; max 5000 rows.
+
+#### Response (200 OK):
+```json
+{
+  "created": 10,
+  "updated": 2,
+  "skipped": 1,
+  "errors": [
+    { "row": 5, "message": "Required field 'name' is missing." }
+  ]
+}
+```
+
 ---
 
 ## 4. Environments
@@ -657,9 +695,45 @@ Returns created API key with generated key value.
 
 ---
 
-## 7. Data Models
+## 7. Mocks (Import & Duplicate)
 
-### 7.1 DynamicEntity
+### 7.1 Import from Postman Collection
+**Endpoint:** `POST /api/mocks/expectations/import/postman?targetEnvironment={env}&pathPrefix={prefix}`  
+**Authorization:** Bearer Token Required (Mocks Write)  
+**Description:** Import mock expectations from a Postman Collection v2.1 JSON file. Request method, URL path, headers, body, and the first response (status, body, headers) are mapped to expectations for the given target environment.
+
+- **targetEnvironment** (required): Environment name for all created expectations (e.g. `qa2`, `st`). Runtime URL will be `/mock/{targetEnvironment}/{path}`.
+- **pathPrefix** (optional): Prefix to prepend to each request path (e.g. `/api`).
+- **Body:** multipart form with field `file` (Postman Collection JSON).
+
+#### Response (200 OK):
+```json
+{
+  "created": 5,
+  "errors": []
+}
+```
+
+### 7.2 Duplicate Expectation to Another Environment
+**Endpoint:** `POST /api/mocks/expectations/{id}/duplicate`  
+**Authorization:** Bearer Token Required (Mocks Write)  
+**Description:** Clone an existing expectation into another environment. The path is unchanged; the new expectation is available at `/mock/{targetEnvironment}/{path}`.
+
+#### Request Body:
+```json
+{
+  "targetEnvironment": "st"
+}
+```
+
+#### Response (200 OK):
+Returns the newly created mock expectation (same structure as a single expectation). The name is suffixed with ` ({targetEnvironment})`.
+
+---
+
+## 8. Data Models
+
+### 8.1 DynamicEntity
 ```typescript
 {
   id: string;                          // MongoDB ObjectId
@@ -672,7 +746,7 @@ Returns created API key with generated key value.
 }
 ```
 
-### 7.2 EntitySchema
+### 8.2 EntitySchema
 ```typescript
 {
   id: string;
@@ -687,7 +761,7 @@ Returns created API key with generated key value.
 }
 ```
 
-### 7.3 FieldDefinition
+### 8.3 FieldDefinition
 ```typescript
 {
   name: string;                        // Field name
@@ -741,7 +815,7 @@ Returns created API key with generated key value.
 
 ---
 
-## 8. Error Handling
+## 9. Error Handling
 
 ### HTTP Status Codes:
 - `200 OK` - Request succeeded
@@ -794,7 +868,7 @@ Returns created API key with generated key value.
 
 ---
 
-## 9. Integration Examples
+## 10. Integration Examples
 
 ### 9.1 C# Client Example
 

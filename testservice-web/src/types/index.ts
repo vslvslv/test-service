@@ -28,6 +28,18 @@ export interface Entity {
   updatedAt?: string;
 }
 
+export interface EntityImportError {
+  row: number;
+  message: string;
+}
+
+export interface EntityImportResult {
+  created: number;
+  updated: number;
+  skipped: number;
+  errors: EntityImportError[];
+}
+
 export interface Environment {
   id: string;
   name: string;
@@ -120,6 +132,11 @@ export interface MockVerificationResponse {
   success: boolean;
   matchedCount: number;
   message: string;
+}
+
+export interface PostmanImportResult {
+  created: number;
+  errors: string[];
 }
 
 export interface LoginCredentials {

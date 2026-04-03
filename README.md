@@ -134,6 +134,8 @@ GET /api/entities/Agent/filter/brandId/brand123
    - RabbitMQ message bus integration
    - Automatic CRUD operations
    - Thread-safe parallel test execution support
+   - **Bulk entity export/import** (CSV and JSON) with append/upsert modes
+   - **Mocks:** Postman Collection v2.1 import and duplicate expectation to another environment
    - Built with ASP.NET Core Web API
 
 2. **TestService.Tests** - NUnit test project

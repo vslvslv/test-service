@@ -11,6 +11,7 @@ import {
   CheckCircle,
   XCircle,
   Download,
+  Upload,
   Filter,
   Settings,
   ChevronDown
@@ -50,6 +51,16 @@ const EntityList: React.FC = () => {
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
+
+  // Import modal state
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [importEnvironment, setImportEnvironment] = useState<string>('');
+  const [importMode, setImportMode] = useState<'append' | 'upsert'>('append');
+  const [importResult, setImportResult] = useState<{ created: number; updated: number; skipped: number; errors: { row: number; message: string }[] } | null>(null);
+  const [isImporting, setIsImporting] = useState(false);
+  const [showExportMenu, setShowExportMenu] = useState(false);
+  const [importEnvironments, setImportEnvironments] = useState<string[]>([]);
   
   // Column visibility state
   const [showColumnMenu, setShowColumnMenu] = useState(false);
@@ -204,6 +215,61 @@ const EntityList: React.FC = () => {
     }
   };
 
+  const handleExport = async (format: 'json' | 'csv') => {
+    try {
+      const env = selectedEnvironment !== 'all' ? selectedEnvironment : undefined;
+      const blob = await apiService.exportEntities(entityType!, format, env);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${entityType}-export.${format}`;
+      a.click();
+      URL.revokeObjectURL(url);
+      setShowExportMenu(false);
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Export failed');
+    }
+  };
+
+  const openImportModal = async () => {
+    setImportFile(null);
+    setImportResult(null);
+    setImportEnvironment(selectedEnvironment !== 'all' ? selectedEnvironment : '');
+    setImportMode('append');
+    setIsImportModalOpen(true);
+    try {
+      const envs = await apiService.getEnvironments();
+      setImportEnvironments(envs.map((e: { name: string }) => e.name));
+    } catch {
+      setImportEnvironments(environments);
+    }
+  };
+
+  const handleImportSubmit = async () => {
+    if (!importFile || !entityType) return;
+    setIsImporting(true);
+    setImportResult(null);
+    try {
+      const result = await apiService.importEntities(entityType, importFile, {
+        environment: importEnvironment || undefined,
+        mode: importMode,
+      });
+      setImportResult(result);
+      if (result.created + result.updated > 0) {
+        await loadData();
+      }
+    } catch (err: any) {
+      setImportResult({
+        created: 0,
+        updated: 0,
+        skipped: 0,
+        errors: [{ row: 0, message: err.response?.data?.message || 'Import failed' }],
+      });
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
   const handleResetFromDialog = async () => {
     if (selectedEntity) {
       await handleResetEntity(selectedEntity.id);
@@ -350,6 +416,48 @@ const EntityList: React.FC = () => {
             </button>
           )}
           
+          {/* Export dropdown */}
+          <div className="relative">
+            <button
+              onClick={() => setShowExportMenu(!showExportMenu)}
+              className="flex items-center gap-2 px-3 py-2 bg-gray-700 hover:bg-gray-600 text-white text-sm rounded-lg transition-colors border border-gray-600"
+              title="Export entities"
+            >
+              <Download className="w-4 h-4" />
+              <span className="hidden sm:inline">Export</span>
+              <ChevronDown className="w-4 h-4" />
+            </button>
+            {showExportMenu && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setShowExportMenu(false)} />
+                <div className="absolute right-0 mt-2 w-40 bg-gray-800 border border-gray-700 rounded-lg shadow-xl z-20 py-1">
+                  <button
+                    onClick={() => handleExport('json')}
+                    className="w-full px-4 py-2 text-left text-sm text-gray-200 hover:bg-gray-700"
+                  >
+                    As JSON
+                  </button>
+                  <button
+                    onClick={() => handleExport('csv')}
+                    className="w-full px-4 py-2 text-left text-sm text-gray-200 hover:bg-gray-700"
+                  >
+                    As CSV
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* Import */}
+          <button
+            onClick={openImportModal}
+            className="flex items-center gap-2 px-3 py-2 bg-gray-700 hover:bg-gray-600 text-white text-sm rounded-lg transition-colors border border-gray-600"
+            title="Import entities from file"
+          >
+            <Upload className="w-4 h-4" />
+            <span className="hidden sm:inline">Import</span>
+          </button>
+
           {/* Primary Action (Create) */}
           <button
             onClick={handleCreateNew}
@@ -683,6 +791,87 @@ const EntityList: React.FC = () => {
         schema={schema}
         entityType={entityType!}
       />
+
+      {/* Import Modal */}
+      {isImportModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+          <div className="bg-gray-800 border border-gray-700 rounded-xl shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-gray-700">
+              <h2 className="text-xl font-semibold text-white">Import entities</h2>
+              <p className="text-sm text-gray-400 mt-1">Upload a CSV or JSON file. JSON: array of objects with &quot;fields&quot; (and optional &quot;environment&quot;).</p>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-1">File</label>
+                <input
+                  type="file"
+                  accept=".csv,.json"
+                  onChange={(e) => setImportFile(e.target.files?.[0] ?? null)}
+                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-sm file:mr-2 file:py-1 file:px-3 file:rounded file:border-0 file:bg-blue-600 file:text-white"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-1">Environment (optional)</label>
+                <select
+                  value={importEnvironment}
+                  onChange={(e) => setImportEnvironment(e.target.value)}
+                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-sm"
+                >
+                  <option value="">— None —</option>
+                  {importEnvironments.map((env) => (
+                    <option key={env} value={env}>{env}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-1">Mode</label>
+                <select
+                  value={importMode}
+                  onChange={(e) => setImportMode(e.target.value as 'append' | 'upsert')}
+                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-sm"
+                >
+                  <option value="append">Append (always create new)</option>
+                  <option value="upsert">Upsert (update if unique key exists)</option>
+                </select>
+              </div>
+              {importResult && (
+                <div className="p-4 bg-gray-700/50 rounded-lg border border-gray-600 space-y-2">
+                  <p className="text-sm text-gray-300">
+                    <span className="text-green-400">{importResult.created} created</span>
+                    {importResult.updated > 0 && <span>, <span className="text-blue-400">{importResult.updated} updated</span></span>}
+                    {importResult.skipped > 0 && <span>, <span className="text-orange-400">{importResult.skipped} skipped</span></span>}
+                  </p>
+                  {importResult.errors.length > 0 && (
+                    <div className="mt-2 max-h-32 overflow-y-auto">
+                      <p className="text-xs font-medium text-red-400 mb-1">Errors:</p>
+                      <ul className="text-xs text-gray-400 space-y-0.5">
+                        {importResult.errors.map((err, i) => (
+                          <li key={i}>Row {err.row}: {err.message}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+            <div className="p-6 border-t border-gray-700 flex justify-end gap-2">
+              <button
+                onClick={() => { setIsImportModalOpen(false); setImportResult(null); }}
+                className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg text-sm"
+              >
+                Close
+              </button>
+              <button
+                onClick={handleImportSubmit}
+                disabled={!importFile || isImporting}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg text-sm font-medium"
+              >
+                {isImporting ? 'Importing…' : 'Import'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

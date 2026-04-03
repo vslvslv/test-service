@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Plus, Pencil, Trash2, RefreshCw, ToggleLeft, ToggleRight, Boxes, X, Copy } from 'lucide-react';
+import { Plus, Pencil, Trash2, RefreshCw, ToggleLeft, ToggleRight, Boxes, X, Copy, Upload, CopyPlus } from 'lucide-react';
 import { apiService } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import type { Environment, MockExpectation, MockRequestLog, MockVerificationRequest, MockVerificationResponse } from '../types';
@@ -176,6 +176,171 @@ const methodBadgeClass = (method?: string) => {
   }
 };
 
+function requestReceivedText(log: MockRequestLog): string {
+  const pathWithQuery = log.path + (log.queryString ? `?${log.queryString}` : '');
+  const lines: string[] = [
+    `${log.method || 'GET'} ${pathWithQuery}`,
+    '',
+    ...Object.entries(log.headers || {}).map(([k, v]) => `${k}: ${v}`),
+  ];
+  if (log.body != null && log.body !== '') {
+    lines.push('');
+    lines.push(log.body);
+  }
+  return lines.join('\n');
+}
+
+function buildCurl(log: MockRequestLog): string {
+  const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://example.com';
+  const pathWithQuery = log.path + (log.queryString ? `?${log.queryString}` : '');
+  const url = `${baseUrl}/mock/${encodeURIComponent(log.environment)}${pathWithQuery.startsWith('/') ? pathWithQuery : `/${pathWithQuery}`}`;
+  const method = log.method || 'GET';
+  const parts: string[] = ['curl'];
+  parts.push('-X', method);
+  for (const [key, value] of Object.entries(log.headers || {})) {
+    if (key.toLowerCase() === 'host') continue;
+    const headerValue = `${key}: ${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}`;
+    parts.push('-H', `"${headerValue}"`);
+  }
+  if (log.body != null && log.body !== '' && !['GET', 'HEAD'].includes(method.toUpperCase())) {
+    const escapedBody = log.body.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+    parts.push('-d', `"${escapedBody}"`);
+  }
+  const escapedUrl = url.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+  parts.push(`"${escapedUrl}"`);
+  return parts.join(' ');
+}
+
+interface RequestLogDetailSidebarProps {
+  log: MockRequestLog;
+  onClose: () => void;
+  formatTimestamp: (ts: string) => string;
+  methodBadgeClass: (method: string) => string;
+}
+
+const RequestLogDetailSidebar: React.FC<RequestLogDetailSidebarProps> = ({
+  log,
+  onClose,
+  formatTimestamp,
+  methodBadgeClass,
+}) => {
+  const [copiedKind, setCopiedKind] = useState<'request' | 'curl' | null>(null);
+
+  const handleCopyRequest = async () => {
+    try {
+      await navigator.clipboard.writeText(requestReceivedText(log));
+      setCopiedKind('request');
+      setTimeout(() => setCopiedKind(null), 2000);
+    } catch {
+      setCopiedKind(null);
+    }
+  };
+
+  const handleCopyCurl = async () => {
+    try {
+      await navigator.clipboard.writeText(buildCurl(log));
+      setCopiedKind('curl');
+      setTimeout(() => setCopiedKind(null), 2000);
+    } catch {
+      setCopiedKind(null);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/40 flex justify-end" onClick={onClose}>
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="mock-log-detail-title"
+        className="h-full w-full max-w-2xl bg-gray-900 border-l border-gray-700 flex flex-col"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex-shrink-0 flex items-center justify-between p-6 pb-4 border-b border-gray-700 bg-gray-900">
+          <h3 id="mock-log-detail-title" className="text-lg font-semibold text-white">Request Log Details</h3>
+          <button type="button" onClick={onClose} aria-label="Close request log details" className="p-2 rounded hover:bg-gray-800 text-gray-300">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+        <div className="flex-1 min-h-0 overflow-y-auto p-6 pt-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm mb-4">
+          <div className="rounded border border-gray-700 bg-gray-800 p-3">
+            <p className="text-gray-400 text-xs mb-1">Timestamp</p>
+            <p className="text-gray-100">{formatTimestamp(log.timestamp)}</p>
+          </div>
+          <div className="rounded border border-gray-700 bg-gray-800 p-3">
+            <p className="text-gray-400 text-xs mb-1">Environment</p>
+            <p className="text-gray-100">{log.environment}</p>
+          </div>
+          <div className="rounded border border-gray-700 bg-gray-800 p-3">
+            <p className="text-gray-400 text-xs mb-1">Method</p>
+            <span className={`inline-flex px-2 py-1 rounded border text-xs ${methodBadgeClass(log.method)}`}>
+              {log.method || 'ANY'}
+            </span>
+          </div>
+          <div className="rounded border border-gray-700 bg-gray-800 p-3">
+            <p className="text-gray-400 text-xs mb-1">Matched</p>
+            <span className={`inline-flex px-2 py-1 rounded text-xs border ${log.matched ? 'bg-green-500/15 text-green-300 border-green-500/30' : 'bg-amber-500/15 text-amber-300 border-amber-500/30'}`}>
+              {log.matched ? 'Matched' : 'Unmatched'}
+            </span>
+          </div>
+        </div>
+        <div className="rounded border border-gray-700 bg-gray-800 p-3 mb-3">
+          <p className="text-gray-400 text-xs mb-1">Path</p>
+          <p className="font-mono text-gray-100 break-all">{log.path}</p>
+        </div>
+        <div className="rounded border border-gray-700 bg-gray-800 p-3 mb-3">
+          <p className="text-gray-400 text-xs mb-1">Query String</p>
+          <p className="font-mono text-gray-100 break-all">{log.queryString || '-'}</p>
+        </div>
+        <div className="rounded border border-gray-700 bg-gray-800 p-3 mb-3">
+          <p className="text-gray-400 text-xs mb-1">Matched Expectation</p>
+          <p className="text-gray-100">{log.matchedExpectationName || '-'}</p>
+        </div>
+        <div className="rounded border border-gray-700 bg-gray-800 p-3 mb-3">
+          <p className="text-gray-400 text-xs mb-1">Response Status</p>
+          <p className="text-gray-100">{log.responseStatusCode}</p>
+        </div>
+
+        <div className="rounded border border-gray-700 bg-gray-800 p-3 mb-3">
+          <div className="flex items-center justify-between gap-2 mb-2">
+            <p className="text-gray-400 text-xs">Request received</p>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleCopyRequest}
+                className="inline-flex items-center gap-1.5 px-2 py-1.5 rounded bg-gray-700 hover:bg-gray-600 text-gray-200 text-xs"
+              >
+                <Copy className="w-3.5 h-3.5" />
+                {copiedKind === 'request' ? 'Copied!' : 'Copy'}
+              </button>
+              <button
+                type="button"
+                onClick={handleCopyCurl}
+                className="inline-flex items-center gap-1.5 px-2 py-1.5 rounded bg-gray-700 hover:bg-gray-600 text-gray-200 text-xs"
+              >
+                {copiedKind === 'curl' ? 'Copied!' : 'Copy as cURL'}
+              </button>
+            </div>
+          </div>
+          <pre className="text-xs text-gray-200 whitespace-pre-wrap break-all font-mono bg-gray-900 rounded p-3 overflow-x-auto max-h-48 overflow-y-auto">
+            {requestReceivedText(log)}
+          </pre>
+        </div>
+
+        <div className="rounded border border-gray-700 bg-gray-800 p-3 mb-3">
+          <p className="text-gray-400 text-xs mb-1">Headers</p>
+          <pre className="text-xs text-gray-200 overflow-x-auto">{JSON.stringify(log.headers || {}, null, 2)}</pre>
+        </div>
+        <div className="rounded border border-gray-700 bg-gray-800 p-3">
+          <p className="text-gray-400 text-xs mb-1">Body</p>
+          <pre className="text-xs text-gray-200 whitespace-pre-wrap break-words">{log.body || '-'}</pre>
+        </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const Mocks: React.FC = () => {
   const { hasPermission } = useAuth();
   const canWriteMocks = hasPermission(Permissions.MocksWrite);
@@ -209,6 +374,13 @@ const Mocks: React.FC = () => {
   const [showUnmatchedSeries, setShowUnmatchedSeries] = useState(true);
   const [selectedLog, setSelectedLog] = useState<MockRequestLog | null>(null);
   const [verifyMethod, setVerifyMethod] = useState('ANY');
+  const [showPostmanImportModal, setShowPostmanImportModal] = useState(false);
+  const [postmanFile, setPostmanFile] = useState<File | null>(null);
+  const [postmanTargetEnv, setPostmanTargetEnv] = useState('');
+  const [postmanPathPrefix, setPostmanPathPrefix] = useState('');
+  const [postmanResult, setPostmanResult] = useState<{ created: number; errors: string[] } | null>(null);
+  const [isPostmanImporting, setIsPostmanImporting] = useState(false);
+  const [duplicateForId, setDuplicateForId] = useState<string | null>(null);
   const [verifyPath, setVerifyPath] = useState('/');
   const [verifyPathMatchType, setVerifyPathMatchType] = useState(0);
   const [verifyBodyMatchType, setVerifyBodyMatchType] = useState(0);
@@ -629,6 +801,38 @@ const Mocks: React.FC = () => {
     }
   };
 
+  const handlePostmanImportSubmit = async () => {
+    if (!postmanFile || !postmanTargetEnv.trim()) return;
+    setIsPostmanImporting(true);
+    setPostmanResult(null);
+    try {
+      const result = await apiService.importPostmanExpectations(
+        postmanFile,
+        postmanTargetEnv.trim(),
+        postmanPathPrefix.trim() || undefined
+      );
+      setPostmanResult(result);
+      if (result.created > 0) await loadExpectations();
+    } catch (err) {
+      setPostmanResult({ created: 0, errors: [getErrorMessage(err)] });
+    } finally {
+      setIsPostmanImporting(false);
+    }
+  };
+
+  const handleDuplicateToEnvironment = async (expectationId: string, targetEnvironment: string) => {
+    if (!canWriteMocks) return;
+    setDuplicateForId(null);
+    try {
+      await apiService.duplicateMockExpectation(expectationId, targetEnvironment);
+      setSuccess(`Expectation duplicated to ${targetEnvironment}.`);
+      setTimeout(() => setSuccess(''), 3000);
+      await loadExpectations();
+    } catch (err) {
+      setError(getErrorMessage(err));
+    }
+  };
+
   const applyLogsFilters = () => {
     setLogsPathFilter(logsPathInput);
     setLogsMatchedFilter(logsMatchedInput);
@@ -843,13 +1047,22 @@ const Mocks: React.FC = () => {
               Refresh
             </button>
             {activeTab === 'expectations' && canWriteMocks && (
-              <button
-                onClick={openCreate}
-                className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded text-white"
-              >
-                <Plus className="w-4 h-4" />
-                Create Expectation
-              </button>
+              <>
+                <button
+                  onClick={() => { setShowPostmanImportModal(true); setPostmanResult(null); setPostmanFile(null); setPostmanTargetEnv(environment || ''); setPostmanPathPrefix(''); }}
+                  className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded text-white"
+                >
+                  <Upload className="w-4 h-4" />
+                  Import from Postman
+                </button>
+                <button
+                  onClick={openCreate}
+                  className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded text-white"
+                >
+                  <Plus className="w-4 h-4" />
+                  Create Expectation
+                </button>
+              </>
             )}
           </div>
         </div>
@@ -1219,6 +1432,38 @@ const Mocks: React.FC = () => {
                     <Copy className="w-3.5 h-3.5" />
                     Clone
                   </button>
+                  <div className="relative inline-block">
+                    <button
+                      onClick={() => setDuplicateForId(duplicateForId === expectation.id ? null : expectation.id || null)}
+                      disabled={!canWriteMocks}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded border border-gray-600 bg-gray-700 hover:bg-gray-600 text-xs text-gray-200 disabled:opacity-50"
+                      title="Duplicate to another environment"
+                    >
+                      <CopyPlus className="w-3.5 h-3.5" />
+                      Duplicate to...
+                    </button>
+                    {duplicateForId === expectation.id && (
+                      <>
+                        <div className="fixed inset-0 z-10" onClick={() => setDuplicateForId(null)} />
+                        <div className="absolute right-0 top-full mt-1 w-48 py-1 bg-gray-800 border border-gray-700 rounded shadow-xl z-20 max-h-48 overflow-y-auto">
+                          {environmentOptions
+                            .filter((env) => env !== (expectation.environment || ''))
+                            .map((env) => (
+                              <button
+                                key={env}
+                                onClick={() => handleDuplicateToEnvironment(expectation.id!, env)}
+                                className="w-full px-3 py-2 text-left text-xs text-gray-200 hover:bg-gray-700"
+                              >
+                                {env}
+                              </button>
+                            ))}
+                          {environmentOptions.filter((env) => env !== (expectation.environment || '')).length === 0 && (
+                            <p className="px-3 py-2 text-xs text-gray-500">No other environments</p>
+                          )}
+                        </div>
+                      </>
+                    )}
+                  </div>
                   <button
                     onClick={() => handleDelete(expectation)}
                     disabled={!canWriteMocks}
@@ -1710,69 +1955,88 @@ const Mocks: React.FC = () => {
       )}
 
       {activeTab === 'logs' && selectedLog && (
-        <div className="fixed inset-0 z-50 bg-black/40 flex justify-end" onClick={() => setSelectedLog(null)}>
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="mock-log-detail-title"
-            className="h-full w-full max-w-2xl bg-gray-900 border-l border-gray-700 p-6 overflow-y-auto"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between mb-4">
-              <h3 id="mock-log-detail-title" className="text-lg font-semibold text-white">Request Log Details</h3>
-              <button type="button" onClick={() => setSelectedLog(null)} aria-label="Close request log details" className="p-2 rounded hover:bg-gray-800 text-gray-300">
-                <X className="w-4 h-4" />
+        <RequestLogDetailSidebar
+          log={selectedLog}
+          onClose={() => setSelectedLog(null)}
+          formatTimestamp={formatTimestamp}
+          methodBadgeClass={methodBadgeClass}
+        />
+      )}
+
+      {showPostmanImportModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+          <div className="bg-gray-800 border border-gray-700 rounded-xl shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-gray-700">
+              <h2 className="text-xl font-semibold text-white">Import from Postman</h2>
+              <p className="text-sm text-gray-400 mt-1">Upload a Postman Collection v2.1 JSON file. Requests will be created as mock expectations for the selected environment.</p>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-1">Collection file (JSON)</label>
+                <input
+                  type="file"
+                  accept=".json"
+                  onChange={(e) => setPostmanFile(e.target.files?.[0] ?? null)}
+                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-sm file:mr-2 file:py-1 file:px-3 file:rounded file:border-0 file:bg-blue-600 file:text-white"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-1">Target environment</label>
+                <select
+                  value={postmanTargetEnv}
+                  onChange={(e) => setPostmanTargetEnv(e.target.value)}
+                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-sm"
+                >
+                  <option value="">Select environment</option>
+                  {environmentOptions.map((env) => (
+                    <option key={env} value={env}>{env}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-1">Path prefix (optional)</label>
+                <input
+                  type="text"
+                  value={postmanPathPrefix}
+                  onChange={(e) => setPostmanPathPrefix(e.target.value)}
+                  placeholder="/api"
+                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-sm"
+                />
+              </div>
+              {postmanResult && (
+                <div className="p-4 bg-gray-700/50 rounded-lg border border-gray-600">
+                  <p className="text-sm text-green-400">{postmanResult.created} expectation(s) created.</p>
+                  {postmanResult.errors.length > 0 && (
+                    <ul className="mt-2 text-xs text-red-300 space-y-1">
+                      {postmanResult.errors.map((msg, i) => (
+                        <li key={i}>{msg}</li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              )}
+            </div>
+            <div className="p-6 border-t border-gray-700 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => { setShowPostmanImportModal(false); setPostmanResult(null); }}
+                className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg text-sm"
+              >
+                Close
               </button>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm mb-4">
-              <div className="rounded border border-gray-700 bg-gray-800 p-3">
-                <p className="text-gray-400 text-xs mb-1">Timestamp</p>
-                <p className="text-gray-100">{formatTimestamp(selectedLog.timestamp)}</p>
-              </div>
-              <div className="rounded border border-gray-700 bg-gray-800 p-3">
-                <p className="text-gray-400 text-xs mb-1">Environment</p>
-                <p className="text-gray-100">{selectedLog.environment}</p>
-              </div>
-              <div className="rounded border border-gray-700 bg-gray-800 p-3">
-                <p className="text-gray-400 text-xs mb-1">Method</p>
-                <span className={`inline-flex px-2 py-1 rounded border text-xs ${methodBadgeClass(selectedLog.method)}`}>
-                  {selectedLog.method || 'ANY'}
-                </span>
-              </div>
-              <div className="rounded border border-gray-700 bg-gray-800 p-3">
-                <p className="text-gray-400 text-xs mb-1">Matched</p>
-                <span className={`inline-flex px-2 py-1 rounded text-xs border ${selectedLog.matched ? 'bg-green-500/15 text-green-300 border-green-500/30' : 'bg-amber-500/15 text-amber-300 border-amber-500/30'}`}>
-                  {selectedLog.matched ? 'Matched' : 'Unmatched'}
-                </span>
-              </div>
-            </div>
-            <div className="rounded border border-gray-700 bg-gray-800 p-3 mb-3">
-              <p className="text-gray-400 text-xs mb-1">Path</p>
-              <p className="font-mono text-gray-100 break-all">{selectedLog.path}</p>
-            </div>
-            <div className="rounded border border-gray-700 bg-gray-800 p-3 mb-3">
-              <p className="text-gray-400 text-xs mb-1">Query String</p>
-              <p className="font-mono text-gray-100 break-all">{selectedLog.queryString || '-'}</p>
-            </div>
-            <div className="rounded border border-gray-700 bg-gray-800 p-3 mb-3">
-              <p className="text-gray-400 text-xs mb-1">Matched Expectation</p>
-              <p className="text-gray-100">{selectedLog.matchedExpectationName || '-'}</p>
-            </div>
-            <div className="rounded border border-gray-700 bg-gray-800 p-3 mb-3">
-              <p className="text-gray-400 text-xs mb-1">Response Status</p>
-              <p className="text-gray-100">{selectedLog.responseStatusCode}</p>
-            </div>
-            <div className="rounded border border-gray-700 bg-gray-800 p-3 mb-3">
-              <p className="text-gray-400 text-xs mb-1">Headers</p>
-              <pre className="text-xs text-gray-200 overflow-x-auto">{JSON.stringify(selectedLog.headers || {}, null, 2)}</pre>
-            </div>
-            <div className="rounded border border-gray-700 bg-gray-800 p-3">
-              <p className="text-gray-400 text-xs mb-1">Body</p>
-              <pre className="text-xs text-gray-200 whitespace-pre-wrap break-words">{selectedLog.body || '-'}</pre>
+              <button
+                type="button"
+                onClick={handlePostmanImportSubmit}
+                disabled={!postmanFile || !postmanTargetEnv.trim() || isPostmanImporting}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg text-sm font-medium"
+              >
+                {isPostmanImporting ? 'Importing…' : 'Import'}
+              </button>
             </div>
           </div>
         </div>
       )}
+
       <p className="text-xs text-gray-500">
         Tip: runtime mock URLs use <span className="font-mono">/mock/{environment}/path</span>. Example: <span className="font-mono">/mock/{environment}/orders/123</span>.
       </p>
