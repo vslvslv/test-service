@@ -435,7 +435,7 @@ const Layout: React.FC = () => {
       )}
 
       <aside
-        className={`fixed inset-y-0 left-0 z-30 w-80 max-w-[85vw] border-r border-slate-700/70 bg-[linear-gradient(180deg,rgba(2,6,23,0.97),rgba(15,23,42,0.98))] shadow-[0_20px_80px_rgba(2,6,23,0.38)] transition-transform duration-300 lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-30 w-80 max-w-[85vw] border-r border-slate-700/70 bg-[linear-gradient(180deg,rgba(2,6,23,0.97),rgba(15,23,42,0.98))] shadow-[0_20px_80px_rgba(2,6,23,0.38)] transition-transform duration-300 ${
           isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
@@ -543,7 +543,7 @@ const Layout: React.FC = () => {
         </div>
       </aside>
 
-      <div className="min-h-screen lg:pl-80">
+      <div className={`min-h-screen transition-[padding] duration-300 ${isSidebarOpen ? 'lg:pl-80' : 'lg:pl-0'}`}>
         <header className="sticky top-0 z-10 border-b border-slate-800/80 bg-[rgba(7,17,31,0.82)] backdrop-blur-xl">
           <div className="flex items-center gap-4 px-4 py-4 sm:px-6">
             <button
