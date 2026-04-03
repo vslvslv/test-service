@@ -20,7 +20,7 @@ metadata:
   name: testservice-web
   namespace: testservice
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: testservice-web
@@ -31,7 +31,7 @@ spec:
     spec:
       containers:
       - name: web
-        image: ghcr.io/YOUR_ORG/YOUR_REPO/web:latest
+        image: harbor.qa2-env01.cloudad.local/library/testservice-ui:1.0.7
         imagePullPolicy: Always
         ports:
         - containerPort: 80
@@ -55,4 +55,4 @@ spec:
             memory: "256Mi"
             cpu: "200m"
       imagePullSecrets:
-      - name: ghcr-secret
+      - name: harbor-registry-secret

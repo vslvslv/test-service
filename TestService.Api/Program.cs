@@ -8,7 +8,6 @@ using TestService.Api.Configuration;
 using TestService.Api.Services;
 using TestService.Api.Hubs;
 using TestService.Api.Models;
-using TestService.Api.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -167,9 +166,10 @@ builder.Services.AddAuthentication(options =>
 
 builder.Services.AddAuthorization(options =>
 {
-    foreach (var permission in PermissionDefinitions.GetCatalog().Select(x => x.Key))
+    foreach (var permission in PermissionDefinitions.GetCatalog())
     {
-        options.AddPolicy(permission, policy => policy.RequireClaim("permission", permission));
+        options.AddPolicy(permission.Key, policy =>
+            policy.RequireClaim("permission", permission.Key));
     }
 });
 
@@ -216,17 +216,17 @@ builder.Services.AddScoped<IEntityImportExportService, EntityImportExportService
 // Register Message Bus service (shared)
 builder.Services.AddSingleton<IMessageBusService, MessageBusService>();
 
+// Register Mock services
+builder.Services.AddSingleton<IMockRepository, MockRepository>();
+builder.Services.AddSingleton<IMockService, MockService>();
+
 // Register Notification service
 builder.Services.AddSingleton<INotificationService, NotificationService>();
 
 // Register Settings services
 builder.Services.AddSingleton<ISettingsRepository, SettingsRepository>();
 
-// Register Mocking services
-builder.Services.AddSingleton<IMockRepository, MockRepository>();
-builder.Services.AddScoped<IMockService, MockService>();
 builder.Services.AddSingleton<IPostmanImportService, PostmanImportService>();
-
 // Register Activity services
 builder.Services.AddSingleton<IActivityRepository, ActivityRepository>();
 builder.Services.AddScoped<IActivityService, ActivityService>();
@@ -291,8 +291,8 @@ if (app.Environment.IsDevelopment())
 // Enable CORS
 app.UseCors("AllowWebUI");
 
-// Handle runtime mock routes before auth/controllers
-app.UseMiddleware<MockRoutingMiddleware>();
+// Route /mock/{environment}/... requests before MVC handles them.
+app.UseMiddleware<TestService.Api.Middleware.MockRoutingMiddleware>();
 
 // Don't use HTTPS redirection in containerized environment behind nginx
 // app.UseHttpsRedirection();

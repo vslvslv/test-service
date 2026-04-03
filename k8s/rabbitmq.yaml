@@ -44,7 +44,7 @@ spec:
     spec:
       containers:
       - name: rabbitmq
-        image: rabbitmq:4.0-management
+        image: harbor.qa2-env01.cloudad.local/library/rabbitmq:4.0-management
         ports:
         - containerPort: 5672
           name: amqp
@@ -52,7 +52,10 @@ spec:
           name: management
         env:
         - name: RABBITMQ_DEFAULT_USER
-          value: "guest"
+          valueFrom:
+            secretKeyRef:
+              name: rabbitmq-secret
+              key: username
         - name: RABBITMQ_DEFAULT_PASS
           valueFrom:
             secretKeyRef:

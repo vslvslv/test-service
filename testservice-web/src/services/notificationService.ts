@@ -24,15 +24,16 @@ class NotificationService {
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 
   async connect() {
-    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? (import.meta.env.DEV ? 'http://localhost:5000' : '/testservice');
+    const hubUrl = `${API_BASE_URL.replace(/\/$/, '')}/notificationHub`;
     const token = localStorage.getItem('token');
-    
+
     console.log('?? Connecting to SignalR...');
-    console.log('   API URL:', API_BASE_URL);
+    console.log('   Hub URL:', hubUrl);
     console.log('   Has Token:', !!token);
     
     this.connection = new signalR.HubConnectionBuilder()
-      .withUrl(`${API_BASE_URL}/notificationHub`, {
+      .withUrl(hubUrl, {
         skipNegotiation: true,
         transport: signalR.HttpTransportType.WebSockets,
         accessTokenFactory: () => {
