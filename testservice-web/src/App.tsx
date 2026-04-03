@@ -15,6 +15,7 @@ import Entities from './pages/Entities';
 import EntityList from './pages/EntityList';
 import Activity from './pages/Activity';
 import Settings from './pages/Settings';
+import Mocks from './pages/Mocks';
 import './App.css';
 
 function AuthHandler() {
@@ -125,6 +126,7 @@ function AppRoutes() {
           <Route path="users" element={<div className="text-white">Users Page - Coming Soon</div>} />
           <Route path="settings" element={<Settings />} />
           <Route path="activity" element={<Activity />} />
+          <Route path="mocks" element={<Mocks />} />
         </Route>
         
         <Route path="*" element={<Navigate to="/" replace={true} />} />
