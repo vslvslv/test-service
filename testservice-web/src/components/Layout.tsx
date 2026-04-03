@@ -405,6 +405,12 @@ const Layout: React.FC = () => {
     navigate('login');
   };
 
+  const handleNavItemClick = () => {
+    if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+      setIsSidebarOpen(false);
+    }
+  };
+
   const menuItems = [
     { icon: Home, label: 'Dashboard', path: '/' },
     { icon: Database, label: 'Entities', path: '/entities' },
@@ -435,26 +441,30 @@ const Layout: React.FC = () => {
       )}
 
       <aside
-        className={`fixed inset-y-0 left-0 z-30 w-80 max-w-[85vw] border-r border-slate-700/70 bg-[linear-gradient(180deg,rgba(2,6,23,0.97),rgba(15,23,42,0.98))] shadow-[0_20px_80px_rgba(2,6,23,0.38)] transition-transform duration-300 ${
-          isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
+        className={`fixed inset-y-0 left-0 z-30 w-80 max-w-[85vw] border-r border-slate-700/70 bg-[linear-gradient(180deg,rgba(2,6,23,0.97),rgba(15,23,42,0.98))] shadow-[0_20px_80px_rgba(2,6,23,0.38)] transition-[width,transform] duration-300 ${
+          isSidebarOpen ? 'translate-x-0 lg:w-80' : '-translate-x-full lg:translate-x-0 lg:w-24'
         }`}
       >
         <div className="flex h-full flex-col">
-          <div className="border-b border-slate-800 px-5 py-5">
+          <div className={`border-b border-slate-800 py-5 ${isSidebarOpen ? 'px-5' : 'px-3 lg:px-4'}`}>
             <div className="flex items-start justify-between gap-3">
-              <div>
-                <div className="inline-flex items-center gap-3">
+              <div className={isSidebarOpen ? '' : 'w-full'}>
+                <div className={`inline-flex items-center ${isSidebarOpen ? 'gap-3' : 'w-full justify-center'}`}>
                   <div className="rounded-2xl border border-blue-400/25 bg-blue-500/10 p-3">
                     <Database className="h-6 w-6 text-blue-300" />
                   </div>
-                  <div>
-                    <p className="eyebrow">Enterprise Test Data</p>
-                    <h1 className="mt-2 text-xl font-semibold text-white">Test Service</h1>
-                  </div>
+                  {isSidebarOpen && (
+                    <div>
+                      <p className="eyebrow">Enterprise Test Data</p>
+                      <h1 className="mt-2 text-xl font-semibold text-white">Test Service</h1>
+                    </div>
+                  )}
                 </div>
-                <p className="mt-4 text-sm leading-6 text-slate-400">
-                  Unified workspace for schemas, entities, mocks, activity, and operational controls.
-                </p>
+                {isSidebarOpen && (
+                  <p className="mt-4 text-sm leading-6 text-slate-400">
+                    Unified workspace for schemas, entities, mocks, activity, and operational controls.
+                  </p>
+                )}
               </div>
               <button
                 onClick={() => setIsSidebarOpen(false)}
@@ -465,12 +475,14 @@ const Layout: React.FC = () => {
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto px-4 py-5">
-            <div className="mb-5 rounded-2xl border border-slate-800 bg-slate-900/60 px-4 py-3">
-              <p className="eyebrow">Current Context</p>
-              <p className="mt-2 text-lg font-semibold text-white">{currentItem?.label || 'Workspace'}</p>
-              <p className="mt-1 text-sm text-slate-400">Use global search or jump directly between operational surfaces.</p>
-            </div>
+          <div className={`flex-1 overflow-y-auto py-5 ${isSidebarOpen ? 'px-4' : 'px-3 lg:px-2.5'}`}>
+            {isSidebarOpen && (
+              <div className="mb-5 rounded-2xl border border-slate-800 bg-slate-900/60 px-4 py-3">
+                <p className="eyebrow">Current Context</p>
+                <p className="mt-2 text-lg font-semibold text-white">{currentItem?.label || 'Workspace'}</p>
+                <p className="mt-1 text-sm text-slate-400">Use global search or jump directly between operational surfaces.</p>
+              </div>
+            )}
 
             <nav className="space-y-1">
               {menuItems.map((item) => {
@@ -483,67 +495,76 @@ const Layout: React.FC = () => {
                   <Link
                     key={item.path}
                     to={item.path}
-                    onClick={() => setIsSidebarOpen(false)}
-                    className={`group flex items-center gap-3 rounded-2xl px-4 py-3 transition-all ${
+                    onClick={handleNavItemClick}
+                    title={!isSidebarOpen ? item.label : undefined}
+                    className={`group flex items-center rounded-2xl transition-all ${
                       active
                         ? 'border border-blue-400/25 bg-blue-500/15 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]'
                         : 'border border-transparent text-slate-400 hover:border-slate-700 hover:bg-slate-900/80 hover:text-white'
-                    }`}
+                    } ${isSidebarOpen ? 'gap-3 px-4 py-3' : 'justify-center px-2 py-3 lg:px-0'}`}
                   >
                     <div className={`rounded-xl p-2 ${active ? 'bg-blue-500/20 text-blue-200' : 'bg-slate-800/80 text-slate-400 group-hover:text-slate-200'}`}>
                       <Icon className="h-4 w-4" />
                     </div>
-                    <div className="min-w-0">
-                      <p className="font-medium">{item.label}</p>
-                      <p className="text-xs text-slate-500">{item.label === 'Dashboard' ? 'Overview and status' : 'Manage and inspect'}</p>
-                    </div>
+                    {isSidebarOpen && (
+                      <div className="min-w-0">
+                        <p className="font-medium">{item.label}</p>
+                        <p className="text-xs text-slate-500">{item.label === 'Dashboard' ? 'Overview and status' : 'Manage and inspect'}</p>
+                      </div>
+                    )}
                   </Link>
                 );
               })}
             </nav>
           </div>
 
-          <div className="border-t border-slate-800 p-4">
-            <div className="mb-3 rounded-2xl border border-slate-800 bg-slate-900/70 px-4 py-3">
-              <div className="flex items-center gap-3">
+          <div className={`border-t border-slate-800 ${isSidebarOpen ? 'p-4' : 'px-3 py-4 lg:px-2.5'}`}>
+            <div className={`mb-3 rounded-2xl border border-slate-800 bg-slate-900/70 ${isSidebarOpen ? 'px-4 py-3' : 'px-2 py-3 lg:px-0'}`}>
+              <div className={`flex items-center ${isSidebarOpen ? 'gap-3' : 'justify-center'}`}>
                 <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-500/20 text-blue-200">
                   <UserIcon className="h-4 w-4" />
                 </div>
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-medium text-white">{user?.username}</p>
-                  <p className="truncate text-xs text-slate-400">{user?.role}</p>
-                </div>
+                {isSidebarOpen && (
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-white">{user?.username}</p>
+                    <p className="truncate text-xs text-slate-400">{user?.role}</p>
+                  </div>
+                )}
               </div>
             </div>
             <div className="space-y-1">
               {hasPermission(Permissions.SettingsRead) && (
                 <Link
                   to="/settings"
-                  onClick={() => setIsSidebarOpen(false)}
-                  className={`flex items-center gap-3 rounded-2xl px-4 py-3 transition-colors ${
+                  onClick={handleNavItemClick}
+                  title={!isSidebarOpen ? 'Settings' : undefined}
+                  className={`flex items-center rounded-2xl transition-colors ${
                     isActive('/settings')
                       ? 'border border-blue-400/25 bg-blue-500/15 text-white'
                       : 'text-slate-400 hover:bg-slate-900/80 hover:text-white'
-                  }`}
+                  } ${isSidebarOpen ? 'gap-3 px-4 py-3' : 'justify-center px-2 py-3 lg:px-0'}`}
                 >
                   <Settings className="h-4 w-4" />
-                  <span className="font-medium">Settings</span>
+                  {isSidebarOpen && <span className="font-medium">Settings</span>}
                 </Link>
               )}
 
               <button
                 onClick={handleLogout}
-                className="flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-slate-400 transition-colors hover:bg-rose-500/10 hover:text-rose-300"
+                title={!isSidebarOpen ? 'Logout' : undefined}
+                className={`flex w-full items-center rounded-2xl text-slate-400 transition-colors hover:bg-rose-500/10 hover:text-rose-300 ${
+                  isSidebarOpen ? 'gap-3 px-4 py-3' : 'justify-center px-2 py-3 lg:px-0'
+                }`}
               >
                 <LogOut className="h-4 w-4" />
-                <span className="font-medium">Logout</span>
+                {isSidebarOpen && <span className="font-medium">Logout</span>}
               </button>
             </div>
           </div>
         </div>
       </aside>
 
-      <div className={`min-h-screen transition-[padding] duration-300 ${isSidebarOpen ? 'lg:pl-80' : 'lg:pl-0'}`}>
+      <div className={`min-h-screen transition-[padding] duration-300 ${isSidebarOpen ? 'lg:pl-80' : 'lg:pl-24'}`}>
         <header className="sticky top-0 z-10 border-b border-slate-800/80 bg-[rgba(7,17,31,0.82)] backdrop-blur-xl">
           <div className="flex items-center gap-4 px-4 py-4 sm:px-6">
             <button
