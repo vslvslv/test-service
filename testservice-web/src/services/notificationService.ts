@@ -26,21 +26,11 @@ class NotificationService {
   async connect() {
     const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? (import.meta.env.DEV ? 'http://localhost:5000' : '/testservice');
     const hubUrl = `${API_BASE_URL.replace(/\/$/, '')}/notificationHub`;
-    const token = localStorage.getItem('token');
-
-    console.log('?? Connecting to SignalR...');
-    console.log('   Hub URL:', hubUrl);
-    console.log('   Has Token:', !!token);
-    
     this.connection = new signalR.HubConnectionBuilder()
       .withUrl(hubUrl, {
         skipNegotiation: true,
         transport: signalR.HttpTransportType.WebSockets,
-        accessTokenFactory: () => {
-          const token = localStorage.getItem('token');
-          console.log('   Providing token to SignalR:', token ? 'Yes' : 'No');
-          return token || '';
-        }
+        accessTokenFactory: () => localStorage.getItem('token') || ''
       })
       .withAutomaticReconnect({
         nextRetryDelayInMilliseconds: (retryContext) => {
@@ -54,105 +44,52 @@ class NotificationService {
       .configureLogging(signalR.LogLevel.Information)
       .build();
 
-    // Set up event handlers
     this.connection.on('SchemaCreated', (data: SignalRSchemaData) => {
-      console.log('?? SchemaCreated event received from SignalR:', data);
-      console.log('   Raw data:', JSON.stringify(data, null, 2));
-      
-      // Transform backend data to frontend Notification format
-      const notification: Notification = {
+      this.notifyHandlers({
         type: 'schema_created',
         schemaName: data.schemaName,
         timestamp: data.timestamp,
         schema: data.schema
-      };
-      
-      console.log('   Transformed notification:', notification);
-      this.notifyHandlers(notification);
+      });
     });
 
     this.connection.on('SchemaUpdated', (data: SignalRSchemaData) => {
-      console.log('?? SchemaUpdated event received from SignalR:', data);
-      console.log('   Raw data:', JSON.stringify(data, null, 2));
-      
-      // Transform backend data to frontend Notification format
-      const notification: Notification = {
+      this.notifyHandlers({
         type: 'schema_updated',
         schemaName: data.schemaName,
         timestamp: data.timestamp,
         schema: data.schema
-      };
-      
-      console.log('   Transformed notification:', notification);
-      this.notifyHandlers(notification);
+      });
     });
 
     this.connection.on('SchemaDeleted', (data: SignalRSchemaData) => {
-      console.log('?? SchemaDeleted event received from SignalR:', data);
-      console.log('   Raw data:', JSON.stringify(data, null, 2));
-      
-      // Transform backend data to frontend Notification format
-      const notification: Notification = {
+      this.notifyHandlers({
         type: 'schema_deleted',
         schemaName: data.schemaName,
         timestamp: data.timestamp
-      };
-      
-      console.log('   Transformed notification:', notification);
-      this.notifyHandlers(notification);
+      });
     });
 
-    this.connection.on('EntityCreated', (data: Notification) => {
-      console.log('Entity created notification:', data);
-      this.notifyHandlers(data);
-    });
-
-    this.connection.on('EntityUpdated', (data: Notification) => {
-      console.log('Entity updated notification:', data);
-      this.notifyHandlers(data);
-    });
-
-    this.connection.on('EntityDeleted', (data: Notification) => {
-      console.log('Entity deleted notification:', data);
-      this.notifyHandlers(data);
-    });
+    this.connection.on('EntityCreated', (data: Notification) => this.notifyHandlers(data));
+    this.connection.on('EntityUpdated', (data: Notification) => this.notifyHandlers(data));
+    this.connection.on('EntityDeleted', (data: Notification) => this.notifyHandlers(data));
 
     this.connection.onreconnecting((error) => {
       console.warn('SignalR reconnecting...', error);
     });
 
-    this.connection.onreconnected((connectionId) => {
-      console.log('SignalR reconnected:', connectionId);
-    });
-
     this.connection.onclose((error) => {
       console.error('SignalR connection closed:', error);
-      // Try to reconnect after 5 seconds
       if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
       this.reconnectTimer = setTimeout(() => {
-        console.log('Attempting to reconnect...');
         this.connect().catch(console.error);
       }, 5000);
     });
 
     try {
       await this.connection.start();
-      console.log('? SignalR connected successfully');
-      console.log('   Connection ID:', this.connection.connectionId);
-      console.log('   Connection State:', this.connection.state);
-      
-      // List all registered event handlers
-      console.log('   Registered event handlers:', [
-        'SchemaCreated',
-        'SchemaUpdated', 
-        'SchemaDeleted',
-        'EntityCreated',
-        'EntityUpdated',
-        'EntityDeleted'
-      ]);
     } catch (err) {
-      console.error('? SignalR connection error:', err);
-      // Retry after 5 seconds
+      console.error('SignalR connection error:', err);
       if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
       this.reconnectTimer = setTimeout(() => {
         this.connect().catch(console.error);

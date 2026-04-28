@@ -1,5 +1,3 @@
-using System.Reflection;
-
 namespace TestService.Tests.Infrastructure;
 
 /// <summary>
@@ -8,6 +6,19 @@ namespace TestService.Tests.Infrastructure;
 [TestFixture]
 public class NginxConfigRegressionTests
 {
+    private string _nginxConfContent = string.Empty;
+
+    [OneTimeSetUp]
+    public void LoadNginxConf()
+    {
+        var path = FindNginxConfPath()
+            ?? throw new InvalidOperationException(
+                "nginx.conf not found. Run tests from repo root or ensure testservice-web/nginx.conf exists. " +
+                $"Searched relative to current dir ({Directory.GetCurrentDirectory()}) " +
+                $"and assembly base ({AppContext.BaseDirectory}).");
+        _nginxConfContent = File.ReadAllText(path);
+    }
+
     private static string? FindNginxConfPath()
     {
         var baseDir = AppContext.BaseDirectory;
@@ -33,61 +44,24 @@ public class NginxConfigRegressionTests
     }
 
     [Test]
-    public void NginxConf_Exists_WhenRunFromRepo()
-    {
-        var path = FindNginxConfPath();
-        if (path == null)
-        {
-            Assert.Inconclusive("nginx.conf not found (run tests from repo root or ensure testservice-web/nginx.conf exists).");
-            return;
-        }
-
-        Assert.That(File.Exists(path), Is.True);
-    }
-
-    [Test]
     public void NginxConf_ProxiesApiAtRoot_SoFrontendApiCallsSucceed()
     {
-        var path = FindNginxConfPath();
-        if (path == null)
-        {
-            Assert.Inconclusive("nginx.conf not found.");
-            return;
-        }
-
-        var content = File.ReadAllText(path);
-        Assert.That(content, Does.Contain("location /api/"), "Must proxy /api/ to backend (bug-fix: was 404 for /api/live/ws)");
-        Assert.That(content, Does.Contain("proxy_pass"), "Must have proxy_pass for API");
-        Assert.That(content, Does.Contain("api:80").Or.Contain("api:8080"), "Must forward to API service");
+        Assert.That(_nginxConfContent, Does.Contain("location /api/"), "Must proxy /api/ to backend (bug-fix: was 404 for /api/live/ws)");
+        Assert.That(_nginxConfContent, Does.Contain("proxy_pass"), "Must have proxy_pass for API");
+        Assert.That(_nginxConfContent, Does.Contain("api:80").Or.Contain("api:8080"), "Must forward to API service");
     }
 
     [Test]
     public void NginxConf_ServesSpaAtRoot_SoLoginPageLoads()
     {
-        var path = FindNginxConfPath();
-        if (path == null)
-        {
-            Assert.Inconclusive("nginx.conf not found.");
-            return;
-        }
-
-        var content = File.ReadAllText(path);
-        Assert.That(content, Does.Contain("location /"), "Must have location / for SPA at root");
-        Assert.That(content, Does.Contain("try_files"), "Must use try_files so client-side routes serve index.html");
-        Assert.That(content, Does.Contain("/index.html"), "Must fallback to index.html for SPA routing");
+        Assert.That(_nginxConfContent, Does.Contain("location /"), "Must have location / for SPA at root");
+        Assert.That(_nginxConfContent, Does.Contain("try_files"), "Must use try_files so client-side routes serve index.html");
+        Assert.That(_nginxConfContent, Does.Contain("/index.html"), "Must fallback to index.html for SPA routing");
     }
 
     [Test]
     public void NginxConf_HasHealthEndpoint_ForComposeAndK8s()
     {
-        var path = FindNginxConfPath();
-        if (path == null)
-        {
-            Assert.Inconclusive("nginx.conf not found.");
-            return;
-        }
-
-        var content = File.ReadAllText(path);
-        Assert.That(content, Does.Contain("location /health").Or.Contain("/health"), "Must expose /health for healthchecks");
+        Assert.That(_nginxConfContent, Does.Contain("location /health").Or.Contain("/health"), "Must expose /health for healthchecks");
     }
 }

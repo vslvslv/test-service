@@ -6,18 +6,15 @@ using TestService.Tests.Infrastructure;
 namespace TestService.Tests.Integration.Entities;
 
 /// <summary>
-/// End-to-end tests for dynamic entity CRUD using a single schema (Agent-like).
-/// Uses IntegrationTestBase and a unique schema name per run to avoid conflicts and share the same app instance.
-/// Requires MongoDB to be running; skips entire fixture with Inconclusive when API returns 500.
+/// End-to-end CRUD coverage for dynamic entities against a single shared schema
+/// created in OneTimeSetUp. Tests are independent and may run in any order.
 /// </summary>
 [TestFixture]
 public class DynamicEntityTests : IntegrationTestBase
 {
-    private string _entityType = null!;
-    private static bool _skippedDueToMongoDb;
+    private string _entityType = string.Empty;
 
-    [Test, Order(1)]
-    public async Task CreateSchema_ForAgentEntity_ReturnsCreated()
+    protected override async Task OnOneTimeSetUp()
     {
         _entityType = CreateUniqueName("Agent");
 
@@ -43,24 +40,18 @@ public class DynamicEntityTests : IntegrationTestBase
         };
 
         var response = await Client.PostAsJsonAsync("/api/schemas", schema);
-
-        if (response.StatusCode == HttpStatusCode.InternalServerError)
-        {
-            _skippedDueToMongoDb = true;
-            Assert.Inconclusive("MongoDB is not available (API returned 500). Start MongoDB to run these tests.");
-        }
-
         Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Created).Or.EqualTo(HttpStatusCode.Conflict),
-            "Expected Created or Conflict");
+            "Schema setup must return Created or Conflict");
     }
 
-    [Test, Order(2)]
-    public async Task GetAllSchemas_ReturnsSchemas()
+    protected override async Task OnOneTimeTearDown()
     {
-        if (_skippedDueToMongoDb)
-            Assert.Inconclusive("MongoDB is not available. Start MongoDB to run these tests.");
-        EnsureEntityTypeSet();
+        await ApiHelpers.DeleteSchemaIfExistsAsync(Client, _entityType);
+    }
 
+    [Test]
+    public async Task GetAllSchemas_IncludesFixtureSchema()
+    {
         var response = await Client.GetAsync("/api/schemas");
 
         AssertStatusCode(response, HttpStatusCode.OK);
@@ -69,13 +60,9 @@ public class DynamicEntityTests : IntegrationTestBase
         Assert.That(schemas!.Any(s => s.EntityName == _entityType), Is.True);
     }
 
-    [Test, Order(3)]
+    [Test]
     public async Task GetSchemaByName_ReturnsSchema()
     {
-        if (_skippedDueToMongoDb)
-            Assert.Inconclusive("MongoDB is not available. Start MongoDB to run these tests.");
-        EnsureEntityTypeSet();
-
         var response = await Client.GetAsync($"/api/schemas/{_entityType}");
 
         AssertStatusCode(response, HttpStatusCode.OK);
@@ -85,18 +72,14 @@ public class DynamicEntityTests : IntegrationTestBase
         Assert.That(schema.Fields.Count, Is.GreaterThan(0));
     }
 
-    [Test, Order(4)]
+    [Test]
     public async Task CreateEntity_WithValidData_ReturnsCreated()
     {
-        if (_skippedDueToMongoDb)
-            Assert.Inconclusive("MongoDB is not available. Start MongoDB to run these tests.");
-        EnsureEntityTypeSet();
-
         var entity = new DynamicEntity
         {
             Fields = new Dictionary<string, object?>
             {
-                { "username", "john.doe" },
+                { "username", $"john.doe_{Guid.NewGuid()}" },
                 { "password", "SecurePass@123" },
                 { "userId", "user001" },
                 { "firstName", "John" },
@@ -115,31 +98,35 @@ public class DynamicEntityTests : IntegrationTestBase
         Assert.That(created, Is.Not.Null);
         Assert.That(created!.Id, Is.Not.Null);
         Assert.That(created.EntityType, Is.EqualTo(_entityType));
-        Assert.That(GetFieldString(created, "username"), Is.EqualTo("john.doe"));
+        Assert.That(GetFieldString(created, "firstName"), Is.EqualTo("John"));
     }
 
-    [Test, Order(5)]
-    public async Task GetAllEntities_ReturnsEntities()
+    [Test]
+    public async Task GetAllEntities_AfterCreate_ReturnsAtLeastOne()
     {
-        if (_skippedDueToMongoDb)
-            Assert.Inconclusive("MongoDB is not available. Start MongoDB to run these tests.");
-        EnsureEntityTypeSet();
+        var entity = new DynamicEntity
+        {
+            Fields = new Dictionary<string, object?>
+            {
+                { "username", $"listuser_{Guid.NewGuid()}" },
+                { "password", "Test@123" },
+                { "userId", "user_list" }
+            }
+        };
+        var createResponse = await Client.PostAsJsonAsync($"/api/entities/{_entityType}", entity);
+        AssertStatusCode(createResponse, HttpStatusCode.Created);
 
         var response = await Client.GetAsync($"/api/entities/{_entityType}");
 
-        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        AssertStatusCode(response, HttpStatusCode.OK);
         var entities = await response.Content.ReadFromJsonAsync<List<DynamicEntity>>();
         Assert.That(entities, Is.Not.Null);
         Assert.That(entities!.Count, Is.GreaterThan(0));
     }
 
-    [Test, Order(6)]
+    [Test]
     public async Task GetEntityById_ReturnsEntity()
     {
-        if (_skippedDueToMongoDb)
-            Assert.Inconclusive("MongoDB is not available. Start MongoDB to run these tests.");
-        EnsureEntityTypeSet();
-
         var entity = new DynamicEntity
         {
             Fields = new Dictionary<string, object?>
@@ -157,24 +144,21 @@ public class DynamicEntityTests : IntegrationTestBase
         };
 
         var createResponse = await Client.PostAsJsonAsync($"/api/entities/{_entityType}", entity);
-        Assert.That(createResponse.IsSuccessStatusCode, Is.True, "Create entity must succeed to get Id");
+        AssertStatusCode(createResponse, HttpStatusCode.Created);
         var created = await createResponse.Content.ReadFromJsonAsync<DynamicEntity>();
         Assert.That(created, Is.Not.Null);
 
         var response = await Client.GetAsync($"/api/entities/{_entityType}/{created!.Id}");
-        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK), "Get entity should return OK");
+
+        AssertStatusCode(response, HttpStatusCode.OK);
         var retrieved = await response.Content.ReadFromJsonAsync<DynamicEntity>();
         Assert.That(retrieved, Is.Not.Null);
         Assert.That(retrieved!.Id, Is.EqualTo(created.Id));
     }
 
-    [Test, Order(7)]
+    [Test]
     public async Task FilterEntities_ByBrandId_ReturnsFilteredResults()
     {
-        if (_skippedDueToMongoDb)
-            Assert.Inconclusive("MongoDB is not available. Start MongoDB to run these tests.");
-        EnsureEntityTypeSet();
-
         var brandId = $"brand_{Guid.NewGuid()}";
         for (int i = 0; i < 2; i++)
         {
@@ -198,20 +182,16 @@ public class DynamicEntityTests : IntegrationTestBase
 
         var response = await Client.GetAsync($"/api/entities/{_entityType}/filter/brandId/{brandId}");
 
-        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        AssertStatusCode(response, HttpStatusCode.OK);
         var entities = await response.Content.ReadFromJsonAsync<List<DynamicEntity>>();
         Assert.That(entities, Is.Not.Null);
-        Assert.That(entities!.Count, Is.GreaterThanOrEqualTo(2));
+        Assert.That(entities!.Count, Is.EqualTo(2));
         Assert.That(entities.All(e => e.Fields["brandId"]?.ToString() == brandId), Is.True);
     }
 
-    [Test, Order(8)]
+    [Test]
     public async Task FilterEntities_ByUsername_ReturnsEntity()
     {
-        if (_skippedDueToMongoDb)
-            Assert.Inconclusive("MongoDB is not available. Start MongoDB to run these tests.");
-        EnsureEntityTypeSet();
-
         var username = $"unique_{Guid.NewGuid()}";
         var entity = new DynamicEntity
         {
@@ -232,19 +212,15 @@ public class DynamicEntityTests : IntegrationTestBase
 
         var response = await Client.GetAsync($"/api/entities/{_entityType}/filter/username/{username}");
 
-        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        AssertStatusCode(response, HttpStatusCode.OK);
         var entities = await response.Content.ReadFromJsonAsync<List<DynamicEntity>>();
         Assert.That(entities, Is.Not.Null);
         Assert.That(entities!.Any(e => e.Fields["username"]?.ToString() == username), Is.True);
     }
 
-    [Test, Order(9)]
+    [Test]
     public async Task UpdateEntity_WithValidData_ReturnsNoContent()
     {
-        if (_skippedDueToMongoDb)
-            Assert.Inconclusive("MongoDB is not available. Start MongoDB to run these tests.");
-        EnsureEntityTypeSet();
-
         var entity = new DynamicEntity
         {
             Fields = new Dictionary<string, object?>
@@ -261,6 +237,7 @@ public class DynamicEntityTests : IntegrationTestBase
             }
         };
         var createResponse = await Client.PostAsJsonAsync($"/api/entities/{_entityType}", entity);
+        AssertStatusCode(createResponse, HttpStatusCode.Created);
         var created = await createResponse.Content.ReadFromJsonAsync<DynamicEntity>();
         Assert.That(created, Is.Not.Null);
 
@@ -269,7 +246,7 @@ public class DynamicEntityTests : IntegrationTestBase
 
         var response = await Client.PutAsJsonAsync($"/api/entities/{_entityType}/{created.Id}", created);
 
-        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NoContent));
+        AssertStatusCode(response, HttpStatusCode.NoContent);
 
         var getResponse = await Client.GetAsync($"/api/entities/{_entityType}/{created.Id}");
         var updated = await getResponse.Content.ReadFromJsonAsync<DynamicEntity>();
@@ -278,13 +255,9 @@ public class DynamicEntityTests : IntegrationTestBase
         Assert.That(GetFieldString(updated, "agentType"), Is.EqualTo("technical"));
     }
 
-    [Test, Order(10)]
+    [Test]
     public async Task DeleteEntity_WithValidId_ReturnsNoContent()
     {
-        if (_skippedDueToMongoDb)
-            Assert.Inconclusive("MongoDB is not available. Start MongoDB to run these tests.");
-        EnsureEntityTypeSet();
-
         var entity = new DynamicEntity
         {
             Fields = new Dictionary<string, object?>
@@ -301,24 +274,21 @@ public class DynamicEntityTests : IntegrationTestBase
             }
         };
         var createResponse = await Client.PostAsJsonAsync($"/api/entities/{_entityType}", entity);
+        AssertStatusCode(createResponse, HttpStatusCode.Created);
         var created = await createResponse.Content.ReadFromJsonAsync<DynamicEntity>();
         Assert.That(created, Is.Not.Null);
 
         var response = await Client.DeleteAsync($"/api/entities/{_entityType}/{created!.Id}");
 
-        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NoContent));
+        AssertStatusCode(response, HttpStatusCode.NoContent);
 
         var getResponse = await Client.GetAsync($"/api/entities/{_entityType}/{created.Id}");
-        Assert.That(getResponse.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
+        AssertStatusCode(getResponse, HttpStatusCode.NotFound);
     }
 
-    [Test, Order(11)]
+    [Test]
     public async Task CreateEntity_WithMissingRequiredField_ReturnsBadRequest()
     {
-        if (_skippedDueToMongoDb)
-            Assert.Inconclusive("MongoDB is not available. Start MongoDB to run these tests.");
-        EnsureEntityTypeSet();
-
         var entity = new DynamicEntity
         {
             Fields = new Dictionary<string, object?>
@@ -330,10 +300,10 @@ public class DynamicEntityTests : IntegrationTestBase
 
         var response = await Client.PostAsJsonAsync($"/api/entities/{_entityType}", entity);
 
-        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+        AssertStatusCode(response, HttpStatusCode.BadRequest);
     }
 
-    [Test, Order(12)]
+    [Test]
     public async Task CreateEntity_ForNonExistentSchema_ReturnsNotFound()
     {
         var entity = new DynamicEntity
@@ -346,12 +316,6 @@ public class DynamicEntityTests : IntegrationTestBase
 
         var response = await Client.PostAsJsonAsync("/api/entities/NonExistentType", entity);
 
-        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
-    }
-
-    private void EnsureEntityTypeSet()
-    {
-        if (string.IsNullOrEmpty(_entityType))
-            Assert.Fail("Entity type not set. Run CreateSchema_ForAgentEntity_ReturnsCreated (Order 1) first.");
+        AssertStatusCode(response, HttpStatusCode.NotFound);
     }
 }

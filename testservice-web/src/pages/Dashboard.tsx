@@ -165,60 +165,84 @@ const Dashboard: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Welcome Section */}
-      <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-lg p-6 text-white">
-        <h1 className="text-2xl font-bold mb-2">Welcome back, {user?.username}!</h1>
-        <p className="text-blue-100">Here's what's happening with your test data today.</p>
-      </div>
+    <div className="app-page">
+      <section className="page-hero">
+        <div className="grid gap-5 xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.9fr)]">
+          <div className="space-y-4">
+            <p className="eyebrow">Operations Overview</p>
+            <div className="flex items-start gap-4">
+              <div className="page-hero-icon">
+                <TrendingUp className="h-7 w-7 text-blue-300" />
+              </div>
+              <div>
+                <h1 className="text-3xl font-semibold tracking-tight text-white">Welcome back, {user?.username}.</h1>
+                <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-300">
+                  Track schema health, entity availability, and environment readiness from one enterprise control surface.
+                </p>
+              </div>
+            </div>
+          </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="panel p-5">
+            <p className="eyebrow">Current Balance</p>
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <div className="stat-card">
+                <p className="text-sm text-slate-400">Available pool</p>
+                <p className="mt-2 text-3xl font-semibold text-white">{availablePercentage}%</p>
+                <p className="mt-2 text-xs text-slate-500">{stats.availableEntities} ready for fetch</p>
+              </div>
+              <div className="stat-card">
+                <p className="text-sm text-slate-400">Schema activity</p>
+                <p className="mt-2 text-3xl font-semibold text-white">{schemaUtilization}%</p>
+                <p className="mt-2 text-xs text-slate-500">{stats.totalSchemas} total schema definitions</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div className="section-grid">
         {statCards.map((stat, index) => {
           const Icon = stat.icon;
           const colorClasses = {
-            blue: 'bg-blue-500/10 text-blue-500 border-blue-500/20',
-            green: 'bg-green-500/10 text-green-500 border-green-500/20',
-            purple: 'bg-purple-500/10 text-purple-500 border-purple-500/20',
-            orange: 'bg-orange-500/10 text-orange-500 border-orange-500/20',
+            blue: 'bg-blue-500/15 text-blue-300 border-blue-500/20',
+            green: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/20',
+            purple: 'bg-violet-500/15 text-violet-300 border-violet-500/20',
+            orange: 'bg-amber-500/15 text-amber-300 border-amber-500/20',
           };
 
           return (
             <button
               key={index}
               onClick={stat.onClick}
-              className="bg-gray-800 rounded-lg border border-gray-700 p-6 hover:border-gray-600 hover:bg-gray-750 transition-all text-left cursor-pointer"
+              className="stat-card text-left transition-all hover:-translate-y-0.5 hover:border-slate-600"
             >
-              <div className="flex items-center justify-between mb-4">
-                <div className={`p-3 rounded-lg ${colorClasses[stat.color as keyof typeof colorClasses]}`}>
-                  <Icon className="w-6 h-6" />
+              <div className="flex items-start justify-between gap-4">
+                <div className={`rounded-2xl border p-3 ${colorClasses[stat.color as keyof typeof colorClasses]}`}>
+                  <Icon className="h-5 w-5" />
                 </div>
-                <span className="text-sm text-green-400 font-medium">{stat.trend}</span>
+                <span className="rounded-full border border-slate-700 bg-slate-900/80 px-2.5 py-1 text-xs text-slate-300">{stat.trend}</span>
               </div>
-              <div>
-                <p className="text-gray-400 text-sm mb-1">{stat.title}</p>
-                <p className="text-3xl font-bold text-white">{stat.value}</p>
-              </div>
+              <p className="mt-5 text-sm text-slate-400">{stat.title}</p>
+              <p className="mt-2 text-3xl font-semibold text-white">{stat.value}</p>
             </button>
           );
         })}
       </div>
 
-      {/* Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Recent Schemas */}
-        <div className="bg-gray-800 rounded-lg border border-gray-700 p-6">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-lg font-semibold text-white flex items-center gap-2">
-              <Layers className="w-5 h-5" />
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <section className="panel-strong p-6">
+          <div className="mb-6 flex items-center justify-between">
+            <h2 className="flex items-center gap-2 text-lg font-semibold text-white">
+              <Layers className="h-5 w-5" />
               Recent Schemas
             </h2>
-            <button 
+            <button
               onClick={handleViewAllSchemas}
-              className="text-blue-400 hover:text-blue-300 text-sm font-medium flex items-center gap-1 transition-colors"
+              className="inline-flex items-center gap-1 text-sm font-medium text-blue-300 transition-colors hover:text-blue-200"
             >
               View All
-              <ChevronRight className="w-4 h-4" />
+              <ChevronRight className="h-4 w-4" />
             </button>
           </div>
           <div className="space-y-2">
@@ -227,142 +251,134 @@ const Dashboard: React.FC = () => {
                 <button
                   key={index}
                   onClick={() => handleSchemaClick(schema.entityName)}
-                  className="w-full p-4 bg-gray-750 rounded-lg border border-gray-700 hover:border-gray-600 hover:bg-gray-700 transition-all text-left group"
+                  className="group w-full rounded-2xl border border-slate-800 bg-slate-900/80 p-4 text-left transition-all hover:border-slate-600 hover:bg-slate-800/80"
                 >
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1 min-w-0">
-                      <h3 className="text-white font-medium mb-1 group-hover:text-blue-400 transition-colors">
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="min-w-0 flex-1">
+                      <h3 className="mb-1 font-medium text-white transition-colors group-hover:text-blue-300">
                         {schema.entityName}
                       </h3>
-                      <p className="text-sm text-gray-400">
-                        {schema.fields?.length || 0} fields
-                      </p>
+                      <p className="text-sm text-slate-400">{schema.fields?.length || 0} fields</p>
                     </div>
-                    <div className="flex items-center gap-3 ml-4">
+                    <div className="ml-4 flex items-center gap-3">
                       {schema.excludeOnFetch && (
-                        <span className="text-xs px-2.5 py-1 bg-orange-500/15 text-orange-400 rounded-md border border-orange-500/30 font-medium whitespace-nowrap">
+                        <span className="whitespace-nowrap rounded-md border border-amber-500/30 bg-amber-500/15 px-2.5 py-1 text-xs font-medium text-amber-300">
                           Auto-consume
                         </span>
                       )}
-                      <div className="flex items-center gap-2 text-gray-500 group-hover:text-gray-400 transition-colors">
-                        <Package className="w-5 h-5" />
-                        <ChevronRight className="w-4 h-4" />
+                      <div className="flex items-center gap-2 text-slate-500 transition-colors group-hover:text-slate-300">
+                        <Package className="h-5 w-5" />
+                        <ChevronRight className="h-4 w-4" />
                       </div>
                     </div>
                   </div>
                 </button>
               ))
             ) : (
-              <div className="text-center py-12 text-gray-500">
-                <Layers className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                <p className="mb-4 text-gray-400">No schemas found</p>
-                <button
-                  onClick={handleCreateSchema}
-                  className="text-blue-400 hover:text-blue-300 text-sm font-medium transition-colors"
-                >
+              <div className="py-12 text-center text-slate-500">
+                <Layers className="mx-auto mb-3 h-12 w-12 opacity-50" />
+                <p className="mb-4 text-slate-400">No schemas found</p>
+                <button onClick={handleCreateSchema} className="button-primary">
+                  <Layers className="h-4 w-4" />
                   Create your first schema
                 </button>
               </div>
             )}
           </div>
-        </div>
+        </section>
 
-        {/* Quick Actions */}
-        <div className="bg-gray-800 rounded-lg border border-gray-700 p-6">
-          <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-            <TrendingUp className="w-5 h-5" />
+        <section className="panel-strong p-6">
+          <h2 className="mb-4 flex items-center gap-2 text-lg font-semibold text-white">
+            <TrendingUp className="h-5 w-5" />
             Quick Actions
           </h2>
           <div className="space-y-3">
-            <button 
+            <button
               onClick={handleCreateSchema}
-              className="w-full p-4 bg-blue-600 hover:bg-blue-700 rounded-lg text-white font-medium transition-colors text-left group"
+              className="group w-full rounded-2xl border border-blue-500/20 bg-blue-500/12 p-4 text-left transition-colors hover:bg-blue-500/18"
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-white/10 rounded-lg">
-                    <Database className="w-5 h-5" />
+                  <div className="rounded-xl bg-white/10 p-2">
+                    <Database className="h-5 w-5" />
                   </div>
                   <div>
-                    <p className="font-semibold">Create New Schema</p>
+                    <p className="font-semibold text-white">Create New Schema</p>
                     <p className="text-sm text-blue-100">Define a new entity type</p>
                   </div>
                 </div>
-                <ChevronRight className="w-5 h-5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                <ChevronRight className="h-5 w-5 opacity-0 transition-opacity group-hover:opacity-100" />
               </div>
             </button>
-            
-            <button 
+
+            <button
               onClick={handleManageEnvironments}
-              className="w-full p-4 bg-gray-700 hover:bg-gray-600 rounded-lg text-white font-medium transition-colors text-left group"
+              className="group w-full rounded-2xl border border-slate-800 bg-slate-900/80 p-4 text-left transition-colors hover:border-slate-600 hover:bg-slate-800/80"
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-white/5 rounded-lg">
-                    <Server className="w-5 h-5" />
+                  <div className="rounded-xl bg-white/5 p-2">
+                    <Server className="h-5 w-5" />
                   </div>
                   <div>
-                    <p className="font-semibold">Manage Environments</p>
-                    <p className="text-sm text-gray-300">Configure test environments</p>
+                    <p className="font-semibold text-white">Manage Environments</p>
+                    <p className="text-sm text-slate-400">Configure test environments</p>
                   </div>
                 </div>
-                <ChevronRight className="w-5 h-5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                <ChevronRight className="h-5 w-5 opacity-0 transition-opacity group-hover:opacity-100" />
               </div>
             </button>
-            
-            <button 
+
+            <button
               onClick={handleViewActivity}
-              className="w-full p-4 bg-gray-700 hover:bg-gray-600 rounded-lg text-white font-medium transition-colors text-left group"
+              className="group w-full rounded-2xl border border-slate-800 bg-slate-900/80 p-4 text-left transition-colors hover:border-slate-600 hover:bg-slate-800/80"
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-white/5 rounded-lg">
-                    <Activity className="w-5 h-5" />
+                  <div className="rounded-xl bg-white/5 p-2">
+                    <Activity className="h-5 w-5" />
                   </div>
                   <div>
-                    <p className="font-semibold">View Activity</p>
-                    <p className="text-sm text-gray-300">Check recent operations</p>
+                    <p className="font-semibold text-white">View Activity</p>
+                    <p className="text-sm text-slate-400">Check recent operations</p>
                   </div>
                 </div>
-                <ChevronRight className="w-5 h-5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                <ChevronRight className="h-5 w-5 opacity-0 transition-opacity group-hover:opacity-100" />
               </div>
             </button>
           </div>
-        </div>
+        </section>
       </div>
 
-      {/* System Status */}
-      <div className="bg-gray-800 rounded-lg border border-gray-700 p-6">
-        <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-          <AlertCircle className="w-5 h-5" />
+      <section className="panel-strong p-6">
+        <h2 className="mb-4 flex items-center gap-2 text-lg font-semibold text-white">
+          <AlertCircle className="h-5 w-5" />
           System Status
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="flex items-center gap-3 p-3 bg-green-500/10 rounded-lg border border-green-500/20">
-            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+          <div className="flex items-center gap-3 rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-4">
+            <div className="h-2.5 w-2.5 rounded-full bg-emerald-400 animate-pulse" />
             <div>
-              <p className="text-white font-medium">API Service</p>
-              <p className="text-sm text-green-400">Operational</p>
+              <p className="font-medium text-white">API Service</p>
+              <p className="text-sm text-emerald-300">Operational</p>
             </div>
           </div>
-          
-          <div className="flex items-center gap-3 p-3 bg-green-500/10 rounded-lg border border-green-500/20">
-            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+          <div className="flex items-center gap-3 rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-4">
+            <div className="h-2.5 w-2.5 rounded-full bg-emerald-400 animate-pulse" />
             <div>
-              <p className="text-white font-medium">Database</p>
-              <p className="text-sm text-green-400">Connected</p>
+              <p className="font-medium text-white">Database</p>
+              <p className="text-sm text-emerald-300">Connected</p>
             </div>
           </div>
-          
-          <div className="flex items-center gap-3 p-3 bg-green-500/10 rounded-lg border border-green-500/20">
-            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+          <div className="flex items-center gap-3 rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-4">
+            <div className="h-2.5 w-2.5 rounded-full bg-emerald-400 animate-pulse" />
             <div>
-              <p className="text-white font-medium">Message Bus</p>
-              <p className="text-sm text-green-400">Active</p>
+              <p className="font-medium text-white">Message Bus</p>
+              <p className="text-sm text-emerald-300">Active</p>
             </div>
           </div>
         </div>
-      </div>
+      </section>
     </div>
   );
 };

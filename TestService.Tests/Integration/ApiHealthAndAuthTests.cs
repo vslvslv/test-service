@@ -54,12 +54,6 @@ public class ApiHealthAndAuthTests : IntegrationTestBase
         var request = new LoginRequest { Username = "admin", Password = "Admin@123" };
         var response = await Client.PostAsJsonAsync("/api/auth/login", request);
 
-        if (response.StatusCode == HttpStatusCode.Unauthorized)
-        {
-            Assert.Inconclusive("Default admin may not be initialized yet (async init). Run test again or ensure MongoDB is up.");
-            return;
-        }
-
         AssertStatusCode(response, HttpStatusCode.OK);
         var loginResponse = await response.Content.ReadFromJsonAsync<LoginResponse>();
         Assert.That(loginResponse, Is.Not.Null);

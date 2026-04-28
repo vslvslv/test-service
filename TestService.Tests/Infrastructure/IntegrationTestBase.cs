@@ -1,9 +1,12 @@
-using System.Collections.Generic;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
-using Microsoft.Extensions.Configuration;
+using Microsoft.AspNetCore.TestHost;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using TestService.Api.Models;
+using TestService.Api.Services;
+using TestService.Tests;
 
 namespace TestService.Tests.Infrastructure;
 
@@ -21,18 +24,24 @@ public abstract class IntegrationTestBase
     [OneTimeSetUp]
     public async Task OneTimeSetUp()
     {
+        // MongoDbContainerFixture exports the test container's connection string via
+        // env vars (MongoDbSettings__ConnectionString / __DatabaseName) before this
+        // runs, which Program.cs reads at top-level startup. ConfigureAppConfiguration
+        // does not work here because Program.cs binds MongoDbSettings before
+        // WebApplicationFactory applies test config sources.
+        //
+        // ConfigureTestServices runs after Program.cs registers services, so it is
+        // the right hook to swap the real RabbitMQ-backed message bus for an
+        // in-process no-op. CI has no broker; without this stub every API call
+        // that publishes a message (entity create/update/delete, settings change)
+        // returns 500.
         Factory = new WebApplicationFactory<Program>()
             .WithWebHostBuilder(builder =>
             {
-                // Override MongoDB config so in-process API uses localhost (e.g. Docker dev stack).
-                // Add after default config so it overrides appsettings.json (which may point at Railway).
-                builder.ConfigureAppConfiguration((_, config) =>
+                builder.ConfigureTestServices(services =>
                 {
-                    config.AddInMemoryCollection(new Dictionary<string, string?>
-                    {
-                        ["MongoDbSettings:ConnectionString"] = "mongodb://admin:password123@localhost:27017/TestServiceDb?authSource=admin",
-                        ["MongoDbSettings:DatabaseName"] = "TestServiceDb"
-                    });
+                    services.RemoveAll<IMessageBusService>();
+                    services.AddSingleton<IMessageBusService, FakeMessageBusService>();
                 });
             });
         Client = Factory.CreateClient();
@@ -177,7 +186,13 @@ public abstract class IntegrationTestBase
 
         if (response.StatusCode == HttpStatusCode.Unauthorized)
         {
-            Assert.Inconclusive("Default admin may not be initialized yet (async init).");
+            var body = await response.Content.ReadAsStringAsync();
+            throw new InvalidOperationException(
+                $"Admin login failed with 401 after 5 retries. " +
+                $"The default admin user did not finish seeding within the retry window, " +
+                $"or the API failed to connect to the test MongoDB container. " +
+                $"Verify Docker is running (the suite uses Testcontainers.MongoDb). " +
+                $"Response body: {body}");
         }
 
         AssertStatusCode(response, HttpStatusCode.OK);

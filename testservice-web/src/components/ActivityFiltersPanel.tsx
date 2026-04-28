@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Calendar, Database, Tag, User, X } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Calendar, Database, Tag, X } from 'lucide-react';
 import { apiService } from '../services/api';
 import type { ActivityFilters, Schema } from '../types';
 
@@ -35,94 +35,83 @@ const ActivityFiltersPanel: React.FC<ActivityFiltersPanelProps> = ({
   };
 
   const handleFilterChange = (key: keyof ActivityFilters, value: string) => {
-    const newFilters = { ...localFilters, [key]: value || undefined };
-    setLocalFilters(newFilters);
-    onFilterChange(newFilters);
+    const nextFilters = { ...localFilters, [key]: value || undefined };
+    setLocalFilters(nextFilters);
+    onFilterChange(nextFilters);
   };
 
-  const handleDateRangeChange = (range: 'today' | 'yesterday' | 'week' | 'custom') => {
+  const handleDateRangeChange = (range: 'today' | 'yesterday' | 'week') => {
     const now = new Date();
     let startDate: Date;
 
     switch (range) {
       case 'today':
-        startDate = new Date(now.setHours(0, 0, 0, 0));
+        startDate = new Date(now);
+        startDate.setHours(0, 0, 0, 0);
         break;
       case 'yesterday':
-        startDate = new Date(now.setDate(now.getDate() - 1));
+        startDate = new Date(now);
+        startDate.setDate(startDate.getDate() - 1);
         startDate.setHours(0, 0, 0, 0);
         break;
       case 'week':
-        startDate = new Date(now.setDate(now.getDate() - 7));
-        break;
       default:
-        return;
+        startDate = new Date(now);
+        startDate.setDate(startDate.getDate() - 7);
+        break;
     }
 
-    const newFilters = {
+    const nextFilters = {
       ...localFilters,
       startDate: startDate.toISOString(),
       endDate: new Date().toISOString(),
     };
-    setLocalFilters(newFilters);
-    onFilterChange(newFilters);
+
+    setLocalFilters(nextFilters);
+    onFilterChange(nextFilters);
   };
 
   return (
-    <div className="bg-gray-800 border border-gray-700 rounded-lg p-6">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-          <Tag className="w-5 h-5 text-blue-400" />
-          Filters
-        </h3>
-        <button
-          onClick={onClearFilters}
-          className="text-sm text-gray-400 hover:text-white flex items-center gap-1"
-        >
-          <X className="w-4 h-4" />
+    <section className="panel p-5">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div>
+          <p className="eyebrow">Activity Filters</p>
+          <h3 className="mt-2 text-xl font-semibold text-white">Refine the operational timeline</h3>
+        </div>
+        <button type="button" onClick={onClearFilters} className="button-secondary">
+          <X className="h-4 w-4" />
           Clear All
         </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Date Range Quick Select */}
-        <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2 flex items-center gap-2">
-            <Calendar className="w-4 h-4" />
+      <div className="mt-5 grid gap-4 xl:grid-cols-4">
+        <div className="rounded-[24px] border border-slate-800 bg-slate-950/35 p-4">
+          <label className="mb-3 flex items-center gap-2 text-sm font-medium text-slate-300">
+            <Calendar className="h-4 w-4 text-slate-400" />
             Time Period
           </label>
           <div className="grid grid-cols-2 gap-2">
-            <button
-              onClick={() => handleDateRangeChange('today')}
-              className="px-3 py-2 text-sm bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors"
-            >
+            <button type="button" onClick={() => handleDateRangeChange('today')} className="button-secondary !rounded-xl !px-3 !py-2 text-xs">
               Today
             </button>
-            <button
-              onClick={() => handleDateRangeChange('yesterday')}
-              className="px-3 py-2 text-sm bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors"
-            >
+            <button type="button" onClick={() => handleDateRangeChange('yesterday')} className="button-secondary !rounded-xl !px-3 !py-2 text-xs">
               Yesterday
             </button>
-            <button
-              onClick={() => handleDateRangeChange('week')}
-              className="px-3 py-2 text-sm bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors col-span-2"
-            >
+            <button type="button" onClick={() => handleDateRangeChange('week')} className="button-secondary !rounded-xl !px-3 !py-2 text-xs col-span-2">
               Last 7 Days
             </button>
           </div>
         </div>
 
-        {/* Entity Type (Schema) Filter */}
-        <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2 flex items-center gap-2">
-            <Database className="w-4 h-4" />
+        <div className="rounded-[24px] border border-slate-800 bg-slate-950/35 p-4">
+          <label className="mb-3 flex items-center gap-2 text-sm font-medium text-slate-300">
+            <Database className="h-4 w-4 text-slate-400" />
             Schema
           </label>
           <select
             value={localFilters.entityType || ''}
             onChange={(e) => handleFilterChange('entityType', e.target.value)}
-            className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="field-shell"
           >
             <option value="">All Schemas</option>
             {schemas.map((schema) => (
@@ -133,16 +122,15 @@ const ActivityFiltersPanel: React.FC<ActivityFiltersPanelProps> = ({
           </select>
         </div>
 
-        {/* Activity Type Filter */}
-        <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2 flex items-center gap-2">
-            <Tag className="w-4 h-4" />
+        <div className="rounded-[24px] border border-slate-800 bg-slate-950/35 p-4">
+          <label className="mb-3 flex items-center gap-2 text-sm font-medium text-slate-300">
+            <Tag className="h-4 w-4 text-slate-400" />
             Type
           </label>
           <select
             value={localFilters.type || ''}
             onChange={(e) => handleFilterChange('type', e.target.value)}
-            className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="field-shell"
           >
             <option value="">All Types</option>
             <option value="entity">Entity</option>
@@ -153,16 +141,15 @@ const ActivityFiltersPanel: React.FC<ActivityFiltersPanelProps> = ({
           </select>
         </div>
 
-        {/* Action Filter */}
-        <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2 flex items-center gap-2">
-            <Tag className="w-4 h-4" />
+        <div className="rounded-[24px] border border-slate-800 bg-slate-950/35 p-4">
+          <label className="mb-3 flex items-center gap-2 text-sm font-medium text-slate-300">
+            <Tag className="h-4 w-4 text-slate-400" />
             Action
           </label>
           <select
             value={localFilters.action || ''}
             onChange={(e) => handleFilterChange('action', e.target.value)}
-            className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="field-shell"
           >
             <option value="">All Actions</option>
             <option value="created">Created</option>
@@ -177,36 +164,29 @@ const ActivityFiltersPanel: React.FC<ActivityFiltersPanelProps> = ({
         </div>
       </div>
 
-      {/* Custom Date Range Inputs */}
       {(localFilters.startDate || localFilters.endDate) && (
-        <div className="mt-4 pt-4 border-t border-gray-700">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Start Date
-              </label>
-              <input
-                type="datetime-local"
-                value={localFilters.startDate ? new Date(localFilters.startDate).toISOString().slice(0, 16) : ''}
-                onChange={(e) => handleFilterChange('startDate', e.target.value ? new Date(e.target.value).toISOString() : '')}
-                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                End Date
-              </label>
-              <input
-                type="datetime-local"
-                value={localFilters.endDate ? new Date(localFilters.endDate).toISOString().slice(0, 16) : ''}
-                onChange={(e) => handleFilterChange('endDate', e.target.value ? new Date(e.target.value).toISOString() : '')}
-                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
+        <div className="mt-5 grid gap-4 lg:grid-cols-2">
+          <div className="rounded-[24px] border border-slate-800 bg-slate-950/35 p-4">
+            <label className="mb-3 block text-sm font-medium text-slate-300">Start Date</label>
+            <input
+              type="datetime-local"
+              value={localFilters.startDate ? new Date(localFilters.startDate).toISOString().slice(0, 16) : ''}
+              onChange={(e) => handleFilterChange('startDate', e.target.value ? new Date(e.target.value).toISOString() : '')}
+              className="field-shell"
+            />
+          </div>
+          <div className="rounded-[24px] border border-slate-800 bg-slate-950/35 p-4">
+            <label className="mb-3 block text-sm font-medium text-slate-300">End Date</label>
+            <input
+              type="datetime-local"
+              value={localFilters.endDate ? new Date(localFilters.endDate).toISOString().slice(0, 16) : ''}
+              onChange={(e) => handleFilterChange('endDate', e.target.value ? new Date(e.target.value).toISOString() : '')}
+              className="field-shell"
+            />
           </div>
         </div>
       )}
-    </div>
+    </section>
   );
 };
 

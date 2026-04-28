@@ -36,23 +36,51 @@ const Login: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 flex items-center justify-center p-4">
-      <div className="max-w-md w-full">
-        {/* Logo/Brand */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-600 rounded-lg mb-4">
-            <LogIn className="w-8 h-8 text-white" />
-          </div>
-          <h1 className="text-3xl font-bold text-white mb-2">Test Service</h1>
-          <p className="text-gray-400">Dynamic Test Data Management Platform</p>
-        </div>
+    <div className="min-h-screen bg-transparent px-4 py-10">
+      <div className="mx-auto grid min-h-[calc(100vh-5rem)] max-w-6xl items-center gap-8 lg:grid-cols-[minmax(0,1.15fr)_minmax(380px,460px)]">
+        <section className="hidden lg:block">
+          <div className="page-hero min-h-[620px]">
+            <p className="eyebrow">Enterprise Test Data Platform</p>
+            <div className="mt-6 flex items-start gap-4">
+              <div className="page-hero-icon">
+                <LogIn className="h-7 w-7 text-blue-300" />
+              </div>
+              <div>
+                <h1 className="text-4xl font-semibold leading-tight text-white">Control schemas, entities, mocks, and access from one operating surface.</h1>
+                <p className="mt-5 max-w-xl text-base leading-7 text-slate-300">
+                  Test Service centralizes dynamic test data management for engineering and QA teams with high-visibility operational tooling.
+                </p>
+              </div>
+            </div>
 
-        {/* Login Card */}
-        <div className="bg-gray-800 rounded-lg shadow-2xl border border-gray-700 p-8">
-          <h2 className="text-2xl font-semibold text-white mb-6">Sign In</h2>
+            <div className="mt-10 grid gap-3 md:grid-cols-3">
+              <div className="stat-card">
+                <p className="text-sm text-slate-400">Data Modeling</p>
+                <p className="mt-3 text-lg font-semibold text-white">Schemas + Entities</p>
+              </div>
+              <div className="stat-card">
+                <p className="text-sm text-slate-400">Traffic Control</p>
+                <p className="mt-3 text-lg font-semibold text-white">Mocks + Verification</p>
+              </div>
+              <div className="stat-card">
+                <p className="text-sm text-slate-400">Administration</p>
+                <p className="mt-3 text-lg font-semibold text-white">Users + API Keys</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <div className="panel-strong mx-auto w-full max-w-md p-8">
+          <div className="mb-8">
+            <div className="inline-flex items-center justify-center rounded-2xl border border-blue-400/25 bg-blue-500/12 p-4">
+              <LogIn className="h-7 w-7 text-blue-300" />
+            </div>
+            <h1 className="mt-5 text-3xl font-semibold text-white">Sign in</h1>
+            <p className="mt-2 text-sm leading-6 text-slate-400">Use your admin or contributor credentials to access the workspace.</p>
+          </div>
 
           {error && (
-            <div className="mb-4 p-3 bg-red-500/10 border border-red-500/50 rounded-lg flex items-center gap-2 text-red-400">
+            <div className="mb-4 flex items-center gap-2 rounded-2xl border border-red-500/35 bg-red-500/10 p-3 text-red-300">
               <svg className="h-5 w-5 flex-shrink-0 text-red-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h8m-4-4v8" />
               </svg>
@@ -61,9 +89,8 @@ const Login: React.FC = () => {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Username Field */}
             <div>
-              <label htmlFor="username" className="block text-sm font-medium text-gray-300 mb-2">
+              <label htmlFor="username" className="mb-2 block text-sm font-medium text-slate-300">
                 Username
               </label>
               <div className="relative">
@@ -78,7 +105,7 @@ const Login: React.FC = () => {
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   onBlur={(e) => setUsername(e.target.value.trim())}
-                  className="block w-full pl-10 pr-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="field-shell block w-full pl-10 pr-3"
                   placeholder="Enter your username"
                   required
                   autoFocus
@@ -86,9 +113,8 @@ const Login: React.FC = () => {
               </div>
             </div>
 
-            {/* Password Field */}
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-300 mb-2">
+              <label htmlFor="password" className="mb-2 block text-sm font-medium text-slate-300">
                 Password
               </label>
               <div className="relative">
@@ -103,18 +129,17 @@ const Login: React.FC = () => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   onBlur={(e) => setPassword(e.target.value.trim())}
-                  className="block w-full pl-10 pr-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="field-shell block w-full pl-10 pr-3"
                   placeholder="Enter your password"
                   required
                 />
               </div>
             </div>
 
-            {/* Submit Button */}
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full py-2.5 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="button-primary w-full rounded-2xl py-3 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {isLoading ? (
                 <span className="flex items-center justify-center">
@@ -130,18 +155,13 @@ const Login: React.FC = () => {
             </button>
           </form>
 
-          {/* Default Credentials Info */}
-          <div className="mt-6 p-4 bg-gray-700/50 rounded-lg border border-gray-600">
-            <p className="text-xs text-gray-400 text-center">
-              Default credentials: <span className="text-white font-medium">admin</span> / <span className="text-white font-medium">Admin@123</span>
-            </p>
-          </div>
-        </div>
-
-        {/* Footer */}
-        <div className="mt-8 text-center text-sm text-gray-500">
-          <p>Test Service API v1.0</p>
-          <p className="mt-1">Secure test data management</p>
+          {import.meta.env.DEV && (
+            <div className="mt-6 rounded-2xl border border-slate-700 bg-slate-900/75 p-4">
+              <p className="text-center text-xs text-slate-400">
+                Default credentials: <span className="text-white font-medium">admin</span> / <span className="text-white font-medium">Admin@123</span>
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </div>

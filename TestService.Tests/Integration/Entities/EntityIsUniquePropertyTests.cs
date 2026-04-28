@@ -12,25 +12,28 @@ namespace TestService.Tests.Integration.Entities;
 [TestFixture]
 public class EntityIsUniquePropertyTests : IntegrationTestBase
 {
-    private const string TestEntityType = "IsUniquePropertyTest";
+    private string _entityType = string.Empty;
 
     protected override async Task OnOneTimeSetUp()
     {
-        await ApiHelpers.DeleteSchemaIfExistsAsync(Client, TestEntityType);
+        _entityType = CreateUniqueName("IsUniquePropertyTest");
 
-        // Create schema using property-level isUnique flags
         var schema = new EntitySchemaBuilder()
-            .WithEntityName(TestEntityType)
-            .WithField("email", "string", required: true, isUnique: true)  // Unique via property flag
-            .WithField("username", "string", required: true, isUnique: true)  // Unique via property flag
-            .WithField("phone", "string", required: false, isUnique: false)  // Not unique
-            .WithField("address", "string")  // Not unique (default)
+            .WithEntityName(_entityType)
+            .WithField("email", "string", required: true, isUnique: true)
+            .WithField("username", "string", required: true, isUnique: true)
+            .WithField("phone", "string", required: false, isUnique: false)
+            .WithField("address", "string")
             .WithFilterableFields("email", "username")
-            .WithUniqueFields("email", "username")  // Also add to uniqueFields for backward compatibility
+            .WithUniqueFields("email", "username")
             .Build();
-        
+
         await ApiHelpers.CreateSchemaAsync(Client, schema);
-        await Client.DeleteAsync($"/api/schemas/{TestEntityType}/entities");
+    }
+
+    protected override async Task OnOneTimeTearDown()
+    {
+        await ApiHelpers.DeleteSchemaIfExistsAsync(Client, _entityType);
     }
 
     [Test]
@@ -45,7 +48,7 @@ public class EntityIsUniquePropertyTests : IntegrationTestBase
             .Build();
 
         // Act
-        var response = await Client.PostAsJsonAsync($"/api/entities/{TestEntityType}", entity);
+        var response = await Client.PostAsJsonAsync($"/api/entities/{_entityType}", entity);
 
         // Assert
         AssertStatusCode(response, HttpStatusCode.Created);
@@ -65,7 +68,7 @@ public class EntityIsUniquePropertyTests : IntegrationTestBase
             .WithField("phone", "555-1111")
             .Build();
         
-        await ApiHelpers.CreateEntityAsync(Client, TestEntityType, entity1);
+        await ApiHelpers.CreateEntityAsync(Client, _entityType, entity1);
 
         // Act - Try duplicate email (marked as isUnique=true)
         var entity2 = new DynamicEntityBuilder()
@@ -74,7 +77,7 @@ public class EntityIsUniquePropertyTests : IntegrationTestBase
             .WithField("phone", "555-2222")
             .Build();
 
-        var response = await Client.PostAsJsonAsync($"/api/entities/{TestEntityType}", entity2);
+        var response = await Client.PostAsJsonAsync($"/api/entities/{_entityType}", entity2);
 
         // Assert
         AssertStatusCode(response, HttpStatusCode.BadRequest);
@@ -90,7 +93,7 @@ public class EntityIsUniquePropertyTests : IntegrationTestBase
             .WithField("username", username)
             .Build();
         
-        await ApiHelpers.CreateEntityAsync(Client, TestEntityType, entity1);
+        await ApiHelpers.CreateEntityAsync(Client, _entityType, entity1);
 
         // Act - Try duplicate username (marked as isUnique=true)
         var entity2 = new DynamicEntityBuilder()
@@ -98,7 +101,7 @@ public class EntityIsUniquePropertyTests : IntegrationTestBase
             .WithField("username", username)  // Duplicate
             .Build();
 
-        var response = await Client.PostAsJsonAsync($"/api/entities/{TestEntityType}", entity2);
+        var response = await Client.PostAsJsonAsync($"/api/entities/{_entityType}", entity2);
 
         // Assert
         AssertStatusCode(response, HttpStatusCode.BadRequest);
@@ -115,7 +118,7 @@ public class EntityIsUniquePropertyTests : IntegrationTestBase
             .WithField("phone", phone)
             .Build();
         
-        await ApiHelpers.CreateEntityAsync(Client, TestEntityType, entity1);
+        await ApiHelpers.CreateEntityAsync(Client, _entityType, entity1);
 
         // Act - Same phone (NOT marked as unique)
         var entity2 = new DynamicEntityBuilder()
@@ -124,7 +127,7 @@ public class EntityIsUniquePropertyTests : IntegrationTestBase
             .WithField("phone", phone)  // Same phone - should be allowed
             .Build();
 
-        var response = await Client.PostAsJsonAsync($"/api/entities/{TestEntityType}", entity2);
+        var response = await Client.PostAsJsonAsync($"/api/entities/{_entityType}", entity2);
 
         // Assert - Should succeed because phone is not unique
         AssertStatusCode(response, HttpStatusCode.Created);
@@ -141,7 +144,7 @@ public class EntityIsUniquePropertyTests : IntegrationTestBase
             .WithField("address", address)
             .Build();
         
-        await ApiHelpers.CreateEntityAsync(Client, TestEntityType, entity1);
+        await ApiHelpers.CreateEntityAsync(Client, _entityType, entity1);
 
         // Act - Same address (isUnique not specified, defaults to false)
         var entity2 = new DynamicEntityBuilder()
@@ -150,7 +153,7 @@ public class EntityIsUniquePropertyTests : IntegrationTestBase
             .WithField("address", address)  // Same address - should be allowed
             .Build();
 
-        var response = await Client.PostAsJsonAsync($"/api/entities/{TestEntityType}", entity2);
+        var response = await Client.PostAsJsonAsync($"/api/entities/{_entityType}", entity2);
 
         // Assert - Should succeed because address is not marked as unique
         AssertStatusCode(response, HttpStatusCode.Created);
@@ -168,7 +171,7 @@ public class EntityIsUniquePropertyTests : IntegrationTestBase
             .WithField("username", username)
             .Build();
         
-        await ApiHelpers.CreateEntityAsync(Client, TestEntityType, entity1);
+        await ApiHelpers.CreateEntityAsync(Client, _entityType, entity1);
 
         // Act - Try duplicating both unique fields
         var entity2 = new DynamicEntityBuilder()
@@ -176,7 +179,7 @@ public class EntityIsUniquePropertyTests : IntegrationTestBase
             .WithField("username", username)  // Duplicate
             .Build();
 
-        var response = await Client.PostAsJsonAsync($"/api/entities/{TestEntityType}", entity2);
+        var response = await Client.PostAsJsonAsync($"/api/entities/{_entityType}", entity2);
 
         // Assert - Should fail due to duplicate (either field triggers conflict)
         AssertStatusCode(response, HttpStatusCode.BadRequest);
@@ -199,12 +202,12 @@ public class EntityIsUniquePropertyTests : IntegrationTestBase
             .WithField("username", $"user2_{Guid.NewGuid()}")
             .Build();
         
-        var created1 = await ApiHelpers.CreateEntityAsync(Client, TestEntityType, entity1);
-        var created2 = await ApiHelpers.CreateEntityAsync(Client, TestEntityType, entity2);
+        var created1 = await ApiHelpers.CreateEntityAsync(Client, _entityType, entity1);
+        var created2 = await ApiHelpers.CreateEntityAsync(Client, _entityType, entity2);
 
         // Act - Try to change entity2's email to match entity1's email
         created2!.Fields["email"] = email1;
-        var response = await Client.PutAsJsonAsync($"/api/entities/{TestEntityType}/{created2.Id}", created2);
+        var response = await Client.PutAsJsonAsync($"/api/entities/{_entityType}/{created2.Id}", created2);
 
         // Assert - Should fail due to duplicate email
         AssertStatusCode(response, HttpStatusCode.BadRequest);
@@ -224,12 +227,12 @@ public class EntityIsUniquePropertyTests : IntegrationTestBase
             .WithField("phone", "555-1234")
             .Build();
         
-        var created = await ApiHelpers.CreateEntityAsync(Client, TestEntityType, entity);
+        var created = await ApiHelpers.CreateEntityAsync(Client, _entityType, entity);
 
         // Act - Update other fields, keep email the same
         created!.Fields["phone"] = "555-9999";
         created.Fields["address"] = "New Address";
-        var response = await Client.PutAsJsonAsync($"/api/entities/{TestEntityType}/{created.Id}", created);
+        var response = await Client.PutAsJsonAsync($"/api/entities/{_entityType}/{created.Id}", created);
 
         // Assert - Should succeed (keeping same unique value is allowed)
         AssertStatusCode(response, HttpStatusCode.NoContent);
@@ -247,22 +250,26 @@ public class EntityIsUniquePropertyTests : IntegrationTestBase
 [Ignore("MongoDB serialization issue prevents isUnique property from being persisted - validation requires uniqueFields array")]
 public class EntityIsUniquePropertyOnlyTests : IntegrationTestBase
 {
-    private const string TestEntityType = "IsUniquePropertyOnlyTest";
+    private string _entityType = string.Empty;
 
     protected override async Task OnOneTimeSetUp()
     {
-        // Create schema using ONLY property-level isUnique flags
-        // Do NOT add to uniqueFields array - let validation find them from field definitions
+        _entityType = CreateUniqueName("IsUniquePropertyOnlyTest");
+
         var schema = new EntitySchemaBuilder()
-            .WithEntityName(TestEntityType)
+            .WithEntityName(_entityType)
             .WithField("productCode", "string", required: true, isUnique: true)
             .WithField("name", "string", required: true)
             .WithField("category", "string")
             .WithFilterableField("productCode")
-            // Note: NOT calling WithUniqueFields - relying solely on isUnique property
             .Build();
-        
+
         await ApiHelpers.CreateSchemaAsync(Client, schema);
+    }
+
+    protected override async Task OnOneTimeTearDown()
+    {
+        await ApiHelpers.DeleteSchemaIfExistsAsync(Client, _entityType);
     }
 
     [Test]
@@ -276,7 +283,7 @@ public class EntityIsUniquePropertyOnlyTests : IntegrationTestBase
             .Build();
 
         // Act
-        var response = await Client.PostAsJsonAsync($"/api/entities/{TestEntityType}", entity);
+        var response = await Client.PostAsJsonAsync($"/api/entities/{_entityType}", entity);
 
         // Assert
         AssertStatusCode(response, HttpStatusCode.Created);
@@ -292,7 +299,7 @@ public class EntityIsUniquePropertyOnlyTests : IntegrationTestBase
             .WithField("name", "Product A")
             .Build();
         
-        await ApiHelpers.CreateEntityAsync(Client, TestEntityType, entity1);
+        await ApiHelpers.CreateEntityAsync(Client, _entityType, entity1);
 
         // Act - Try duplicate productCode
         var entity2 = new DynamicEntityBuilder()
@@ -300,7 +307,7 @@ public class EntityIsUniquePropertyOnlyTests : IntegrationTestBase
             .WithField("name", "Product B")  // Different name
             .Build();
 
-        var response = await Client.PostAsJsonAsync($"/api/entities/{TestEntityType}", entity2);
+        var response = await Client.PostAsJsonAsync($"/api/entities/{_entityType}", entity2);
 
         // Assert - Should detect uniqueness violation from isUnique property alone
         AssertStatusCode(response, HttpStatusCode.Conflict);
@@ -316,7 +323,7 @@ public class EntityIsUniquePropertyOnlyTests : IntegrationTestBase
             .WithField("name", name)
             .Build();
         
-        await ApiHelpers.CreateEntityAsync(Client, TestEntityType, entity1);
+        await ApiHelpers.CreateEntityAsync(Client, _entityType, entity1);
 
         // Act - Same name, different productCode
         var entity2 = new DynamicEntityBuilder()
@@ -324,7 +331,7 @@ public class EntityIsUniquePropertyOnlyTests : IntegrationTestBase
             .WithField("name", name)  // Same name - should be allowed
             .Build();
 
-        var response = await Client.PostAsJsonAsync($"/api/entities/{TestEntityType}", entity2);
+        var response = await Client.PostAsJsonAsync($"/api/entities/{_entityType}", entity2);
 
         // Assert - Should succeed because name is not marked as unique
         AssertStatusCode(response, HttpStatusCode.Created);
