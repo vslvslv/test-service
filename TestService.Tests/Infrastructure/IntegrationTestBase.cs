@@ -4,6 +4,7 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using Microsoft.Extensions.Configuration;
 using TestService.Api.Models;
+using TestService.Tests;
 
 namespace TestService.Tests.Infrastructure;
 
@@ -24,13 +25,14 @@ public abstract class IntegrationTestBase
         Factory = new WebApplicationFactory<Program>()
             .WithWebHostBuilder(builder =>
             {
-                // Override MongoDB config so in-process API uses localhost (e.g. Docker dev stack).
-                // Add after default config so it overrides appsettings.json (which may point at Railway).
+                // Point the in-process API at the Testcontainers Mongo instance so the
+                // suite is hermetic and does not require a developer-managed Mongo.
+                // Added after default config so it overrides appsettings.json.
                 builder.ConfigureAppConfiguration((_, config) =>
                 {
                     config.AddInMemoryCollection(new Dictionary<string, string?>
                     {
-                        ["MongoDbSettings:ConnectionString"] = "mongodb://admin:password123@localhost:27017/TestServiceDb?authSource=admin",
+                        ["MongoDbSettings:ConnectionString"] = MongoDbContainerFixture.ConnectionString,
                         ["MongoDbSettings:DatabaseName"] = "TestServiceDb"
                     });
                 });
@@ -180,8 +182,9 @@ public abstract class IntegrationTestBase
             var body = await response.Content.ReadAsStringAsync();
             throw new InvalidOperationException(
                 $"Admin login failed with 401 after 5 retries. " +
-                $"The API or MongoDB is not reachable, or the default admin user is not seeded. " +
-                $"Ensure MongoDB is running on localhost:27017 and the API has finished startup. " +
+                $"The default admin user did not finish seeding within the retry window, " +
+                $"or the API failed to connect to the test MongoDB container. " +
+                $"Verify Docker is running (the suite uses Testcontainers.MongoDb). " +
                 $"Response body: {body}");
         }
 
