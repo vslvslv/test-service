@@ -1652,41 +1652,49 @@ const Mocks: React.FC = () => {
       )}
 
       {showModal && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+        <div className="modal-backdrop">
           <div
             role="dialog"
             aria-modal="true"
             aria-labelledby="mock-expectation-dialog-title"
-            className="bg-gray-800 border border-gray-700 rounded-lg w-full max-w-5xl max-h-[92vh] overflow-hidden"
+            className="modal-shell max-h-[92vh] max-w-5xl overflow-hidden"
           >
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-700">
-              <h2 id="mock-expectation-dialog-title" className="text-xl text-white font-semibold">{editingId ? 'Edit Expectation' : 'Create Expectation'}</h2>
-              <button type="button" onClick={closeModal} aria-label="Close expectation dialog" className="p-2 rounded hover:bg-gray-700">
-                <X className="w-5 h-5 text-gray-300" />
+            <div className="flex items-center justify-between border-b border-slate-800 px-6 py-5">
+              <div>
+                <p className="eyebrow">Mock Expectation</p>
+                <h2 id="mock-expectation-dialog-title" className="mt-2 text-xl font-semibold text-white">
+                  {editingId ? 'Edit Expectation' : 'Create Expectation'}
+                </h2>
+                <p className="mt-1 text-sm text-slate-400">Define request matching, response payload, and execution behavior.</p>
+              </div>
+              <button type="button" onClick={closeModal} aria-label="Close expectation dialog" className="rounded-xl p-2 text-slate-300 transition-colors hover:bg-slate-800 hover:text-white">
+                <X className="h-5 w-5" />
               </button>
             </div>
-            <form onSubmit={handleSave} className="p-6 space-y-6 overflow-y-auto max-h-[calc(92vh-76px)]">
+            <form onSubmit={handleSave} className="max-h-[calc(92vh-88px)] space-y-6 overflow-y-auto px-6 py-5">
               <div className="flex flex-wrap gap-2 text-xs">
-                <span className="px-2 py-1 rounded border border-cyan-500/30 bg-cyan-500/10 text-cyan-300">1. General</span>
-                <span className="px-2 py-1 rounded border border-blue-500/30 bg-blue-500/10 text-blue-300">2. Request Matching</span>
-                <span className="px-2 py-1 rounded border border-indigo-500/30 bg-indigo-500/10 text-indigo-300">3. Response</span>
-                <span className="px-2 py-1 rounded border border-emerald-500/30 bg-emerald-500/10 text-emerald-300">4. Execution Limits</span>
+                <span className="badge-soft border-cyan-500/30 bg-cyan-500/10 text-cyan-300">1. General</span>
+                <span className="badge-soft border-blue-500/30 bg-blue-500/10 text-blue-300">2. Request Matching</span>
+                <span className="badge-soft border-indigo-500/30 bg-indigo-500/10 text-indigo-300">3. Response</span>
+                <span className="badge-soft border-emerald-500/30 bg-emerald-500/10 text-emerald-300">4. Execution Limits</span>
               </div>
 
-              <div className="bg-gray-900/40 border border-gray-700 rounded-lg p-4 space-y-4">
-                <h3 className="text-white font-medium">General</h3>
-                <p className="text-xs text-gray-400">Identity and targeting configuration for this expectation.</p>
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                  <label className="text-sm text-gray-300">
+              <div className="rounded-[24px] border border-slate-800 bg-slate-950/35 p-5 space-y-4">
+                <div>
+                  <h3 className="text-white font-medium">General</h3>
+                  <p className="mt-1 text-xs text-slate-400">Identity and targeting configuration for this expectation.</p>
+                </div>
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+                  <label className="text-sm text-slate-300">
                     Name
-                    <input type="text" value={form.name} onChange={(e) => setField('name', e.target.value)} className="mt-1 w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white" required />
+                    <input type="text" value={form.name} onChange={(e) => setField('name', e.target.value)} className="field-shell mt-2" required />
                   </label>
-                  <label className="text-sm text-gray-300">
+                  <label className="text-sm text-slate-300">
                     Environment
                     <select
                       value={form.environment}
                       onChange={(e) => setField('environment', e.target.value)}
-                      className="mt-1 w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white"
+                      className="field-shell mt-2"
                       required
                       disabled={environmentOptions.length === 0}
                     >
@@ -1699,145 +1707,151 @@ const Mocks: React.FC = () => {
                       )}
                     </select>
                   </label>
-                  <label className="text-sm text-gray-300">
+                  <label className="text-sm text-slate-300">
                     Priority
-                    <input type="number" value={form.priority} onChange={(e) => setField('priority', Number(e.target.value))} className="mt-1 w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white" />
+                    <input type="number" value={form.priority} onChange={(e) => setField('priority', Number(e.target.value))} className="field-shell mt-2" />
                   </label>
-                  <label className="text-sm text-gray-300 flex items-center gap-2 mt-7">
-                    <input type="checkbox" checked={form.enabled} onChange={(e) => setField('enabled', e.target.checked)} />
+                  <label className="mt-7 flex items-center gap-3 rounded-2xl border border-slate-800 bg-slate-900/60 px-4 py-3 text-sm text-slate-300">
+                    <input type="checkbox" checked={form.enabled} onChange={(e) => setField('enabled', e.target.checked)} className="h-4 w-4 rounded border-slate-600 bg-slate-800 text-cyan-500 focus:ring-cyan-500" />
                     Enabled
                   </label>
                 </div>
               </div>
 
-              <div className="bg-gray-900/40 border border-gray-700 rounded-lg p-4 space-y-4">
-                <h3 className="text-white font-medium">Request Matching</h3>
-                <p className="text-xs text-gray-400">Define incoming request conditions that should trigger this response.</p>
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                  <label className="text-sm text-gray-300">
+              <div className="rounded-[24px] border border-slate-800 bg-slate-950/35 p-5 space-y-4">
+                <div>
+                  <h3 className="text-white font-medium">Request Matching</h3>
+                  <p className="mt-1 text-xs text-slate-400">Define incoming request conditions that should trigger this response.</p>
+                </div>
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+                  <label className="text-sm text-slate-300">
                     Method
-                    <select value={form.method} onChange={(e) => setField('method', e.target.value)} className="mt-1 w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white">
+                    <select value={form.method} onChange={(e) => setField('method', e.target.value)} className="field-shell mt-2">
                       {['GET', 'POST', 'PUT', 'PATCH', 'DELETE'].map((method) => <option key={method} value={method}>{method}</option>)}
                     </select>
                   </label>
-                  <label className="text-sm text-gray-300 md:col-span-2">
+                  <label className="text-sm text-slate-300 md:col-span-2">
                     Path
-                    <input type="text" value={form.path} onChange={(e) => setField('path', e.target.value)} className="mt-1 w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white font-mono" required />
+                    <input type="text" value={form.path} onChange={(e) => setField('path', e.target.value)} className="field-shell mt-2 font-mono" required />
                   </label>
-                  <label className="text-sm text-gray-300">
+                  <label className="text-sm text-slate-300">
                     Path Match
-                    <select value={form.pathMatchType} onChange={(e) => setField('pathMatchType', Number(e.target.value))} className="mt-1 w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white">
+                    <select value={form.pathMatchType} onChange={(e) => setField('pathMatchType', Number(e.target.value))} className="field-shell mt-2">
                       <option value={0}>Exact</option>
                       <option value={1}>Prefix</option>
                       <option value={2}>Regex</option>
                     </select>
                   </label>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <p className="text-xs uppercase tracking-wider text-gray-500">Query Params</p>
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4">
+                    <div className="mb-3 flex items-center justify-between">
+                      <p className="text-xs uppercase tracking-wider text-slate-500">Query Params</p>
                       <button type="button" onClick={() => addRow('queryRows')} className="text-xs text-blue-300 hover:text-blue-200">+ Add</button>
                     </div>
                     <div className="space-y-2">
                       {form.queryRows.map((row, index) => (
                         <div key={`q-${index}`} className="grid grid-cols-[1fr_1fr_auto] gap-2">
-                          <input value={row.key} onChange={(e) => setRow('queryRows', index, 'key', e.target.value)} placeholder="key" className="px-2 py-1.5 bg-gray-700 border border-gray-600 rounded text-sm text-white" />
-                          <input value={row.value} onChange={(e) => setRow('queryRows', index, 'value', e.target.value)} placeholder="value" className="px-2 py-1.5 bg-gray-700 border border-gray-600 rounded text-sm text-white" />
-                          <button type="button" onClick={() => removeRow('queryRows', index)} className="px-2 text-red-300 hover:text-red-200">x</button>
+                          <input value={row.key} onChange={(e) => setRow('queryRows', index, 'key', e.target.value)} placeholder="key" className="field-shell px-3 py-2 text-sm" />
+                          <input value={row.value} onChange={(e) => setRow('queryRows', index, 'value', e.target.value)} placeholder="value" className="field-shell px-3 py-2 text-sm" />
+                          <button type="button" onClick={() => removeRow('queryRows', index)} className="rounded-xl px-3 text-red-300 transition-colors hover:bg-red-500/10 hover:text-red-200">x</button>
                         </div>
                       ))}
                     </div>
                   </div>
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <p className="text-xs uppercase tracking-wider text-gray-500">Headers</p>
+                  <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4">
+                    <div className="mb-3 flex items-center justify-between">
+                      <p className="text-xs uppercase tracking-wider text-slate-500">Headers</p>
                       <button type="button" onClick={() => addRow('headerRows')} className="text-xs text-blue-300 hover:text-blue-200">+ Add</button>
                     </div>
                     <div className="space-y-2">
                       {form.headerRows.map((row, index) => (
                         <div key={`h-${index}`} className="grid grid-cols-[1fr_1fr_auto] gap-2">
-                          <input value={row.key} onChange={(e) => setRow('headerRows', index, 'key', e.target.value)} placeholder="key" className="px-2 py-1.5 bg-gray-700 border border-gray-600 rounded text-sm text-white" />
-                          <input value={row.value} onChange={(e) => setRow('headerRows', index, 'value', e.target.value)} placeholder="value" className="px-2 py-1.5 bg-gray-700 border border-gray-600 rounded text-sm text-white" />
-                          <button type="button" onClick={() => removeRow('headerRows', index)} className="px-2 text-red-300 hover:text-red-200">x</button>
+                          <input value={row.key} onChange={(e) => setRow('headerRows', index, 'key', e.target.value)} placeholder="key" className="field-shell px-3 py-2 text-sm" />
+                          <input value={row.value} onChange={(e) => setRow('headerRows', index, 'value', e.target.value)} placeholder="value" className="field-shell px-3 py-2 text-sm" />
+                          <button type="button" onClick={() => removeRow('headerRows', index)} className="rounded-xl px-3 text-red-300 transition-colors hover:bg-red-500/10 hover:text-red-200">x</button>
                         </div>
                       ))}
                     </div>
                   </div>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <label className="text-sm text-gray-300">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                  <label className="text-sm text-slate-300">
                     Body Match
-                    <select value={form.bodyMatchType} onChange={(e) => setField('bodyMatchType', Number(e.target.value))} className="mt-1 w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white">
+                    <select value={form.bodyMatchType} onChange={(e) => setField('bodyMatchType', Number(e.target.value))} className="field-shell mt-2">
                       <option value={0}>Any</option>
                       <option value={1}>Exact</option>
                       <option value={2}>Contains</option>
                       <option value={3}>Regex</option>
                     </select>
                   </label>
-                  <label className="text-sm text-gray-300 md:col-span-2">
+                  <label className="text-sm text-slate-300 md:col-span-2">
                     Body Pattern
-                    <textarea value={form.body} onChange={(e) => setField('body', e.target.value)} rows={3} className="mt-1 w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white font-mono" />
+                    <textarea value={form.body} onChange={(e) => setField('body', e.target.value)} rows={3} className="field-shell mt-2 min-h-[108px] font-mono" />
                   </label>
                 </div>
               </div>
 
-              <div className="bg-gray-900/40 border border-gray-700 rounded-lg p-4 space-y-4">
-                <h3 className="text-white font-medium">Response</h3>
-                <p className="text-xs text-gray-400">Configure status, headers, and payload returned to matched requests.</p>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <label className="text-sm text-gray-300">
+              <div className="rounded-[24px] border border-slate-800 bg-slate-950/35 p-5 space-y-4">
+                <div>
+                  <h3 className="text-white font-medium">Response</h3>
+                  <p className="mt-1 text-xs text-slate-400">Configure status, headers, and payload returned to matched requests.</p>
+                </div>
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <label className="text-sm text-slate-300">
                     Status
-                    <input type="number" value={form.status} onChange={(e) => setField('status', Number(e.target.value))} className="mt-1 w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white" />
+                    <input type="number" value={form.status} onChange={(e) => setField('status', Number(e.target.value))} className="field-shell mt-2" />
                   </label>
-                  <label className="text-sm text-gray-300">
+                  <label className="text-sm text-slate-300">
                     Delay (ms)
-                    <input type="number" min={0} value={form.delayMs} onChange={(e) => setField('delayMs', Number(e.target.value))} className="mt-1 w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white" />
+                    <input type="number" min={0} value={form.delayMs} onChange={(e) => setField('delayMs', Number(e.target.value))} className="field-shell mt-2" />
                   </label>
                 </div>
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <p className="text-xs uppercase tracking-wider text-gray-500">Response Headers</p>
+                <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4">
+                  <div className="mb-3 flex items-center justify-between">
+                    <p className="text-xs uppercase tracking-wider text-slate-500">Response Headers</p>
                     <button type="button" onClick={() => addRow('responseHeaderRows')} className="text-xs text-blue-300 hover:text-blue-200">+ Add</button>
                   </div>
                   <div className="space-y-2">
                     {form.responseHeaderRows.map((row, index) => (
                       <div key={`rh-${index}`} className="grid grid-cols-[1fr_1fr_auto] gap-2">
-                        <input value={row.key} onChange={(e) => setRow('responseHeaderRows', index, 'key', e.target.value)} placeholder="key" className="px-2 py-1.5 bg-gray-700 border border-gray-600 rounded text-sm text-white" />
-                        <input value={row.value} onChange={(e) => setRow('responseHeaderRows', index, 'value', e.target.value)} placeholder="value" className="px-2 py-1.5 bg-gray-700 border border-gray-600 rounded text-sm text-white" />
-                        <button type="button" onClick={() => removeRow('responseHeaderRows', index)} className="px-2 text-red-300 hover:text-red-200">x</button>
+                        <input value={row.key} onChange={(e) => setRow('responseHeaderRows', index, 'key', e.target.value)} placeholder="key" className="field-shell px-3 py-2 text-sm" />
+                        <input value={row.value} onChange={(e) => setRow('responseHeaderRows', index, 'value', e.target.value)} placeholder="value" className="field-shell px-3 py-2 text-sm" />
+                        <button type="button" onClick={() => removeRow('responseHeaderRows', index)} className="rounded-xl px-3 text-red-300 transition-colors hover:bg-red-500/10 hover:text-red-200">x</button>
                       </div>
                     ))}
                   </div>
                 </div>
-                <label className="text-sm text-gray-300 block">
+                <label className="block text-sm text-slate-300">
                   Response Body
-                  <textarea value={form.responseBody} onChange={(e) => setField('responseBody', e.target.value)} rows={5} className="mt-1 w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white font-mono" />
+                  <textarea value={form.responseBody} onChange={(e) => setField('responseBody', e.target.value)} rows={5} className="field-shell mt-2 min-h-[160px] font-mono" />
                 </label>
               </div>
 
-              <div className="bg-gray-900/40 border border-gray-700 rounded-lg p-4 space-y-4">
-                <h3 className="text-white font-medium">Execution Limits</h3>
-                <p className="text-xs text-gray-400">Control whether the expectation can be consumed infinitely or a fixed number of times.</p>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <label className="text-sm text-gray-300 flex items-center gap-2 mt-7">
-                    <input type="checkbox" checked={form.unlimited} onChange={(e) => setField('unlimited', e.target.checked)} />
+              <div className="rounded-[24px] border border-slate-800 bg-slate-950/35 p-5 space-y-4">
+                <div>
+                  <h3 className="text-white font-medium">Execution Limits</h3>
+                  <p className="mt-1 text-xs text-slate-400">Control whether the expectation can be consumed infinitely or a fixed number of times.</p>
+                </div>
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <label className="mt-7 flex items-center gap-3 rounded-2xl border border-slate-800 bg-slate-900/60 px-4 py-3 text-sm text-slate-300">
+                    <input type="checkbox" checked={form.unlimited} onChange={(e) => setField('unlimited', e.target.checked)} className="h-4 w-4 rounded border-slate-600 bg-slate-800 text-emerald-500 focus:ring-emerald-500" />
                     Unlimited calls
                   </label>
                   {!form.unlimited && (
-                    <label className="text-sm text-gray-300">
+                    <label className="text-sm text-slate-300">
                       Remaining
-                      <input type="number" min={1} value={form.remaining} onChange={(e) => setField('remaining', Number(e.target.value))} className="mt-1 w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white" />
+                      <input type="number" min={1} value={form.remaining} onChange={(e) => setField('remaining', Number(e.target.value))} className="field-shell mt-2" />
                     </label>
                   )}
                 </div>
               </div>
 
-              <div className="flex justify-end gap-3">
-                <button type="button" onClick={closeModal} className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded text-white">
+              <div className="flex justify-end gap-3 border-t border-slate-800 pt-4">
+                <button type="button" onClick={closeModal} className="button-secondary">
                   Cancel
                 </button>
-                <button type="submit" disabled={isSaving} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded text-white disabled:opacity-50">
+                <button type="submit" disabled={isSaving} className="button-primary disabled:opacity-50">
                   {isSaving ? 'Saving...' : editingId ? 'Save Changes' : 'Create Expectation'}
                 </button>
               </div>
