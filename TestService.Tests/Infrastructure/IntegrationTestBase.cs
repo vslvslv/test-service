@@ -177,7 +177,12 @@ public abstract class IntegrationTestBase
 
         if (response.StatusCode == HttpStatusCode.Unauthorized)
         {
-            Assert.Inconclusive("Default admin may not be initialized yet (async init).");
+            var body = await response.Content.ReadAsStringAsync();
+            throw new InvalidOperationException(
+                $"Admin login failed with 401 after 5 retries. " +
+                $"The API or MongoDB is not reachable, or the default admin user is not seeded. " +
+                $"Ensure MongoDB is running on localhost:27017 and the API has finished startup. " +
+                $"Response body: {body}");
         }
 
         AssertStatusCode(response, HttpStatusCode.OK);

@@ -350,10 +350,11 @@ public class UsersControllerTests : IntegrationTestBase
             .Where(u => u.Role == UserRole.Admin && u.IsActive)
             .ToList();
 
-        if (activeAdmins.Count != 1)
-        {
-            Assert.Inconclusive($"Expected exactly one active admin for deterministic test, found {activeAdmins.Count}.");
-        }
+        // Precondition: this test only verifies the last-admin guard when there is
+        // exactly one active admin. If shared DB state has more, skip via Assume so
+        // the result is reported as Inconclusive (intentional precondition), not Failed.
+        Assume.That(activeAdmins.Count, Is.EqualTo(1),
+            $"Test requires exactly one active admin to verify last-admin protection; found {activeAdmins.Count}.");
 
         var response = await Client.DeleteAsync($"/api/users/{activeAdmins[0].Id}");
         AssertStatusCode(response, HttpStatusCode.BadRequest);
