@@ -1,7 +1,11 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using Microsoft.AspNetCore.TestHost;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using TestService.Api.Models;
+using TestService.Api.Services;
 using TestService.Tests;
 
 namespace TestService.Tests.Infrastructure;
@@ -25,7 +29,21 @@ public abstract class IntegrationTestBase
         // runs, which Program.cs reads at top-level startup. ConfigureAppConfiguration
         // does not work here because Program.cs binds MongoDbSettings before
         // WebApplicationFactory applies test config sources.
-        Factory = new WebApplicationFactory<Program>();
+        //
+        // ConfigureTestServices runs after Program.cs registers services, so it is
+        // the right hook to swap the real RabbitMQ-backed message bus for an
+        // in-process no-op. CI has no broker; without this stub every API call
+        // that publishes a message (entity create/update/delete, settings change)
+        // returns 500.
+        Factory = new WebApplicationFactory<Program>()
+            .WithWebHostBuilder(builder =>
+            {
+                builder.ConfigureTestServices(services =>
+                {
+                    services.RemoveAll<IMessageBusService>();
+                    services.AddSingleton<IMessageBusService, FakeMessageBusService>();
+                });
+            });
         Client = Factory.CreateClient();
 
         if (AuthenticateAsAdminByDefault)
