@@ -14,6 +14,14 @@ namespace TestService.Tests;
 [SetUpFixture]
 public class MongoDbContainerFixture
 {
+    // Program.cs reads its Mongo connection string from these env vars at
+    // top-level startup, before WebApplicationFactory's ConfigureAppConfiguration
+    // overrides are applied. Setting the env var from this fixture is the only
+    // way to redirect the in-process API at the test container.
+    private const string ConnectionStringEnvVar = "MongoDbSettings__ConnectionString";
+    private const string DatabaseNameEnvVar = "MongoDbSettings__DatabaseName";
+    private const string TestDatabaseName = "TestServiceDb";
+
     private static MongoDbContainer? _container;
 
     /// <summary>
@@ -43,11 +51,17 @@ public class MongoDbContainerFixture
         _container = new MongoDbBuilder("mongo:7").Build();
 
         await _container.StartAsync();
+
+        Environment.SetEnvironmentVariable(ConnectionStringEnvVar, _container.GetConnectionString());
+        Environment.SetEnvironmentVariable(DatabaseNameEnvVar, TestDatabaseName);
     }
 
     [OneTimeTearDown]
     public async Task StopContainer()
     {
+        Environment.SetEnvironmentVariable(ConnectionStringEnvVar, null);
+        Environment.SetEnvironmentVariable(DatabaseNameEnvVar, null);
+
         if (_container is not null)
         {
             await _container.DisposeAsync();

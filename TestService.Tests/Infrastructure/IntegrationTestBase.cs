@@ -1,8 +1,6 @@
-using System.Collections.Generic;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
-using Microsoft.Extensions.Configuration;
 using TestService.Api.Models;
 using TestService.Tests;
 
@@ -22,21 +20,12 @@ public abstract class IntegrationTestBase
     [OneTimeSetUp]
     public async Task OneTimeSetUp()
     {
-        Factory = new WebApplicationFactory<Program>()
-            .WithWebHostBuilder(builder =>
-            {
-                // Point the in-process API at the Testcontainers Mongo instance so the
-                // suite is hermetic and does not require a developer-managed Mongo.
-                // Added after default config so it overrides appsettings.json.
-                builder.ConfigureAppConfiguration((_, config) =>
-                {
-                    config.AddInMemoryCollection(new Dictionary<string, string?>
-                    {
-                        ["MongoDbSettings:ConnectionString"] = MongoDbContainerFixture.ConnectionString,
-                        ["MongoDbSettings:DatabaseName"] = "TestServiceDb"
-                    });
-                });
-            });
+        // MongoDbContainerFixture exports the test container's connection string via
+        // env vars (MongoDbSettings__ConnectionString / __DatabaseName) before this
+        // runs, which Program.cs reads at top-level startup. ConfigureAppConfiguration
+        // does not work here because Program.cs binds MongoDbSettings before
+        // WebApplicationFactory applies test config sources.
+        Factory = new WebApplicationFactory<Program>();
         Client = Factory.CreateClient();
 
         if (AuthenticateAsAdminByDefault)
