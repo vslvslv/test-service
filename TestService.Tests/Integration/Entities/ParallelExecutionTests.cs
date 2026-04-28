@@ -11,27 +11,31 @@ namespace TestService.Tests.Integration.Entities;
 [TestFixture]
 public class ParallelExecutionTests : IntegrationTestBase
 {
-    private const string TestEntityType = "ParallelTest";
+    private string _entityType = string.Empty;
 
     protected override async Task OnOneTimeSetUp()
     {
-        await ApiHelpers.DeleteSchemaIfExistsAsync(Client, TestEntityType);
+        _entityType = CreateUniqueName("ParallelTest");
 
         var schema = new EntitySchemaBuilder()
-            .WithEntityName(TestEntityType)
+            .WithEntityName(_entityType)
             .WithField("name", "string", required: true)
             .WithField("testId", "string")
             .WithFilterableField("testId")
-            .WithExcludeOnFetch(true) // Enable exclude on fetch
+            .WithExcludeOnFetch(true)
             .Build();
-        
+
         await ApiHelpers.CreateSchemaAsync(Client, schema);
-        await Client.DeleteAsync($"/api/schemas/{TestEntityType}/entities");
+    }
+
+    protected override async Task OnOneTimeTearDown()
+    {
+        await ApiHelpers.DeleteSchemaIfExistsAsync(Client, _entityType);
     }
 
     protected override async Task OnSetUp()
     {
-        await Client.DeleteAsync($"/api/schemas/{TestEntityType}/entities");
+        await Client.DeleteAsync($"/api/schemas/{_entityType}/entities");
     }
 
     [Test]
@@ -41,10 +45,10 @@ public class ParallelExecutionTests : IntegrationTestBase
         var entity = new DynamicEntityBuilder()
             .WithField("name", "Test")
             .Build();
-        await ApiHelpers.CreateEntityAsync(Client, TestEntityType, entity);
+        await ApiHelpers.CreateEntityAsync(Client, _entityType, entity);
 
         // Act
-        var response = await Client.GetAsync($"/api/entities/{TestEntityType}/next");
+        var response = await Client.GetAsync($"/api/entities/{_entityType}/next");
 
         // Assert
         AssertStatusCode(response, HttpStatusCode.OK);
@@ -63,14 +67,14 @@ public class ParallelExecutionTests : IntegrationTestBase
             var entity = new DynamicEntityBuilder()
                 .WithField("name", $"Entity_{i}")
                 .Build();
-            await ApiHelpers.CreateEntityAsync(Client, TestEntityType, entity);
+            await ApiHelpers.CreateEntityAsync(Client, _entityType, entity);
         }
 
         // Act - Get next available multiple times
         var retrievedIds = new HashSet<string>();
         for (int i = 0; i < 5; i++)
         {
-            var response = await Client.GetAsync($"/api/entities/{TestEntityType}/next");
+            var response = await Client.GetAsync($"/api/entities/{_entityType}/next");
             var entity = await response.Content.ReadFromJsonAsync<DynamicEntity>();
             retrievedIds.Add(entity!.Id!);
         }
@@ -86,13 +90,13 @@ public class ParallelExecutionTests : IntegrationTestBase
         var entity = new DynamicEntityBuilder()
             .WithField("name", "OnlyOne")
             .Build();
-        await ApiHelpers.CreateEntityAsync(Client, TestEntityType, entity);
+        await ApiHelpers.CreateEntityAsync(Client, _entityType, entity);
         
         // Consume it
-        await Client.GetAsync($"/api/entities/{TestEntityType}/next");
+        await Client.GetAsync($"/api/entities/{_entityType}/next");
 
         // Act - Try to get next when none available
-        var response = await Client.GetAsync($"/api/entities/{TestEntityType}/next");
+        var response = await Client.GetAsync($"/api/entities/{_entityType}/next");
 
         // Assert
         AssertStatusCode(response, HttpStatusCode.NotFound);
@@ -122,14 +126,14 @@ public class ParallelExecutionTests : IntegrationTestBase
             var entity = new DynamicEntityBuilder()
                 .WithField("name", $"Entity_{i}")
                 .Build();
-            await ApiHelpers.CreateEntityAsync(Client, TestEntityType, entity);
+            await ApiHelpers.CreateEntityAsync(Client, _entityType, entity);
         }
 
         // Consume one
-        await Client.GetAsync($"/api/entities/{TestEntityType}/next");
+        await Client.GetAsync($"/api/entities/{_entityType}/next");
 
         // Act - Get all
-        var response = await Client.GetAsync($"/api/entities/{TestEntityType}");
+        var response = await Client.GetAsync($"/api/entities/{_entityType}");
         var entities = await response.Content.ReadFromJsonAsync<List<DynamicEntity>>();
 
         // Assert - GetAll returns all entities (consumed and non-consumed).
@@ -145,10 +149,10 @@ public class ParallelExecutionTests : IntegrationTestBase
         var entity = new DynamicEntityBuilder()
             .WithField("name", "Test")
             .Build();
-        var created = await ApiHelpers.CreateEntityAsync(Client, TestEntityType, entity);
+        var created = await ApiHelpers.CreateEntityAsync(Client, _entityType, entity);
 
         // Act - Get by ID
-        var response = await Client.GetAsync($"/api/entities/{TestEntityType}/{created!.Id}");
+        var response = await Client.GetAsync($"/api/entities/{_entityType}/{created!.Id}");
         
         // Assert - GetById does not auto-consume.
         AssertStatusCode(response, HttpStatusCode.OK);
@@ -156,7 +160,7 @@ public class ParallelExecutionTests : IntegrationTestBase
         Assert.That(retrieved!.IsConsumed, Is.False);
 
         // Verify it still appears in GetAll.
-        var allResponse = await Client.GetAsync($"/api/entities/{TestEntityType}");
+        var allResponse = await Client.GetAsync($"/api/entities/{_entityType}");
         var allEntities = await allResponse.Content.ReadFromJsonAsync<List<DynamicEntity>>();
         Assert.That(allEntities!.Any(e => e.Id == created.Id), Is.True);
     }
@@ -172,14 +176,14 @@ public class ParallelExecutionTests : IntegrationTestBase
                 .WithField("name", $"Entity_{i}")
                 .WithField("testId", testId)
                 .Build();
-            await ApiHelpers.CreateEntityAsync(Client, TestEntityType, entity);
+            await ApiHelpers.CreateEntityAsync(Client, _entityType, entity);
         }
 
         // Consume one
-        await Client.GetAsync($"/api/entities/{TestEntityType}/next");
+        await Client.GetAsync($"/api/entities/{_entityType}/next");
 
         // Act - Filter
-        var response = await Client.GetAsync($"/api/entities/{TestEntityType}/filter/testId/{testId}");
+        var response = await Client.GetAsync($"/api/entities/{_entityType}/filter/testId/{testId}");
         var entities = await response.Content.ReadFromJsonAsync<List<DynamicEntity>>();
 
         // Assert - Should return only non-consumed entities
@@ -194,19 +198,19 @@ public class ParallelExecutionTests : IntegrationTestBase
         var entity = new DynamicEntityBuilder()
             .WithField("name", "Test")
             .Build();
-        var created = await ApiHelpers.CreateEntityAsync(Client, TestEntityType, entity);
+        var created = await ApiHelpers.CreateEntityAsync(Client, _entityType, entity);
 
         // Consume it
-        await Client.GetAsync($"/api/entities/{TestEntityType}/{created!.Id}");
+        await Client.GetAsync($"/api/entities/{_entityType}/{created!.Id}");
 
         // Act - Reset
-        var response = await Client.PostAsync($"/api/entities/{TestEntityType}/{created.Id}/reset", null);
+        var response = await Client.PostAsync($"/api/entities/{_entityType}/{created.Id}/reset", null);
 
         // Assert
         AssertStatusCode(response, HttpStatusCode.NoContent);
 
         // Verify it's available again
-        var allResponse = await Client.GetAsync($"/api/entities/{TestEntityType}");
+        var allResponse = await Client.GetAsync($"/api/entities/{_entityType}");
         var allEntities = await allResponse.Content.ReadFromJsonAsync<List<DynamicEntity>>();
         Assert.That(allEntities!.Any(e => e.Id == created.Id), Is.True);
     }
@@ -221,15 +225,15 @@ public class ParallelExecutionTests : IntegrationTestBase
             var entity = new DynamicEntityBuilder()
                 .WithField("name", $"Entity_{i}")
                 .Build();
-            var created = await ApiHelpers.CreateEntityAsync(Client, TestEntityType, entity);
+            var created = await ApiHelpers.CreateEntityAsync(Client, _entityType, entity);
             entityIds.Add(created!.Id!);
             
             // Consume it
-            await Client.GetAsync($"/api/entities/{TestEntityType}/next");
+            await Client.GetAsync($"/api/entities/{_entityType}/next");
         }
 
         // Act - Reset all
-        var response = await Client.PostAsync($"/api/entities/{TestEntityType}/reset-all", null);
+        var response = await Client.PostAsync($"/api/entities/{_entityType}/reset-all", null);
 
         // Assert
         AssertStatusCode(response, HttpStatusCode.OK);
@@ -239,7 +243,7 @@ public class ParallelExecutionTests : IntegrationTestBase
         Assert.That(result!["resetCount"].GetInt32(), Is.EqualTo(3));
 
         // Verify all are available again
-        var allResponse = await Client.GetAsync($"/api/entities/{TestEntityType}");
+        var allResponse = await Client.GetAsync($"/api/entities/{_entityType}");
         var allEntities = await allResponse.Content.ReadFromJsonAsync<List<DynamicEntity>>();
         Assert.That(allEntities!.Count, Is.GreaterThanOrEqualTo(3));
     }
@@ -254,7 +258,7 @@ public class ParallelExecutionTests : IntegrationTestBase
             var entity = new DynamicEntityBuilder()
                 .WithField("name", $"ParallelEntity_{i}")
                 .Build();
-            await ApiHelpers.CreateEntityAsync(Client, TestEntityType, entity);
+            await ApiHelpers.CreateEntityAsync(Client, _entityType, entity);
         }
 
         // Act - Simulate 10 parallel tests
@@ -273,7 +277,7 @@ public class ParallelExecutionTests : IntegrationTestBase
 
     private async Task<string> GetNextEntityIdAsync()
     {
-        var response = await Client.GetAsync($"/api/entities/{TestEntityType}/next");
+        var response = await Client.GetAsync($"/api/entities/{_entityType}/next");
         if (response.IsSuccessStatusCode)
         {
             var entity = await response.Content.ReadFromJsonAsync<DynamicEntity>();
@@ -289,7 +293,7 @@ public class ParallelExecutionTests : IntegrationTestBase
         var entity = new DynamicEntityBuilder()
             .WithField("name", "New Entity")
             .Build();
-        var created = await ApiHelpers.CreateEntityAsync(Client, TestEntityType, entity);
+        var created = await ApiHelpers.CreateEntityAsync(Client, _entityType, entity);
 
         // Assert
         Assert.That(created!.IsConsumed, Is.False);
@@ -302,17 +306,17 @@ public class ParallelExecutionTests : IntegrationTestBase
         var entity = new DynamicEntityBuilder()
             .WithField("name", "Original")
             .Build();
-        var created = await ApiHelpers.CreateEntityAsync(Client, TestEntityType, entity);
+        var created = await ApiHelpers.CreateEntityAsync(Client, _entityType, entity);
 
         // Consume it via next
-        await Client.GetAsync($"/api/entities/{TestEntityType}/next");
+        await Client.GetAsync($"/api/entities/{_entityType}/next");
 
         // Act - Update
         created.Fields["name"] = "Updated";
-        await Client.PutAsJsonAsync($"/api/entities/{TestEntityType}/{created.Id}", created);
+        await Client.PutAsJsonAsync($"/api/entities/{_entityType}/{created.Id}", created);
 
         // Assert - Should still be consumed
-        var updated = await ApiHelpers.GetEntityByIdAsync(Client, TestEntityType, created.Id!);
+        var updated = await ApiHelpers.GetEntityByIdAsync(Client, _entityType, created.Id!);
         Assert.That(updated, Is.Not.Null);
         Assert.That(updated!.IsConsumed, Is.True);
     }
@@ -325,17 +329,24 @@ public class ParallelExecutionTests : IntegrationTestBase
 [Explicit("Stress tests - run manually")]
 public class ParallelExecutionStressTests : IntegrationTestBase
 {
-    private const string TestEntityType = "StressTest";
+    private string _entityType = string.Empty;
 
     protected override async Task OnOneTimeSetUp()
     {
+        _entityType = CreateUniqueName("StressTest");
+
         var schema = new EntitySchemaBuilder()
-            .WithEntityName(TestEntityType)
+            .WithEntityName(_entityType)
             .WithField("name", "string", required: true)
             .WithExcludeOnFetch(true)
             .Build();
-        
+
         await ApiHelpers.CreateSchemaAsync(Client, schema);
+    }
+
+    protected override async Task OnOneTimeTearDown()
+    {
+        await ApiHelpers.DeleteSchemaIfExistsAsync(Client, _entityType);
     }
 
     [Test]
@@ -347,12 +358,12 @@ public class ParallelExecutionStressTests : IntegrationTestBase
             var entity = new DynamicEntityBuilder()
                 .WithField("name", $"StressEntity_{i}")
                 .Build();
-            await ApiHelpers.CreateEntityAsync(Client, TestEntityType, entity);
+            await ApiHelpers.CreateEntityAsync(Client, _entityType, entity);
         }
 
         // Act - 100 parallel requests
         var tasks = Enumerable.Range(0, 100)
-            .Select(_ => Client.GetAsync($"/api/entities/{TestEntityType}/next"))
+            .Select(_ => Client.GetAsync($"/api/entities/{_entityType}/next"))
             .ToArray();
 
         var responses = await Task.WhenAll(tasks);
@@ -385,12 +396,12 @@ public class ParallelExecutionStressTests : IntegrationTestBase
             var entity = new DynamicEntityBuilder()
                 .WithField("name", $"ResetEntity_{i}")
                 .Build();
-            await ApiHelpers.CreateEntityAsync(Client, TestEntityType, entity);
-            await Client.GetAsync($"/api/entities/{TestEntityType}/next");
+            await ApiHelpers.CreateEntityAsync(Client, _entityType, entity);
+            await Client.GetAsync($"/api/entities/{_entityType}/next");
         }
 
         // Act
-        var response = await Client.PostAsync($"/api/entities/{TestEntityType}/reset-all", null);
+        var response = await Client.PostAsync($"/api/entities/{_entityType}/reset-all", null);
 
         // Assert
         AssertStatusCode(response, HttpStatusCode.OK);

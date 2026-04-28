@@ -503,6 +503,114 @@ public class MocksControllerTests : IntegrationTestBase
         }
     }
 
+    [Test]
+    public async Task DuplicateExpectation_WithValidId_ReturnsCloneInTargetEnvironment()
+    {
+        var sourceEnvironment = $"src-{Guid.NewGuid():N}";
+        var targetEnvironment = $"tgt-{Guid.NewGuid():N}";
+        var original = await CreateExpectationAsync(sourceEnvironment, "/duplicated", "duplicate source");
+
+        var response = await Client.PostAsJsonAsync(
+            $"/api/mocks/expectations/{original.Id}/duplicate",
+            new DuplicateExpectationRequest { TargetEnvironment = targetEnvironment });
+
+        AssertStatusCode(response, HttpStatusCode.OK);
+        var clone = await response.Content.ReadFromJsonAsync<MockExpectation>();
+        Assert.That(clone, Is.Not.Null);
+        Assert.That(clone!.Id, Is.Not.Null.And.Not.Empty);
+        Assert.That(clone.Id, Is.Not.EqualTo(original.Id));
+        Assert.That(clone.Environment, Is.EqualTo(targetEnvironment));
+        Assert.That(clone.RequestMatcher.Path, Is.EqualTo(original.RequestMatcher.Path));
+    }
+
+    [Test]
+    public async Task DuplicateExpectation_WithUnknownId_ReturnsNotFound()
+    {
+        var response = await Client.PostAsJsonAsync(
+            "/api/mocks/expectations/507f1f77bcf86cd799439011/duplicate",
+            new DuplicateExpectationRequest { TargetEnvironment = "anywhere" });
+
+        AssertStatusCode(response, HttpStatusCode.NotFound);
+    }
+
+    [Test]
+    public async Task DuplicateExpectation_WithEmptyTargetEnvironment_ReturnsBadRequest()
+    {
+        var sourceEnvironment = $"src-{Guid.NewGuid():N}";
+        var original = await CreateExpectationAsync(sourceEnvironment, "/dup-bad", "duplicate bad target");
+
+        var response = await Client.PostAsJsonAsync(
+            $"/api/mocks/expectations/{original.Id}/duplicate",
+            new DuplicateExpectationRequest { TargetEnvironment = "   " });
+
+        AssertStatusCode(response, HttpStatusCode.BadRequest);
+    }
+
+    [Test]
+    public async Task ImportPostman_WithValidCollection_CreatesExpectations()
+    {
+        var environment = $"postman-{Guid.NewGuid():N}";
+        var collectionJson = """
+            {
+              "info": {
+                "name": "Sample",
+                "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+              },
+              "item": [
+                {
+                  "name": "Get Foo",
+                  "request": {
+                    "method": "GET",
+                    "url": {
+                      "raw": "https://example.com/foo",
+                      "host": ["example", "com"],
+                      "path": ["foo"]
+                    }
+                  }
+                }
+              ]
+            }
+            """;
+
+        using var content = new MultipartFormDataContent();
+        var fileContent = new ByteArrayContent(System.Text.Encoding.UTF8.GetBytes(collectionJson));
+        fileContent.Headers.ContentType = new MediaTypeHeaderValue("application/json");
+        content.Add(fileContent, "file", "collection.json");
+
+        var response = await Client.PostAsync(
+            $"/api/mocks/expectations/import/postman?targetEnvironment={environment}",
+            content);
+
+        AssertStatusCode(response, HttpStatusCode.OK);
+        var result = await response.Content.ReadFromJsonAsync<PostmanImportResult>();
+        Assert.That(result, Is.Not.Null);
+        Assert.That(result!.Created, Is.GreaterThan(0));
+    }
+
+    [Test]
+    public async Task ImportPostman_WithoutFile_ReturnsBadRequest()
+    {
+        using var content = new MultipartFormDataContent();
+        var response = await Client.PostAsync(
+            $"/api/mocks/expectations/import/postman?targetEnvironment=any-{Guid.NewGuid():N}",
+            content);
+
+        AssertStatusCode(response, HttpStatusCode.BadRequest);
+    }
+
+    [Test]
+    public async Task ImportPostman_WithoutTargetEnvironment_ReturnsBadRequest()
+    {
+        using var content = new MultipartFormDataContent();
+        var fileContent = new ByteArrayContent(System.Text.Encoding.UTF8.GetBytes("{}"));
+        fileContent.Headers.ContentType = new MediaTypeHeaderValue("application/json");
+        content.Add(fileContent, "file", "collection.json");
+
+        var response = await Client.PostAsync("/api/mocks/expectations/import/postman", content);
+
+        AssertStatusCode(response, HttpStatusCode.BadRequest);
+    }
+
     private async Task<MockExpectation> CreateExpectationAsync(
         string environment,
         string path,

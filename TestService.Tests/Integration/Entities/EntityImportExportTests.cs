@@ -11,12 +11,14 @@ namespace TestService.Tests.Integration.Entities;
 [TestFixture]
 public class EntityImportExportTests : IntegrationTestBase
 {
-    private const string TestEntityType = "ImportExportTest";
+    private string _entityType = string.Empty;
 
     protected override async Task OnOneTimeSetUp()
     {
+        _entityType = CreateUniqueName("ImportExportTest");
+
         var schema = new EntitySchemaBuilder()
-            .WithEntityName(TestEntityType)
+            .WithEntityName(_entityType)
             .WithField("name", "string", required: true)
             .WithField("value", "number")
             .WithField("description", "string")
@@ -28,7 +30,7 @@ public class EntityImportExportTests : IntegrationTestBase
 
     protected override async Task OnOneTimeTearDown()
     {
-        await ApiHelpers.DeleteSchemaIfExistsAsync(Client, TestEntityType);
+        await ApiHelpers.DeleteSchemaIfExistsAsync(Client, _entityType);
     }
 
     [Test]
@@ -39,9 +41,9 @@ public class EntityImportExportTests : IntegrationTestBase
             .WithField("value", 42)
             .WithField("description", "For export")
             .Build();
-        await ApiHelpers.CreateEntityAsync(Client, TestEntityType, entity);
+        await ApiHelpers.CreateEntityAsync(Client, _entityType, entity);
 
-        var response = await Client.GetAsync($"/api/entities/{TestEntityType}/export?format=json");
+        var response = await Client.GetAsync($"/api/entities/{_entityType}/export?format=json");
 
         AssertStatusCode(response, HttpStatusCode.OK);
         Assert.That(response.Content.Headers.ContentType?.MediaType, Is.EqualTo("application/json"));
@@ -54,7 +56,7 @@ public class EntityImportExportTests : IntegrationTestBase
     [Test]
     public async Task Export_AsCsv_ReturnsOkAndValidCsv()
     {
-        var response = await Client.GetAsync($"/api/entities/{TestEntityType}/export?format=csv");
+        var response = await Client.GetAsync($"/api/entities/{_entityType}/export?format=csv");
 
         AssertStatusCode(response, HttpStatusCode.OK);
         Assert.That(response.Content.Headers.ContentType?.MediaType, Is.EqualTo("text/csv"));
@@ -84,7 +86,7 @@ public class EntityImportExportTests : IntegrationTestBase
         fileContent.Headers.ContentType = new MediaTypeHeaderValue("application/json");
         content.Add(fileContent, "file", "import.json");
 
-        var response = await Client.PostAsync($"/api/entities/{TestEntityType}/import?mode=append", content);
+        var response = await Client.PostAsync($"/api/entities/{_entityType}/import?mode=append", content);
 
         AssertStatusCode(response, HttpStatusCode.OK);
         var result = await response.Content.ReadFromJsonAsync<EntityImportResult>();
@@ -107,7 +109,7 @@ public class EntityImportExportTests : IntegrationTestBase
         fileContent.Headers.ContentType = new MediaTypeHeaderValue("application/json");
         content.Add(fileContent, "file", "import.json");
 
-        var response = await Client.PostAsync($"/api/entities/{TestEntityType}/import?mode=append", content);
+        var response = await Client.PostAsync($"/api/entities/{_entityType}/import?mode=append", content);
 
         AssertStatusCode(response, HttpStatusCode.OK);
         var result = await response.Content.ReadFromJsonAsync<EntityImportResult>();
@@ -121,7 +123,7 @@ public class EntityImportExportTests : IntegrationTestBase
     public async Task Import_NoFile_ReturnsBadRequest()
     {
         using var content = new MultipartFormDataContent();
-        var response = await Client.PostAsync($"/api/entities/{TestEntityType}/import?mode=append", content);
+        var response = await Client.PostAsync($"/api/entities/{_entityType}/import?mode=append", content);
         AssertStatusCode(response, HttpStatusCode.BadRequest);
     }
 

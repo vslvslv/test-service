@@ -12,27 +12,31 @@ namespace TestService.Tests.Integration.Entities;
 [TestFixture]
 public class EntityEnvironmentTests : IntegrationTestBase
 {
-    private const string TestEntityType = "EnvironmentTest";
+    private string _entityType = string.Empty;
 
     protected override async Task OnOneTimeSetUp()
     {
-        await ApiHelpers.DeleteSchemaIfExistsAsync(Client, TestEntityType);
+        _entityType = CreateUniqueName("EnvironmentTest");
 
         var schema = new EntitySchemaBuilder()
-            .WithEntityName(TestEntityType)
+            .WithEntityName(_entityType)
             .WithField("name", "string", required: true)
             .WithField("category", "string")
             .WithFilterableFields("name", "category")
             .WithExcludeOnFetch(true)
             .Build();
-        
+
         await ApiHelpers.CreateSchemaAsync(Client, schema);
-        await Client.DeleteAsync($"/api/schemas/{TestEntityType}/entities");
+    }
+
+    protected override async Task OnOneTimeTearDown()
+    {
+        await ApiHelpers.DeleteSchemaIfExistsAsync(Client, _entityType);
     }
 
     protected override async Task OnSetUp()
     {
-        await Client.DeleteAsync($"/api/schemas/{TestEntityType}/entities");
+        await Client.DeleteAsync($"/api/schemas/{_entityType}/entities");
     }
 
     [Test]
@@ -45,7 +49,7 @@ public class EntityEnvironmentTests : IntegrationTestBase
             .Build();
 
         // Act
-        var response = await Client.PostAsJsonAsync($"/api/entities/{TestEntityType}", entity);
+        var response = await Client.PostAsJsonAsync($"/api/entities/{_entityType}", entity);
 
         // Assert
         AssertStatusCode(response, HttpStatusCode.Created);
@@ -64,7 +68,7 @@ public class EntityEnvironmentTests : IntegrationTestBase
             .Build();
 
         // Act
-        var response = await Client.PostAsJsonAsync($"/api/entities/{TestEntityType}", entity);
+        var response = await Client.PostAsJsonAsync($"/api/entities/{_entityType}", entity);
 
         // Assert
         AssertStatusCode(response, HttpStatusCode.Created);
@@ -82,16 +86,16 @@ public class EntityEnvironmentTests : IntegrationTestBase
             .WithField("name", "Dev Entity 1")
             .WithEnvironment("dev")
             .Build();
-        await ApiHelpers.CreateEntityAsync(Client, TestEntityType, devEntity);
+        await ApiHelpers.CreateEntityAsync(Client, _entityType, devEntity);
 
         var stagingEntity = new DynamicEntityBuilder()
             .WithField("name", "Staging Entity 1")
             .WithEnvironment("staging")
             .Build();
-        await ApiHelpers.CreateEntityAsync(Client, TestEntityType, stagingEntity);
+        await ApiHelpers.CreateEntityAsync(Client, _entityType, stagingEntity);
 
         // Act
-        var response = await Client.GetAsync($"/api/entities/{TestEntityType}?environment=dev");
+        var response = await Client.GetAsync($"/api/entities/{_entityType}?environment=dev");
 
         // Assert
         AssertStatusCode(response, HttpStatusCode.OK);
@@ -116,7 +120,7 @@ public class EntityEnvironmentTests : IntegrationTestBase
                     .WithField("name", $"{env}_entity_{i}")
                     .WithEnvironment(env)
                     .Build();
-                await ApiHelpers.CreateEntityAsync(Client, TestEntityType, entity);
+                await ApiHelpers.CreateEntityAsync(Client, _entityType, entity);
             }
             entityCounts[env] = 5;
         }
@@ -124,7 +128,7 @@ public class EntityEnvironmentTests : IntegrationTestBase
         // Assert - Verify each environment has correct count
         foreach (var env in environments)
         {
-            var response = await Client.GetAsync($"/api/entities/{TestEntityType}?environment={env}");
+            var response = await Client.GetAsync($"/api/entities/{_entityType}?environment={env}");
             var entities = await response.Content.ReadFromJsonAsync<List<DynamicEntity>>();
             
             Assert.That(entities, Is.Not.Null);
@@ -141,21 +145,21 @@ public class EntityEnvironmentTests : IntegrationTestBase
             .WithField("name", "Move Entity")
             .WithEnvironment("dev")
             .Build();
-        var created = await ApiHelpers.CreateEntityAsync(Client, TestEntityType, entity);
+        var created = await ApiHelpers.CreateEntityAsync(Client, _entityType, entity);
 
         // Act - Change environment
         created!.Environment = "staging";
-        var response = await Client.PutAsJsonAsync($"/api/entities/{TestEntityType}/{created.Id}", created);
+        var response = await Client.PutAsJsonAsync($"/api/entities/{_entityType}/{created.Id}", created);
 
         // Assert
         AssertStatusCode(response, HttpStatusCode.NoContent);
 
         // Verify - Should now be in staging
-        var devResponse = await Client.GetAsync($"/api/entities/{TestEntityType}?environment=dev");
+        var devResponse = await Client.GetAsync($"/api/entities/{_entityType}?environment=dev");
         var devEntities = await devResponse.Content.ReadFromJsonAsync<List<DynamicEntity>>();
         Assert.That(devEntities!.Any(e => e.Id == created.Id), Is.False);
 
-        var stagingResponse = await Client.GetAsync($"/api/entities/{TestEntityType}?environment=staging");
+        var stagingResponse = await Client.GetAsync($"/api/entities/{_entityType}?environment=staging");
         var stagingEntities = await stagingResponse.Content.ReadFromJsonAsync<List<DynamicEntity>>();
         Assert.That(stagingEntities!.Any(e => e.Id == created.Id), Is.True);
     }
@@ -173,19 +177,19 @@ public class EntityEnvironmentTests : IntegrationTestBase
                 .WithField("name", $"Dev All {i}")
                 .WithEnvironment("dev")
                 .Build();
-            await ApiHelpers.CreateEntityAsync(Client, TestEntityType, devEntity);
+            await ApiHelpers.CreateEntityAsync(Client, _entityType, devEntity);
             devCount++;
 
             var stagingEntity = new DynamicEntityBuilder()
                 .WithField("name", $"Staging All {i}")
                 .WithEnvironment("staging")
                 .Build();
-            await ApiHelpers.CreateEntityAsync(Client, TestEntityType, stagingEntity);
+            await ApiHelpers.CreateEntityAsync(Client, _entityType, stagingEntity);
             stagingCount++;
         }
 
         // Act
-        var response = await Client.GetAsync($"/api/entities/{TestEntityType}");
+        var response = await Client.GetAsync($"/api/entities/{_entityType}");
 
         // Assert
         AssertStatusCode(response, HttpStatusCode.OK);
@@ -204,24 +208,24 @@ public class EntityEnvironmentTests : IntegrationTestBase
             .WithField("category", "test-category")
             .WithEnvironment("dev")
             .Build();
-        await ApiHelpers.CreateEntityAsync(Client, TestEntityType, devEntity1);
+        await ApiHelpers.CreateEntityAsync(Client, _entityType, devEntity1);
 
         var devEntity2 = new DynamicEntityBuilder()
             .WithField("name", "Dev Cat 2")
             .WithField("category", "test-category")
             .WithEnvironment("dev")
             .Build();
-        await ApiHelpers.CreateEntityAsync(Client, TestEntityType, devEntity2);
+        await ApiHelpers.CreateEntityAsync(Client, _entityType, devEntity2);
 
         var stagingEntity = new DynamicEntityBuilder()
             .WithField("name", "Staging Cat 1")
             .WithField("category", "test-category")
             .WithEnvironment("staging")
             .Build();
-        await ApiHelpers.CreateEntityAsync(Client, TestEntityType, stagingEntity);
+        await ApiHelpers.CreateEntityAsync(Client, _entityType, stagingEntity);
 
         // Act - Filter by category in dev environment
-        var response = await Client.GetAsync($"/api/entities/{TestEntityType}/filter/category/test-category?environment=dev");
+        var response = await Client.GetAsync($"/api/entities/{_entityType}/filter/category/test-category?environment=dev");
 
         // Assert
         AssertStatusCode(response, HttpStatusCode.OK);
@@ -242,19 +246,19 @@ public class EntityEnvironmentTests : IntegrationTestBase
                 .WithField("name", $"Dev Reset {i}")
                 .WithEnvironment("dev")
                 .Build();
-            await ApiHelpers.CreateEntityAsync(Client, TestEntityType, devEntity);
-            await Client.GetAsync($"/api/entities/{TestEntityType}/next?environment=dev");
+            await ApiHelpers.CreateEntityAsync(Client, _entityType, devEntity);
+            await Client.GetAsync($"/api/entities/{_entityType}/next?environment=dev");
 
             var stagingEntity = new DynamicEntityBuilder()
                 .WithField("name", $"Staging Reset {i}")
                 .WithEnvironment("staging")
                 .Build();
-            await ApiHelpers.CreateEntityAsync(Client, TestEntityType, stagingEntity);
-            await Client.GetAsync($"/api/entities/{TestEntityType}/next?environment=staging");
+            await ApiHelpers.CreateEntityAsync(Client, _entityType, stagingEntity);
+            await Client.GetAsync($"/api/entities/{_entityType}/next?environment=staging");
         }
 
         // Act - Reset only dev environment
-        var response = await Client.PostAsync($"/api/entities/{TestEntityType}/reset-all?environment=dev", null);
+        var response = await Client.PostAsync($"/api/entities/{_entityType}/reset-all?environment=dev", null);
 
         // Assert
         AssertStatusCode(response, HttpStatusCode.OK);
@@ -263,11 +267,11 @@ public class EntityEnvironmentTests : IntegrationTestBase
         Assert.That(result!["resetCount"].GetInt32(), Is.GreaterThanOrEqualTo(3));
 
         // Verify - Dev entities should be available, staging still consumed
-        var devResponse = await Client.GetAsync($"/api/entities/{TestEntityType}?environment=dev");
+        var devResponse = await Client.GetAsync($"/api/entities/{_entityType}?environment=dev");
         var devEntities = await devResponse.Content.ReadFromJsonAsync<List<DynamicEntity>>();
         Assert.That(devEntities!.Count, Is.GreaterThanOrEqualTo(3));
 
-        var stagingResponse = await Client.GetAsync($"/api/entities/{TestEntityType}?environment=staging");
+        var stagingResponse = await Client.GetAsync($"/api/entities/{_entityType}?environment=staging");
         var stagingEntities = await stagingResponse.Content.ReadFromJsonAsync<List<DynamicEntity>>();
         Assert.That(stagingEntities!.Count, Is.GreaterThanOrEqualTo(3)); // GetAll includes consumed entities
     }
@@ -282,7 +286,7 @@ public class EntityEnvironmentTests : IntegrationTestBase
                 .WithField("name", $"Dev Limited {i}")
                 .WithEnvironment("dev")
                 .Build();
-            await ApiHelpers.CreateEntityAsync(Client, TestEntityType, devEntity);
+            await ApiHelpers.CreateEntityAsync(Client, _entityType, devEntity);
         }
 
         for (int i = 0; i < 5; i++)
@@ -291,19 +295,19 @@ public class EntityEnvironmentTests : IntegrationTestBase
                 .WithField("name", $"Staging Plenty {i}")
                 .WithEnvironment("staging")
                 .Build();
-            await ApiHelpers.CreateEntityAsync(Client, TestEntityType, stagingEntity);
+            await ApiHelpers.CreateEntityAsync(Client, _entityType, stagingEntity);
         }
 
         // Act - Exhaust dev environment
-        await Client.GetAsync($"/api/entities/{TestEntityType}/next?environment=dev");
-        await Client.GetAsync($"/api/entities/{TestEntityType}/next?environment=dev");
-        var devExhausted = await Client.GetAsync($"/api/entities/{TestEntityType}/next?environment=dev");
+        await Client.GetAsync($"/api/entities/{_entityType}/next?environment=dev");
+        await Client.GetAsync($"/api/entities/{_entityType}/next?environment=dev");
+        var devExhausted = await Client.GetAsync($"/api/entities/{_entityType}/next?environment=dev");
 
         // Assert - Dev is exhausted
         AssertStatusCode(devExhausted, HttpStatusCode.NotFound);
 
         // Act - Staging should still work
-        var stagingResponse = await Client.GetAsync($"/api/entities/{TestEntityType}/next?environment=staging");
+        var stagingResponse = await Client.GetAsync($"/api/entities/{_entityType}/next?environment=staging");
 
         // Assert - Staging still has entities
         AssertStatusCode(stagingResponse, HttpStatusCode.OK);
@@ -316,25 +320,29 @@ public class EntityEnvironmentTests : IntegrationTestBase
 [TestFixture]
 public class ParallelExecutionWithEnvironmentTests : IntegrationTestBase
 {
-    private const string TestEntityType = "ParallelEnvTest";
+    private string _entityType = string.Empty;
 
     protected override async Task OnOneTimeSetUp()
     {
-        await ApiHelpers.DeleteSchemaIfExistsAsync(Client, TestEntityType);
+        _entityType = CreateUniqueName("ParallelEnvTest");
 
         var schema = new EntitySchemaBuilder()
-            .WithEntityName(TestEntityType)
+            .WithEntityName(_entityType)
             .WithField("name", "string", required: true)
             .WithExcludeOnFetch(true)
             .Build();
-        
+
         await ApiHelpers.CreateSchemaAsync(Client, schema);
-        await Client.DeleteAsync($"/api/schemas/{TestEntityType}/entities");
+    }
+
+    protected override async Task OnOneTimeTearDown()
+    {
+        await ApiHelpers.DeleteSchemaIfExistsAsync(Client, _entityType);
     }
 
     protected override async Task OnSetUp()
     {
-        await Client.DeleteAsync($"/api/schemas/{TestEntityType}/entities");
+        await Client.DeleteAsync($"/api/schemas/{_entityType}/entities");
     }
 
     [Test]
@@ -345,16 +353,16 @@ public class ParallelExecutionWithEnvironmentTests : IntegrationTestBase
             .WithField("name", "Dev Next 1")
             .WithEnvironment("dev")
             .Build();
-        await ApiHelpers.CreateEntityAsync(Client, TestEntityType, devEntity);
+        await ApiHelpers.CreateEntityAsync(Client, _entityType, devEntity);
 
         var stagingEntity = new DynamicEntityBuilder()
             .WithField("name", "Staging Next 1")
             .WithEnvironment("staging")
             .Build();
-        await ApiHelpers.CreateEntityAsync(Client, TestEntityType, stagingEntity);
+        await ApiHelpers.CreateEntityAsync(Client, _entityType, stagingEntity);
 
         // Act
-        var response = await Client.GetAsync($"/api/entities/{TestEntityType}/next?environment=dev");
+        var response = await Client.GetAsync($"/api/entities/{_entityType}/next?environment=dev");
 
         // Assert
         AssertStatusCode(response, HttpStatusCode.OK);
@@ -375,20 +383,20 @@ public class ParallelExecutionWithEnvironmentTests : IntegrationTestBase
                 .WithField("name", $"Dev Parallel {i}")
                 .WithEnvironment("dev")
                 .Build();
-            await ApiHelpers.CreateEntityAsync(Client, TestEntityType, devEntity);
+            await ApiHelpers.CreateEntityAsync(Client, _entityType, devEntity);
 
             var stagingEntity = new DynamicEntityBuilder()
                 .WithField("name", $"Staging Parallel {i}")
                 .WithEnvironment("staging")
                 .Build();
-            await ApiHelpers.CreateEntityAsync(Client, TestEntityType, stagingEntity);
+            await ApiHelpers.CreateEntityAsync(Client, _entityType, stagingEntity);
         }
 
         // Act - Simulate parallel requests to different environments
-        var devTask1 = Client.GetAsync($"/api/entities/{TestEntityType}/next?environment=dev");
-        var devTask2 = Client.GetAsync($"/api/entities/{TestEntityType}/next?environment=dev");
-        var stagingTask1 = Client.GetAsync($"/api/entities/{TestEntityType}/next?environment=staging");
-        var stagingTask2 = Client.GetAsync($"/api/entities/{TestEntityType}/next?environment=staging");
+        var devTask1 = Client.GetAsync($"/api/entities/{_entityType}/next?environment=dev");
+        var devTask2 = Client.GetAsync($"/api/entities/{_entityType}/next?environment=dev");
+        var stagingTask1 = Client.GetAsync($"/api/entities/{_entityType}/next?environment=staging");
+        var stagingTask2 = Client.GetAsync($"/api/entities/{_entityType}/next?environment=staging");
 
         await Task.WhenAll(devTask1, devTask2, stagingTask1, stagingTask2);
 
@@ -425,19 +433,19 @@ public class ParallelExecutionWithEnvironmentTests : IntegrationTestBase
                 .WithField("name", $"Dev Reset {i}")
                 .WithEnvironment("dev")
                 .Build();
-            await ApiHelpers.CreateEntityAsync(Client, TestEntityType, devEntity);
-            await Client.GetAsync($"/api/entities/{TestEntityType}/next?environment=dev");
+            await ApiHelpers.CreateEntityAsync(Client, _entityType, devEntity);
+            await Client.GetAsync($"/api/entities/{_entityType}/next?environment=dev");
 
             var stagingEntity = new DynamicEntityBuilder()
                 .WithField("name", $"Staging Reset {i}")
                 .WithEnvironment("staging")
                 .Build();
-            await ApiHelpers.CreateEntityAsync(Client, TestEntityType, stagingEntity);
-            await Client.GetAsync($"/api/entities/{TestEntityType}/next?environment=staging");
+            await ApiHelpers.CreateEntityAsync(Client, _entityType, stagingEntity);
+            await Client.GetAsync($"/api/entities/{_entityType}/next?environment=staging");
         }
 
         // Act - Reset only dev environment
-        var response = await Client.PostAsync($"/api/entities/{TestEntityType}/reset-all?environment=dev", null);
+        var response = await Client.PostAsync($"/api/entities/{_entityType}/reset-all?environment=dev", null);
 
         // Assert
         AssertStatusCode(response, HttpStatusCode.OK);
@@ -446,11 +454,11 @@ public class ParallelExecutionWithEnvironmentTests : IntegrationTestBase
         Assert.That(result!["resetCount"].GetInt32(), Is.GreaterThanOrEqualTo(3));
 
         // Verify - Dev entities should be available, staging still consumed
-        var devResponse = await Client.GetAsync($"/api/entities/{TestEntityType}?environment=dev");
+        var devResponse = await Client.GetAsync($"/api/entities/{_entityType}?environment=dev");
         var devEntities = await devResponse.Content.ReadFromJsonAsync<List<DynamicEntity>>();
         Assert.That(devEntities!.Count, Is.GreaterThanOrEqualTo(3));
 
-        var stagingResponse = await Client.GetAsync($"/api/entities/{TestEntityType}?environment=staging");
+        var stagingResponse = await Client.GetAsync($"/api/entities/{_entityType}?environment=staging");
         var stagingEntities = await stagingResponse.Content.ReadFromJsonAsync<List<DynamicEntity>>();
         Assert.That(stagingEntities!.Count, Is.GreaterThanOrEqualTo(3)); // GetAll includes consumed entities
     }
@@ -465,7 +473,7 @@ public class ParallelExecutionWithEnvironmentTests : IntegrationTestBase
                 .WithField("name", $"Dev Limited {i}")
                 .WithEnvironment("dev")
                 .Build();
-            await ApiHelpers.CreateEntityAsync(Client, TestEntityType, devEntity);
+            await ApiHelpers.CreateEntityAsync(Client, _entityType, devEntity);
         }
 
         for (int i = 0; i < 5; i++)
@@ -474,19 +482,19 @@ public class ParallelExecutionWithEnvironmentTests : IntegrationTestBase
                 .WithField("name", $"Staging Plenty {i}")
                 .WithEnvironment("staging")
                 .Build();
-            await ApiHelpers.CreateEntityAsync(Client, TestEntityType, stagingEntity);
+            await ApiHelpers.CreateEntityAsync(Client, _entityType, stagingEntity);
         }
 
         // Act - Exhaust dev environment
-        await Client.GetAsync($"/api/entities/{TestEntityType}/next?environment=dev");
-        await Client.GetAsync($"/api/entities/{TestEntityType}/next?environment=dev");
-        var devExhausted = await Client.GetAsync($"/api/entities/{TestEntityType}/next?environment=dev");
+        await Client.GetAsync($"/api/entities/{_entityType}/next?environment=dev");
+        await Client.GetAsync($"/api/entities/{_entityType}/next?environment=dev");
+        var devExhausted = await Client.GetAsync($"/api/entities/{_entityType}/next?environment=dev");
 
         // Assert - Dev is exhausted
         AssertStatusCode(devExhausted, HttpStatusCode.NotFound);
 
         // Act - Staging should still work
-        var stagingResponse = await Client.GetAsync($"/api/entities/{TestEntityType}/next?environment=staging");
+        var stagingResponse = await Client.GetAsync($"/api/entities/{_entityType}/next?environment=staging");
 
         // Assert - Staging still has entities
         AssertStatusCode(stagingResponse, HttpStatusCode.OK);
