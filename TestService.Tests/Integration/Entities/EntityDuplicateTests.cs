@@ -76,7 +76,8 @@ public class EntitySingleUniqueFieldTests : IntegrationTestBase
         // Assert
         AssertStatusCode(response, HttpStatusCode.BadRequest);
         var error = await response.Content.ReadAsStringAsync();
-        Assert.That(error, Does.Contain("Entity does not match schema"));
+        Assert.That(error, Does.Contain("must be unique"));
+        Assert.That(error, Does.Contain("username"));
     }
 
     [Test]
@@ -243,7 +244,8 @@ public class EntityMultipleUniqueFieldsTests : IntegrationTestBase
         // Assert
         AssertStatusCode(response, HttpStatusCode.BadRequest);
         var error = await response.Content.ReadAsStringAsync();
-        Assert.That(error, Does.Contain("Entity does not match schema"));
+        Assert.That(error, Does.Contain("must be unique"));
+        Assert.That(error, Does.Contain("username"));
     }
 
     [Test]
@@ -269,7 +271,8 @@ public class EntityMultipleUniqueFieldsTests : IntegrationTestBase
         // Assert
         AssertStatusCode(response, HttpStatusCode.BadRequest);
         var error = await response.Content.ReadAsStringAsync();
-        Assert.That(error, Does.Contain("Entity does not match schema"));
+        Assert.That(error, Does.Contain("must be unique"));
+        Assert.That(error, Does.Contain("email"));
     }
 
     [Test]

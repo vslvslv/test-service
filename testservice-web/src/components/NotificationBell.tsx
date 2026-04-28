@@ -50,16 +50,9 @@ const NotificationBell = forwardRef<NotificationBellRef, NotificationBellProps>(
   }, [isOpen]);
 
   const addNotification = (notification: Notification) => {
-    console.log('?? Adding notification to bell:', notification);
-    
     setNotifications(prev => {
-      // Add new notification at the beginning, keep only last 5
       const updated = [{ ...notification, read: false }, ...prev].slice(0, 5);
-      
-      // Save to localStorage
       localStorage.setItem('notification_history', JSON.stringify(updated));
-      
-      console.log('?? Updated notifications:', updated);
       return updated;
     });
 

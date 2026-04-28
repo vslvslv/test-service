@@ -362,42 +362,35 @@ const Layout: React.FC = () => {
   const hasResults = groupedResults.length > 0;
   const showDropdown = showSearchResults;
 
-  // Use useLayoutEffect to register callback synchronously after render
   useLayoutEffect(() => {
-    // Use a small delay to ensure ref is populated
     const timer = setTimeout(() => {
       if (bellRef.current?.addNotification) {
-        console.log('? Registering bell callback (useLayoutEffect)');
         setBellCallback(bellRef.current.addNotification);
-      } else {
-        console.log('? Bell ref not ready in useLayoutEffect, will retry...');
       }
     }, 50);
 
     return () => clearTimeout(timer);
-  }, []); // Run once on mount
+  }, []);
 
-  // Also register on any changes to ensure it's set
   useEffect(() => {
     if (bellRef.current?.addNotification) {
-      console.log('? Re-registering bell callback (useEffect)');
       setBellCallback(bellRef.current.addNotification);
-    } else {
-      console.log('? Bell ref still not ready in useEffect');
-      // Keep trying
-      const retryTimer = setInterval(() => {
-        if (bellRef.current?.addNotification) {
-          console.log('? Bell callback registered after retry');
-          setBellCallback(bellRef.current.addNotification);
-          clearInterval(retryTimer);
-        }
-      }, 100);
-
-      // Stop trying after 5 seconds
-      setTimeout(() => clearInterval(retryTimer), 5000);
-
-      return () => clearInterval(retryTimer);
+      return;
     }
+
+    const retryTimer = setInterval(() => {
+      if (bellRef.current?.addNotification) {
+        setBellCallback(bellRef.current.addNotification);
+        clearInterval(retryTimer);
+      }
+    }, 100);
+
+    const giveUpTimer = setTimeout(() => clearInterval(retryTimer), 5000);
+
+    return () => {
+      clearInterval(retryTimer);
+      clearTimeout(giveUpTimer);
+    };
   }, [setBellCallback]);
 
   const handleLogout = () => {

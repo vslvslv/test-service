@@ -29,58 +29,40 @@ function NotificationHandler() {
   const { isAuthenticated } = useAuth();
 
   const handleNotification = useCallback((notification: Notification) => {
-    console.log('?? Notification received in handler:', notification);
-    console.log('   Type:', notification.type);
-    console.log('   Schema:', notification.schemaName);
-    console.log('   Timestamp:', notification.timestamp);
-    
-    // Add to bell history
     notifyBell(notification);
 
-    // Show toast notification
     switch (notification.type) {
       case 'schema_created':
-        console.log('? Showing schema created toast');
         success('Schema Created', `Schema "${notification.schemaName}" has been created`);
         break;
       case 'schema_updated':
-        console.log('? Showing schema updated toast');
         info('Schema Updated', `Schema "${notification.schemaName}" has been updated`);
         break;
       case 'schema_deleted':
-        console.log('? Showing schema deleted toast');
         warning('Schema Deleted', `Schema "${notification.schemaName}" has been deleted`);
         break;
       case 'entity_created':
-        console.log('? Showing entity created toast');
         success('Entity Created', `New ${notification.entityType} entity created`);
         break;
       case 'entity_updated':
-        console.log('? Showing entity updated toast');
         info('Entity Updated', `${notification.entityType} entity updated`);
         break;
       case 'entity_deleted':
-        console.log('? Showing entity deleted toast');
         warning('Entity Deleted', `${notification.entityType} entity deleted`);
         break;
       default:
-        console.warn('?? Unknown notification type:', notification.type);
+        console.warn('Unknown notification type:', notification.type);
     }
   }, [success, info, warning, notifyBell]);
 
   useEffect(() => {
     if (!isAuthenticated) return;
 
-    console.log('?? Connecting to SignalR notification hub...');
-
-    // Connect to notification hub
     notificationService.connect().catch(console.error);
 
-    // Subscribe to notifications
     const unsubscribe = notificationService.subscribe(handleNotification);
 
     return () => {
-      console.log('?? Disconnecting from SignalR notification hub...');
       unsubscribe();
       notificationService.disconnect();
     };
@@ -120,7 +102,6 @@ function AppRoutes() {
           
           <Route path="entities" element={<Entities />} />
           <Route path="entities/:entityType" element={<EntityList />} />
-          <Route path="entities/:entityType/new" element={<div className="text-white">Create Entity - Coming Soon</div>} />
           <Route path="entities/:entityType/:id" element={<EntityList />} />
           <Route path="entities/:entityType/:id/edit" element={<EntityList />} />
           

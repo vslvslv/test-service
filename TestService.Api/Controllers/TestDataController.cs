@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TestService.Api.Models;
 using TestService.Api.Services;
@@ -5,6 +6,7 @@ using TestService.Api.Services;
 namespace TestService.Api.Controllers;
 
 [ApiController]
+[Authorize]
 [Route("api/[controller]")]
 public class TestDataController : ControllerBase
 {

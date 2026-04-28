@@ -21,6 +21,7 @@ public class SecurityAuthorizationMatrixTests : IntegrationTestBase
         ("GET", "/api/settings", null),
         ("GET", "/api/environments", null),
         ("GET", "/api/mocks/expectations", null),
+        ("GET", "/api/testdata", null),
         ("POST", "/api/auth/change-password", new ChangePasswordRequest
         {
             CurrentPassword = "x",
