@@ -17,6 +17,7 @@ import Activity from './pages/Activity';
 import Settings from './pages/Settings';
 import Users from './pages/Users';
 import Mocks from './pages/Mocks';
+import { Permissions } from './utils/permissions';
 import './App.css';
 
 function AuthHandler() {
@@ -105,10 +106,31 @@ function AppRoutes() {
           <Route path="entities/:entityType/:id" element={<EntityList />} />
           <Route path="entities/:entityType/:id/edit" element={<EntityList />} />
           
-          <Route path="users" element={<Users />} />
-          <Route path="settings" element={<Settings />} />
+          <Route
+            path="users"
+            element={
+              <ProtectedRoute requiredPermission={Permissions.UsersRead}>
+                <Users />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="settings"
+            element={
+              <ProtectedRoute requiredPermission={Permissions.SettingsRead}>
+                <Settings />
+              </ProtectedRoute>
+            }
+          />
           <Route path="activity" element={<Activity />} />
-          <Route path="mocks" element={<Mocks />} />
+          <Route
+            path="mocks"
+            element={
+              <ProtectedRoute requiredPermission={Permissions.MocksRead}>
+                <Mocks />
+              </ProtectedRoute>
+            }
+          />
         </Route>
         
         <Route path="*" element={<Navigate to="/" replace={true} />} />

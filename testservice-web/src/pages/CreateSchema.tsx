@@ -13,6 +13,7 @@ import { apiService } from '../services/api';
 import { getErrorMessage } from '../types';
 
 interface SchemaField {
+  id: string;
   name: string;
   type: string;
   required: boolean;
@@ -29,7 +30,13 @@ const fieldTypes = [
   { value: 'object', label: 'Object' }
 ];
 
+const newFieldId = (): string =>
+  typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+    ? crypto.randomUUID()
+    : `field-${Math.random().toString(36).slice(2)}-${Date.now()}`;
+
 const emptyField = (): SchemaField => ({
+  id: newFieldId(),
   name: '',
   type: 'string',
   required: false,
@@ -231,7 +238,7 @@ const CreateSchema: React.FC = () => {
 
           <div className="space-y-4">
             {fields.map((field, index) => (
-              <div key={`${field.name}-${index}`} className="rounded-[24px] border border-slate-800 bg-slate-950/35 p-4">
+              <div key={field.id} className="rounded-[24px] border border-slate-800 bg-slate-950/35 p-4">
                 <div className="mb-4 flex items-center justify-between">
                   <div className="inline-flex items-center gap-3">
                     <div className="rounded-2xl border border-slate-700/70 bg-slate-900/70 p-2 text-slate-400">

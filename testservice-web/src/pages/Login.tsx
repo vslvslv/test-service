@@ -155,11 +155,13 @@ const Login: React.FC = () => {
             </button>
           </form>
 
-          <div className="mt-6 rounded-2xl border border-slate-700 bg-slate-900/75 p-4">
-            <p className="text-center text-xs text-slate-400">
-              Default credentials: <span className="text-white font-medium">admin</span> / <span className="text-white font-medium">Admin@123</span>
-            </p>
-          </div>
+          {import.meta.env.DEV && (
+            <div className="mt-6 rounded-2xl border border-slate-700 bg-slate-900/75 p-4">
+              <p className="text-center text-xs text-slate-400">
+                Default credentials: <span className="text-white font-medium">admin</span> / <span className="text-white font-medium">Admin@123</span>
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </div>

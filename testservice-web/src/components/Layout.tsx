@@ -460,7 +460,9 @@ const Layout: React.FC = () => {
                 )}
               </div>
               <button
+                type="button"
                 onClick={() => setIsSidebarOpen(false)}
+                aria-label="Close navigation"
                 className="rounded-xl border border-slate-700 bg-slate-900/70 p-2 text-slate-400 hover:bg-slate-800 hover:text-white lg:hidden"
               >
                 <X className="h-4 w-4" />
@@ -561,7 +563,10 @@ const Layout: React.FC = () => {
         <header className="sticky top-0 z-10 border-b border-slate-800/80 bg-[rgba(7,17,31,0.82)] backdrop-blur-xl">
           <div className="flex items-center gap-4 px-4 py-4 sm:px-6">
             <button
+              type="button"
               onClick={() => setIsSidebarOpen((prev) => !prev)}
+              aria-label={isSidebarOpen ? 'Collapse navigation' : 'Expand navigation'}
+              aria-expanded={isSidebarOpen}
               className="rounded-2xl border border-slate-700 bg-slate-900/70 p-3 text-slate-400 hover:bg-slate-800 hover:text-white"
             >
               {isSidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
