@@ -250,7 +250,7 @@ const EditSchema: React.FC = () => {
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit} noValidate className="space-y-6">
         <section className="panel p-5">
           <div className="mb-5">
             <p className="eyebrow">Definition</p>

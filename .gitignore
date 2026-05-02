@@ -413,3 +413,15 @@ FodyWeavers.xsd
 # JetBrains Rider
 *.sln.iml
 .idea/
+
+# pre-pr.sh pipeline artifacts
+test-results/
+pre-pr-report-*.md
+TestService.E2E/.auth/
+
+# Playwright generated HTML reports
+testservice-web/playwright-report/
+
+# QA team skill run history and generated reports (local tooling state)
+.qa-team/
+qa-report-*.md
