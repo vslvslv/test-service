@@ -181,7 +181,7 @@ public class TestDataApiTests : IntegrationTestBase
         // Arrange
         var category1 = "AggCategory1";
         var category2 = "AggCategory2";
-        
+
         await Client.PostAsJsonAsync("/api/testdata", new TestData { Name = "Item 1", Value = 10, Category = category1 });
         await Client.PostAsJsonAsync("/api/testdata", new TestData { Name = "Item 2", Value = 20, Category = category1 });
         await Client.PostAsJsonAsync("/api/testdata", new TestData { Name = "Item 3", Value = 30, Category = category2 });
@@ -194,5 +194,79 @@ public class TestDataApiTests : IntegrationTestBase
         var results = await response.Content.ReadFromJsonAsync<Dictionary<string, decimal>>();
         Assert.That(results, Is.Not.Null);
         Assert.That(results!.Count, Is.GreaterThan(0));
+    }
+
+    // ── Auth: 401 Unauthorized ────────────────────────────────────────────────
+
+    [Test]
+    public async Task GetAll_WithoutAuth_ReturnsUnauthorized()
+    {
+        Client.DefaultRequestHeaders.Authorization = null;
+
+        var response = await Client.GetAsync("/api/testdata");
+
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
+    }
+
+    [Test]
+    public async Task GetById_WithoutAuth_ReturnsUnauthorized()
+    {
+        Client.DefaultRequestHeaders.Authorization = null;
+
+        var response = await Client.GetAsync("/api/testdata/507f1f77bcf86cd799439011");
+
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
+    }
+
+    [Test]
+    public async Task Create_WithoutAuth_ReturnsUnauthorized()
+    {
+        Client.DefaultRequestHeaders.Authorization = null;
+
+        var response = await Client.PostAsJsonAsync("/api/testdata",
+            new TestData { Name = "Unauth", Value = 1, Category = "Test" });
+
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
+    }
+
+    [Test]
+    public async Task Update_WithoutAuth_ReturnsUnauthorized()
+    {
+        Client.DefaultRequestHeaders.Authorization = null;
+
+        var response = await Client.PutAsJsonAsync("/api/testdata/507f1f77bcf86cd799439011",
+            new TestData { Name = "Unauth", Value = 1, Category = "Test" });
+
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
+    }
+
+    [Test]
+    public async Task Delete_WithoutAuth_ReturnsUnauthorized()
+    {
+        Client.DefaultRequestHeaders.Authorization = null;
+
+        var response = await Client.DeleteAsync("/api/testdata/507f1f77bcf86cd799439011");
+
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
+    }
+
+    [Test]
+    public async Task GetByCategory_WithoutAuth_ReturnsUnauthorized()
+    {
+        Client.DefaultRequestHeaders.Authorization = null;
+
+        var response = await Client.GetAsync("/api/testdata/category/SomeCategory");
+
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
+    }
+
+    [Test]
+    public async Task GetAggregated_WithoutAuth_ReturnsUnauthorized()
+    {
+        Client.DefaultRequestHeaders.Authorization = null;
+
+        var response = await Client.GetAsync("/api/testdata/aggregated");
+
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
     }
 }

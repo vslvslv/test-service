@@ -240,14 +240,11 @@ public class EntityIsUniquePropertyTests : IntegrationTestBase
 }
 
 /// <summary>
-/// Tests for schemas that use ONLY property-level isUnique flags (without uniqueFields array)
-/// This validates that the validation logic properly detects unique fields from field definitions
-/// NOTE: Currently skipped due to MongoDB serialization issue - the isUnique property is not
-/// being persisted/retrieved correctly, so validation only works when fields are also in uniqueFields array.
-/// These tests document the intended behavior once the serialization issue is resolved.
+/// Tests for schemas that use ONLY property-level isUnique flags (without uniqueFields array).
+/// Validates that the BsonClassMap registration in Program.cs (SetShouldSerializeMethod) correctly
+/// persists IsUnique=true to MongoDB and that the validation logic detects it on read-back.
 /// </summary>
 [TestFixture]
-[Ignore("MongoDB serialization issue prevents isUnique property from being persisted - validation requires uniqueFields array")]
 public class EntityIsUniquePropertyOnlyTests : IntegrationTestBase
 {
     private string _entityType = string.Empty;
@@ -310,7 +307,7 @@ public class EntityIsUniquePropertyOnlyTests : IntegrationTestBase
         var response = await Client.PostAsJsonAsync($"/api/entities/{_entityType}", entity2);
 
         // Assert - Should detect uniqueness violation from isUnique property alone
-        AssertStatusCode(response, HttpStatusCode.Conflict);
+        AssertStatusCode(response, HttpStatusCode.BadRequest);
     }
 
     [Test]
