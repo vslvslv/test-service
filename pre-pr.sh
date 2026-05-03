@@ -126,12 +126,16 @@ step_docker() {
   local log="$RESULTS_DIR/docker.log"
   local compose_exit=0
 
+  # --wait is docker compose v2 only; v1 relies on the curl health-check below
+  local wait_flag=""
+  [[ "$COMPOSE" == "docker compose" ]] && wait_flag="--wait"
+
   if [[ "$SKIP_BUILD" == "true" ]]; then
     warn "Skipping build (--skip-build). Starting existing images."
-    $COMPOSE -f "$COMPOSE_FILE" up -d --wait 2>&1 | tee "$log" || compose_exit=$?
+    $COMPOSE -f "$COMPOSE_FILE" up -d $wait_flag 2>&1 | tee "$log" || compose_exit=$?
   else
     info "Building images and starting services..."
-    $COMPOSE -f "$COMPOSE_FILE" up -d --build --wait 2>&1 | tee "$log" || compose_exit=$?
+    $COMPOSE -f "$COMPOSE_FILE" up -d --build $wait_flag 2>&1 | tee "$log" || compose_exit=$?
   fi
 
   if [[ $compose_exit -ne 0 ]]; then

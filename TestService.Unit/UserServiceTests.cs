@@ -88,12 +88,12 @@ public class UserServiceTests
     // ── CreateAsync — password validation ─────────────────────────────────────
 
     [Test]
-    public void CreateAsync_Throws_WhenUsernameAlreadyExists()
+    public async Task CreateAsync_Throws_WhenUsernameAlreadyExists()
     {
         _repo.UsernameExistsAsync("alice").Returns(true);
 
         Assert.That(
-            () => _sut.CreateAsync(new CreateUserRequest
+            async () => await _sut.CreateAsync(new CreateUserRequest
             {
                 Username = "alice",
                 Email = "new@example.com",
@@ -103,13 +103,13 @@ public class UserServiceTests
     }
 
     [Test]
-    public void CreateAsync_Throws_WhenEmailAlreadyExists()
+    public async Task CreateAsync_Throws_WhenEmailAlreadyExists()
     {
         _repo.UsernameExistsAsync(Arg.Any<string>()).Returns(false);
         _repo.EmailExistsAsync("taken@example.com").Returns(true);
 
         Assert.That(
-            () => _sut.CreateAsync(new CreateUserRequest
+            async () => await _sut.CreateAsync(new CreateUserRequest
             {
                 Username = "newuser",
                 Email = "taken@example.com",
@@ -123,13 +123,13 @@ public class UserServiceTests
     [TestCase("NOLOWERCASE1@", "lowercase")]
     [TestCase("NoDigitsHere@", "digit")]
     [TestCase("NoSpecial123", "special character")]
-    public void CreateAsync_Throws_WhenPasswordViolatesStrengthRule(string password, string expectedFragment)
+    public async Task CreateAsync_Throws_WhenPasswordViolatesStrengthRule(string password, string expectedFragment)
     {
         _repo.UsernameExistsAsync(Arg.Any<string>()).Returns(false);
         _repo.EmailExistsAsync(Arg.Any<string>()).Returns(false);
 
         Assert.That(
-            () => _sut.CreateAsync(new CreateUserRequest
+            async () => await _sut.CreateAsync(new CreateUserRequest
             {
                 Username = "bob",
                 Email = "bob@example.com",
@@ -141,14 +141,14 @@ public class UserServiceTests
     // ── DeleteAsync ────────────────────────────────────────────────────────────
 
     [Test]
-    public void DeleteAsync_Throws_WhenDeletingLastActiveAdmin()
+    public async Task DeleteAsync_Throws_WhenDeletingLastActiveAdmin()
     {
         var lastAdmin = new User { Id = "1", Username = "admin", Role = UserRole.Admin, IsActive = true };
         _repo.GetByIdAsync("1").Returns(lastAdmin);
         _repo.GetAllAsync().Returns([lastAdmin]);
 
         Assert.That(
-            () => _sut.DeleteAsync("1"),
+            async () => await _sut.DeleteAsync("1"),
             Throws.InvalidOperationException.With.Message.Contains("last admin"));
     }
 

@@ -98,6 +98,8 @@ const EntityList: React.FC = () => {
     setIsLoading(true);
     setError('');
     setSchemaNotFound(false);
+    setSchema(null);
+    setEntities([]);
     try {
       const schemaData = await apiService.getSchema(entityType!);
       setSchema(schemaData);
