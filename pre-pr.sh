@@ -269,14 +269,12 @@ step_e2e() {
     fi
   fi
 
+  BASE_URL="$WEB_URL" E2E_USER="admin" E2E_PASSWORD="Admin@123" \
   dotnet test TestService.E2E/TestService.E2E.csproj \
     --configuration Release \
     --settings "$E2E_SETTINGS" \
     --logger "trx;LogFileName=$trx" \
     --logger "console;verbosity=normal" \
-    -e BASE_URL="$WEB_URL" \
-    -e E2E_USER="admin" \
-    -e E2E_PASSWORD="Admin@123" \
     2>&1 | tee "$log" || test_exit=$?
 
   local dur=$(( $(date +%s) - t0 ))
