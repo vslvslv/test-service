@@ -59,6 +59,7 @@ const EntityList: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [error, setError] = useState('');
+  const [schemaNotFound, setSchemaNotFound] = useState(false);
   const [showConsumedOnly, setShowConsumedOnly] = useState(false);
   const [selectedEnvironment, setSelectedEnvironment] = useState('all');
   const [selectedEntity, setSelectedEntity] = useState<Entity | null>(null);
@@ -96,6 +97,9 @@ const EntityList: React.FC = () => {
   const loadData = async () => {
     setIsLoading(true);
     setError('');
+    setSchemaNotFound(false);
+    setSchema(null);
+    setEntities([]);
     try {
       const schemaData = await apiService.getSchema(entityType!);
       setSchema(schemaData);
@@ -106,7 +110,11 @@ const EntityList: React.FC = () => {
       });
       setEntities(entitiesData);
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to load entities');
+      if (err.response?.status === 404) {
+        setSchemaNotFound(true);
+      } else {
+        setError(err.response?.data?.message || 'Failed to load entities');
+      }
       console.error('Failed to load entities:', err);
     } finally {
       setIsLoading(false);
@@ -312,7 +320,7 @@ const EntityList: React.FC = () => {
     );
   }
 
-  if (!schema) {
+  if (schemaNotFound || (!schema && !error)) {
     return (
       <div className="panel p-12 text-center">
         <AlertCircle className="mx-auto h-14 w-14 text-red-400" />
@@ -322,6 +330,17 @@ const EntityList: React.FC = () => {
           <button type="button" onClick={() => navigate('/entities')} className="button-primary">
             Back to Entities
           </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (error && !schema) {
+    return (
+      <div className="rounded-2xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+        <div className="flex items-center gap-2">
+          <AlertCircle className="h-4 w-4" />
+          <span>{error}</span>
         </div>
       </div>
     );

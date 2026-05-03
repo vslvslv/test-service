@@ -26,7 +26,16 @@ jobs:
       - name: Build
         run: dotnet build test-service.sln --configuration Release --no-restore
 
-      - name: Test With Coverage Threshold
+      - name: Unit Tests
+        run: >
+          dotnet test TestService.Unit/TestService.Unit.csproj
+          --configuration Release
+          --no-build
+          /p:CollectCoverage=true
+          /p:CoverletOutput=./TestResults/Coverage/
+          /p:CoverletOutputFormat=cobertura
+
+      - name: Integration Tests With Coverage Threshold
         run: >
           dotnet test TestService.Tests/TestService.Tests.csproj
           --configuration Release
@@ -34,7 +43,7 @@ jobs:
           /p:CollectCoverage=true
           /p:CoverletOutput=./TestResults/Coverage/
           /p:CoverletOutputFormat=cobertura
-          /p:Threshold=67
+          /p:Threshold=70
           /p:ThresholdType=line
           /p:ThresholdStat=total
 
@@ -43,5 +52,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: backend-coverage-cobertura
-          path: TestService.Tests/TestResults/Coverage/
+          path: |
+            TestService.Unit/TestResults/Coverage/
+            TestService.Tests/TestResults/Coverage/
           if-no-files-found: ignore
