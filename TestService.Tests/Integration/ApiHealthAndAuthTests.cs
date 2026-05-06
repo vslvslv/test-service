@@ -18,7 +18,7 @@ public class ApiHealthAndAuthTests : IntegrationTestBase
 
         AssertStatusCode(response, HttpStatusCode.OK);
         var body = await response.Content.ReadAsStringAsync();
-        Assert.That(body, Does.Contain("healthy").Or.Contain("OK"),
+        Assert.That(body, Does.Contain("healthy"),
             "Health response body should indicate healthy (used by Docker/K8s healthchecks)");
     }
 

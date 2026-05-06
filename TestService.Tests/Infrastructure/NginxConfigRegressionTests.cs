@@ -48,7 +48,7 @@ public class NginxConfigRegressionTests
     {
         Assert.That(_nginxConfContent, Does.Contain("location /api/"), "Must proxy /api/ to backend (bug-fix: was 404 for /api/live/ws)");
         Assert.That(_nginxConfContent, Does.Contain("proxy_pass"), "Must have proxy_pass for API");
-        Assert.That(_nginxConfContent, Does.Contain("api:80").Or.Contain("api:8080"), "Must forward to API service");
+        Assert.That(_nginxConfContent, Does.Contain("api:80"), "Must forward to API service on port 80");
     }
 
     [Test]
@@ -62,6 +62,6 @@ public class NginxConfigRegressionTests
     [Test]
     public void NginxConf_HasHealthEndpoint_ForComposeAndK8s()
     {
-        Assert.That(_nginxConfContent, Does.Contain("location /health").Or.Contain("/health"), "Must expose /health for healthchecks");
+        Assert.That(_nginxConfContent, Does.Contain("/health"), "Must expose /health for healthchecks");
     }
 }
