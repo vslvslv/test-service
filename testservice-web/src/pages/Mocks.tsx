@@ -877,7 +877,7 @@ const Mocks: React.FC = () => {
 
               <div className="grid gap-3 md:grid-cols-[minmax(220px,280px)_1fr]">
                 <label className="rounded-2xl border border-slate-700 bg-slate-900/70 p-4 text-sm text-slate-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
-                  <span className="text-[11px] uppercase tracking-[0.24em] text-slate-500">Environment</span>
+                  <span className="text-[11px] uppercase tracking-[0.24em] text-slate-400">Environment</span>
                   <select
                     value={environment}
                     onChange={(e) => setEnvironment(e.target.value)}
@@ -937,7 +937,7 @@ const Mocks: React.FC = () => {
             <div className="rounded-[24px] border border-slate-700 bg-slate-900/75 p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <p className="text-[11px] uppercase tracking-[0.24em] text-slate-500">Operational Signal</p>
+                  <p className="text-[11px] uppercase tracking-[0.24em] text-slate-400">Operational Signal</p>
                   <h2 className="mt-2 text-lg font-semibold text-white">Current health snapshot</h2>
                 </div>
                 <div className={`rounded-full border px-3 py-1 text-xs ${
@@ -956,7 +956,7 @@ const Mocks: React.FC = () => {
                     key={card.label}
                     className={`rounded-2xl border border-slate-700 bg-gradient-to-br ${card.accent} p-4`}
                   >
-                    <p className="text-[11px] uppercase tracking-[0.24em] text-slate-500">{card.label}</p>
+                    <p className="text-[11px] uppercase tracking-[0.24em] text-slate-400">{card.label}</p>
                     <p className={`mt-3 text-2xl font-semibold ${card.valueClass}`}>{card.value}</p>
                     <p className="mt-2 text-sm text-slate-400">{card.detail}</p>
                   </div>
@@ -999,7 +999,7 @@ const Mocks: React.FC = () => {
             <form onSubmit={handleVerify} className="rounded-[24px] border border-slate-700 bg-slate-900/95 p-5 space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-[11px] uppercase tracking-[0.24em] text-slate-500">Verification Workspace</p>
+                  <p className="text-[11px] uppercase tracking-[0.24em] text-slate-400">Verification Workspace</p>
                   <h2 className="mt-2 text-lg font-semibold text-white">Verification Flow</h2>
                 </div>
                 <p className="text-xs text-slate-400">Guided 3-step verification</p>
@@ -1282,24 +1282,24 @@ const Mocks: React.FC = () => {
                   </div>
                   <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                     <div className="rounded-2xl border border-slate-800 bg-slate-900/80 px-4 py-3">
-                      <p className="text-[11px] uppercase tracking-[0.24em] text-slate-500">Response</p>
+                      <p className="text-[11px] uppercase tracking-[0.24em] text-slate-400">Response</p>
                       <p className="mt-2 text-sm font-medium text-white">{expectation.responseTemplate?.status ?? 200}</p>
                       <p className="mt-1 text-xs text-slate-400">delay {expectation.responseTemplate?.delayMs ?? 0}ms</p>
                     </div>
                     <div className="rounded-2xl border border-slate-800 bg-slate-900/80 px-4 py-3">
-                      <p className="text-[11px] uppercase tracking-[0.24em] text-slate-500">Execution</p>
+                      <p className="text-[11px] uppercase tracking-[0.24em] text-slate-400">Execution</p>
                       <p className="mt-2 text-sm font-medium text-white">
                         {expectation.times?.unlimited ? 'Unlimited' : `${expectation.times?.remaining ?? 0} remaining`}
                       </p>
                       <p className="mt-1 text-xs text-slate-400">consumption policy</p>
                     </div>
                     <div className="rounded-2xl border border-slate-800 bg-slate-900/80 px-4 py-3">
-                      <p className="text-[11px] uppercase tracking-[0.24em] text-slate-500">Query Rules</p>
+                      <p className="text-[11px] uppercase tracking-[0.24em] text-slate-400">Query Rules</p>
                       <p className="mt-2 text-sm font-medium text-white">{Object.keys(expectation.requestMatcher?.query || {}).length}</p>
                       <p className="mt-1 text-xs text-slate-400">matcher entries</p>
                     </div>
                     <div className="rounded-2xl border border-slate-800 bg-slate-900/80 px-4 py-3">
-                      <p className="text-[11px] uppercase tracking-[0.24em] text-slate-500">Header Rules</p>
+                      <p className="text-[11px] uppercase tracking-[0.24em] text-slate-400">Header Rules</p>
                       <p className="mt-2 text-sm font-medium text-white">{Object.keys(expectation.requestMatcher?.headers || {}).length}</p>
                       <p className="mt-1 text-xs text-slate-400">matcher entries</p>
                     </div>
@@ -1366,7 +1366,7 @@ const Mocks: React.FC = () => {
               <div className="rounded-[24px] border border-slate-700 bg-slate-900/95 p-5">
                 <div className="mb-4 flex flex-col gap-2 lg:flex-row lg:items-end lg:justify-between">
                   <div>
-                    <p className="text-[11px] uppercase tracking-[0.24em] text-slate-500">Filter Console</p>
+                    <p className="text-[11px] uppercase tracking-[0.24em] text-slate-400">Filter Console</p>
                     <h3 className="mt-2 text-lg font-semibold text-white">Slice the request stream</h3>
                     <p className="mt-1 text-sm text-slate-400">Pinpoint a path, narrow by match status, then inspect the resulting window.</p>
                   </div>
@@ -1459,7 +1459,7 @@ const Mocks: React.FC = () => {
               <div className="rounded-[24px] border border-slate-700 bg-slate-900/95 p-5 space-y-4">
                 <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
                   <div>
-                    <p className="text-[11px] uppercase tracking-[0.24em] text-slate-500">Traffic Shape</p>
+                    <p className="text-[11px] uppercase tracking-[0.24em] text-slate-400">Traffic Shape</p>
                     <h3 className="mt-2 text-lg font-semibold text-white">Request usage over time</h3>
                     <p className="mt-1 text-xs text-slate-400">
                       {logRangeMeta[logsTimeRange].label} · Bucketed over {logChart.range.buckets} intervals
@@ -1578,7 +1578,7 @@ const Mocks: React.FC = () => {
 
               <div className="overflow-hidden rounded-[24px] border border-slate-700 bg-slate-900/95">
                 <div className="border-b border-slate-800 px-5 py-4">
-                  <p className="text-[11px] uppercase tracking-[0.24em] text-slate-500">Event Table</p>
+                  <p className="text-[11px] uppercase tracking-[0.24em] text-slate-400">Event Table</p>
                   <h3 className="mt-2 text-lg font-semibold text-white">Recent request logs</h3>
                 </div>
                 <div className="overflow-x-auto">
