@@ -64,6 +64,28 @@ public class AuthTests : PageTest
     }
 
     [Test]
+    public async Task EmptyUsername_WithValidPassword_PreventsSingleFieldSubmit()
+    {
+        await Page.GotoAsync("/login");
+        await Page.GetByLabel("Password").FillAsync(TestConfig.Password);
+        await Page.GetByRole(AriaRole.Button, new() { Name = "Sign In" }).ClickAsync();
+        await Expect(Page).ToHaveURLAsync(
+            new System.Text.RegularExpressions.Regex("/login"),
+            new() { Timeout = 3_000 });
+    }
+
+    [Test]
+    public async Task EmptyPassword_WithValidUsername_PreventsSingleFieldSubmit()
+    {
+        await Page.GotoAsync("/login");
+        await Page.GetByLabel("Username").FillAsync(TestConfig.Username);
+        await Page.GetByRole(AriaRole.Button, new() { Name = "Sign In" }).ClickAsync();
+        await Expect(Page).ToHaveURLAsync(
+            new System.Text.RegularExpressions.Regex("/login"),
+            new() { Timeout = 3_000 });
+    }
+
+    [Test]
     public async Task SubmitButtonIsDisabledDuringAuthentication()
     {
         var releaseLogin = new TaskCompletionSource();
@@ -89,6 +111,56 @@ public class AuthTests : PageTest
     // ── Credential handling ──────────────────────────────────────────────────
 
     [Test]
+    public async Task SubmitButton_ShowsSigningInText_DuringAuthentication()
+    {
+        var releaseLogin = new TaskCompletionSource();
+        await Page.RouteAsync("**/api/auth/login", async route =>
+        {
+            await releaseLogin.Task;
+            await route.ContinueAsync();
+        });
+
+        await Page.GotoAsync("/login");
+        await Page.GetByLabel("Username").FillAsync(TestConfig.Username);
+        await Page.GetByLabel("Password").FillAsync(TestConfig.Password);
+        await Page.GetByRole(AriaRole.Button, new() { Name = "Sign In" }).ClickAsync();
+
+        await Expect(Page.GetByText("Signing in...")).ToBeVisibleAsync();
+
+        releaseLogin.SetResult();
+        await Page.WaitForURLAsync(url => !url.Contains("/login"), new() { Timeout = 10_000 });
+    }
+
+    [Test]
+    public async Task SubmitsFormOnEnterKeyInUsernameField()
+    {
+        await Page.GotoAsync("/login");
+        await Page.GetByLabel("Username").FillAsync(TestConfig.Username);
+        await Page.GetByLabel("Password").FillAsync(TestConfig.Password);
+        await Page.GetByLabel("Username").PressAsync("Enter");
+        await Page.WaitForURLAsync(url => !url.Contains("/login"), new() { Timeout = 10_000 });
+        await Expect(Page).Not.ToHaveURLAsync(new System.Text.RegularExpressions.Regex("/login"));
+    }
+
+    [Test]
+    public async Task OnBlur_TrimsLeadingAndTrailingWhitespaceFromUsernameField()
+    {
+        await Page.GotoAsync("/login");
+        await Page.GetByLabel("Username").FillAsync("  admin  ");
+        await Page.GetByLabel("Username").PressAsync("Tab"); // move focus to password
+        await Expect(Page.GetByLabel("Username")).ToHaveValueAsync("admin");
+    }
+
+    [Test]
+    public async Task OnBlur_TrimsLeadingAndTrailingWhitespaceFromPasswordField()
+    {
+        await Page.GotoAsync("/login");
+        await Page.GetByLabel("Password").FillAsync("  Admin@123  ");
+        await Page.GetByLabel("Password").PressAsync("Tab");
+        await Expect(Page.GetByLabel("Password")).ToHaveValueAsync("Admin@123");
+    }
+
+    [Test]
     public async Task TrimsWhitespaceAroundCredentials()
     {
         var login = new LoginPage(Page);
@@ -112,6 +184,36 @@ public class AuthTests : PageTest
     }
 
     // ── Error messages ───────────────────────────────────────────────────────
+
+    [Test]
+    public async Task ErrorBanner_HasAlertAriaRole()
+    {
+        var login = new LoginPage(Page);
+        await login.GotoAsync();
+        await login.LoginAsync("bad_user_xyz", "bad_pass");
+        await Expect(login.ErrorBanner).ToBeVisibleAsync();
+        var role = await login.ErrorBanner.GetAttributeAsync("role");
+        Assert.That(role, Is.EqualTo("alert"));
+    }
+
+    [Test]
+    public async Task ErrorMessage_ReplacedOnSubsequentFailedAttempt()
+    {
+        var login = new LoginPage(Page);
+        await login.GotoAsync();
+
+        // First attempt: unknown user → generic message
+        await login.LoginAsync("nonexistent_user_abc123", "SomePassword@1");
+        await Expect(Page.GetByText("Invalid username or password.")).ToBeVisibleAsync();
+
+        // Second attempt: correct user but wrong password → specific message replaces the first
+        await login.UsernameInput.FillAsync(TestConfig.Username);
+        await login.PasswordInput.FillAsync("WrongPassword@2");
+        await login.SubmitButton.ClickAsync();
+
+        await Expect(Page.GetByText("Invalid or incorrect password.")).ToBeVisibleAsync();
+        await Expect(Page.GetByText("Invalid username or password.")).Not.ToBeVisibleAsync();
+    }
 
     [Test]
     public async Task ShowsErrorOnWrongCredentials()
@@ -198,6 +300,20 @@ public class AuthTests : PageTest
             new() { Timeout = 5_000 });
     }
 
+    [TestCase("/environments")]
+    [TestCase("/entities")]
+    [TestCase("/activity")]
+    [TestCase("/users")]
+    [TestCase("/settings")]
+    [TestCase("/mocks")]
+    public async Task UnauthenticatedUser_NavigatingToProtectedRoute_RedirectsToLogin(string path)
+    {
+        await Page.GotoAsync(path);
+        await Expect(Page).ToHaveURLAsync(
+            new System.Text.RegularExpressions.Regex("/login"),
+            new() { Timeout = 5_000 });
+    }
+
     // ── Error recovery ───────────────────────────────────────────────────────
 
     [Test]
@@ -228,6 +344,35 @@ public class AuthTests : PageTest
 
         var token = await Page.EvaluateAsync<string?>("() => localStorage.getItem('token')");
         Assert.That(token, Is.Not.Null.And.Not.Empty);
+    }
+
+    [Test]
+    public async Task UserDataPersistedToLocalStorage_AfterSuccessfulLogin()
+    {
+        var login = new LoginPage(Page);
+        await login.GotoAsync();
+        await login.LoginAsync(TestConfig.Username, TestConfig.Password);
+        await Page.WaitForURLAsync(url => !url.Contains("/login"), new() { Timeout = 10_000 });
+
+        var storedUser = await Page.EvaluateAsync<string?>("() => localStorage.getItem('user')");
+        Assert.That(storedUser, Is.Not.Null.And.Not.Empty);
+
+        var username = await Page.EvaluateAsync<string?>(
+            "() => { const u = JSON.parse(localStorage.getItem('user') ?? 'null'); return u?.username ?? null; }");
+        Assert.That(username, Is.EqualTo(TestConfig.Username));
+    }
+
+    [Test]
+    public async Task RolePersistedToLocalStorage_AfterSuccessfulLogin()
+    {
+        var login = new LoginPage(Page);
+        await login.GotoAsync();
+        await login.LoginAsync(TestConfig.Username, TestConfig.Password);
+        await Page.WaitForURLAsync(url => !url.Contains("/login"), new() { Timeout = 10_000 });
+
+        var role = await Page.EvaluateAsync<string?>(
+            "() => { const u = JSON.parse(localStorage.getItem('user') ?? 'null'); return u?.role ?? null; }");
+        Assert.That(role, Is.Not.Null.And.Not.Empty);
     }
 
     // ── Role-based login ─────────────────────────────────────────────────────
