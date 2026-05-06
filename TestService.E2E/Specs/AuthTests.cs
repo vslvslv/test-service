@@ -66,9 +66,10 @@ public class AuthTests : PageTest
     [Test]
     public async Task SubmitButtonIsDisabledDuringAuthentication()
     {
+        var releaseLogin = new TaskCompletionSource();
         await Page.RouteAsync("**/api/auth/login", async route =>
         {
-            await Task.Delay(1500);
+            await releaseLogin.Task;
             await route.ContinueAsync();
         });
 
@@ -81,6 +82,7 @@ public class AuthTests : PageTest
         await Expect(login.LoadingButton).ToBeVisibleAsync();
         await Expect(login.LoadingButton).ToBeDisabledAsync();
 
+        releaseLogin.SetResult();
         await Page.WaitForURLAsync(url => !url.Contains("/login"), new() { Timeout = 10_000 });
     }
 
