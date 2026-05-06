@@ -30,7 +30,7 @@ metadata:
   name: testservice-api
   namespace: testservice
 spec:
-  replicas: 1
+  replicas: 2
   selector:
     matchLabels:
       app: testservice-api
@@ -41,7 +41,7 @@ spec:
     spec:
       containers:
       - name: api
-        image: harbor.qa2-env01.cloudad.local/library/testservice-api:1.0.7
+        image: harbor.qa2-env01.cloudad.local/library/testservice-api:1.0.8
         imagePullPolicy: Always
         ports:
         - containerPort: 80
