@@ -23,6 +23,17 @@ jobs:
       - name: Restore
         run: dotnet restore test-service.sln
 
+      - name: NuGet vulnerability scan
+        run: |
+          set -o pipefail
+          dotnet list test-service.sln package --vulnerable --include-transitive 2>&1 | tee vuln.txt
+          # Exit non-zero if any package shows a Severity column entry.
+          # Output format: "   > Package.Name 1.2.3   1.2.3   High   <CVE-link>"
+          if grep -E '^\s*>\s+\S+\s+\S+\s+\S+\s+(Critical|High|Moderate|Low)' vuln.txt; then
+            echo "::error::Vulnerable NuGet packages detected — see job log"
+            exit 1
+          fi
+
       - name: Build
         run: dotnet build test-service.sln --configuration Release --no-restore
 
