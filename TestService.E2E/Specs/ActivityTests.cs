@@ -32,11 +32,9 @@ public class ActivityTests : AuthenticatedTest
         await Page.GotoAsync("/activity");
         await Expect(Page.Locator(".animate-spin")).ToHaveCountAsync(0, new() { Timeout = 10_000 });
         var refreshBtn = Page.GetByRole(AriaRole.Button, new() { NameRegex = new System.Text.RegularExpressions.Regex("refresh", System.Text.RegularExpressions.RegexOptions.IgnoreCase) });
-        if (await refreshBtn.IsVisibleAsync())
-        {
-            await refreshBtn.ClickAsync();
-            await Expect(Page).Not.ToHaveURLAsync(new System.Text.RegularExpressions.Regex("/login"));
-        }
+        await Expect(refreshBtn).ToBeVisibleAsync();
+        await refreshBtn.ClickAsync();
+        await Expect(Page).Not.ToHaveURLAsync(new System.Text.RegularExpressions.Regex("/login"));
     }
 
     [Test]
