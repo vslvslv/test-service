@@ -274,6 +274,7 @@ const CreateSchema: React.FC = () => {
                   <div>
                     <label className="mb-2 block text-sm font-medium text-slate-300">Field type</label>
                     <select
+                      aria-label="Field type"
                       value={field.type}
                       onChange={(e) => updateField(index, { type: e.target.value })}
                       className="field-shell"

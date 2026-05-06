@@ -897,7 +897,7 @@ const Mocks: React.FC = () => {
                 <div className="rounded-2xl border border-slate-700 bg-slate-900/60 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
-                      <p className="text-[11px] uppercase tracking-[0.24em] text-slate-500">{activeTabMeta.eyebrow}</p>
+                      <p className="text-[11px] uppercase tracking-[0.24em] text-slate-400">{activeTabMeta.eyebrow}</p>
                       <h2 className="mt-2 text-lg font-semibold text-white">{activeTabMeta.label}</h2>
                       <p className="mt-1 max-w-xl text-sm text-slate-400">{activeTabMeta.description}</p>
                     </div>
@@ -978,7 +978,7 @@ const Mocks: React.FC = () => {
                     : 'text-slate-400 hover:bg-slate-800/70 hover:text-white'
                 }`}
               >
-                <span className="block text-[11px] uppercase tracking-[0.24em] text-slate-500">{tabMeta[tabKey].eyebrow}</span>
+                <span className="block text-[11px] uppercase tracking-[0.24em] text-slate-400">{tabMeta[tabKey].eyebrow}</span>
                 <span className="mt-1 block text-sm font-medium">{tabMeta[tabKey].label}</span>
               </button>
             ))}

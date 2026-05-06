@@ -194,6 +194,7 @@ const Schemas: React.FC = () => {
 
           <div className="flex flex-col gap-3 sm:flex-row">
             <select
+              aria-label="Sort schemas"
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as SortOption)}
               className="field-shell sm:min-w-[180px]"
