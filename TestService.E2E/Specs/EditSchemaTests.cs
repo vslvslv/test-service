@@ -32,13 +32,15 @@ public class EditSchemaTests : AuthenticatedTest
     [Test]
     public async Task SpinnerAppearsAndDisappearsOnLoad()
     {
+        var releaseSchema = new TaskCompletionSource();
         await Page.RouteAsync("**/api/schemas/SlowSchema", async route =>
         {
-            await Task.Delay(600);
+            await releaseSchema.Task;
             await route.FulfillAsync(new() { Status = 200, ContentType = "application/json", Body = SchemaJson });
         });
         await Page.GotoAsync("/schemas/SlowSchema");
         await Expect(_edit.Spinner).ToBeVisibleAsync();
+        releaseSchema.SetResult();
         await Expect(_edit.Spinner).ToHaveCountAsync(0, new() { Timeout = 10_000 });
     }
 
