@@ -4,7 +4,6 @@ import {
   Calendar,
   CheckCircle,
   Copy,
-  Database,
   Eye,
   EyeOff,
   Info,
