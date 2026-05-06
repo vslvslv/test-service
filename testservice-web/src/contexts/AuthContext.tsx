@@ -171,6 +171,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   );
 };
 
+// eslint-disable-next-line react-refresh/only-export-components -- consumer hook colocated with provider; the alternative is a one-line useAuth.ts that re-imports AuthContext, which only obscures intent.
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {

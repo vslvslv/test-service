@@ -49,7 +49,7 @@ const Environments: React.FC = () => {
     try {
       const data = await apiService.getEnvironments();
       setEnvironments(data);
-    } catch (err: any) {
+    } catch (err: unknown) {
       setError(getErrorMessage(err));
       console.error('Failed to load environments:', err);
     } finally {
@@ -72,7 +72,7 @@ const Environments: React.FC = () => {
       setNewEnvName('');
       setNewEnvDescription('');
       await loadEnvironments();
-    } catch (err: any) {
+    } catch (err: unknown) {
       setError(getErrorMessage(err));
     } finally {
       setIsCreating(false);
@@ -91,7 +91,7 @@ const Environments: React.FC = () => {
       });
       
       await loadEnvironments();
-    } catch (err: any) {
+    } catch (err: unknown) {
       alert(getErrorMessage(err));
     }
   };
@@ -125,7 +125,7 @@ const Environments: React.FC = () => {
       });
       handleCloseEditModal();
       await loadEnvironments();
-    } catch (err: any) {
+    } catch (err: unknown) {
       setError(getErrorMessage(err));
     } finally {
       setIsUpdating(false);

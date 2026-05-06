@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Plus, Pencil, Trash2, RefreshCw, ToggleLeft, ToggleRight, Boxes, X, Copy } from 'lucide-react';
 import { apiService } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
@@ -246,9 +246,13 @@ const Mocks: React.FC = () => {
     return () => {
       cancelled = true;
     };
+    // Run once on mount: read `environment` to decide whether to auto-pick
+    // the first one. Re-running on environment change would refetch the list
+    // every time the user picks one — defeating the purpose.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const loadExpectations = async () => {
+  const loadExpectations = useCallback(async () => {
     setIsLoading(true);
     setError('');
     try {
@@ -259,13 +263,13 @@ const Mocks: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [environment, includeDisabled]);
 
   useEffect(() => {
     loadExpectations();
-  }, [environment, includeDisabled]);
+  }, [loadExpectations]);
 
-  const loadRequestLogs = async () => {
+  const loadRequestLogs = useCallback(async () => {
     setIsLoadingLogs(true);
     setError('');
     try {
@@ -285,12 +289,12 @@ const Mocks: React.FC = () => {
     } finally {
       setIsLoadingLogs(false);
     }
-  };
+  }, [environment, logsPathFilter, logsMatchedFilter, logsLimit]);
 
   useEffect(() => {
     if (activeTab !== 'logs' || !canReadLogs) return;
     loadRequestLogs();
-  }, [activeTab, environment, logsPathFilter, logsMatchedFilter, logsLimit, canReadLogs]);
+  }, [activeTab, canReadLogs, loadRequestLogs]);
 
   useEffect(() => {
     const handleEscape = (event: KeyboardEvent) => {
@@ -305,7 +309,7 @@ const Mocks: React.FC = () => {
     };
     window.addEventListener('keydown', handleEscape);
     return () => window.removeEventListener('keydown', handleEscape);
-  }, [showModal, selectedLog]);
+  }, [showModal, selectedLog, closeModal]);
 
   useEffect(() => {
     try {
@@ -480,10 +484,10 @@ const Mocks: React.FC = () => {
     }
   ];
 
-  const resetForm = () => {
+  const resetForm = useCallback(() => {
     setEditingId(null);
     setForm(defaultForm(environment));
-  };
+  }, [environment]);
 
   const openCreate = () => {
     resetForm();
@@ -514,10 +518,10 @@ const Mocks: React.FC = () => {
     setShowModal(true);
   };
 
-  const closeModal = () => {
+  const closeModal = useCallback(() => {
     setShowModal(false);
     resetForm();
-  };
+  }, [resetForm]);
 
   const setField = <K extends keyof MockFormState>(key: K, value: MockFormState[K]) => {
     setForm((prev) => ({ ...prev, [key]: value }));

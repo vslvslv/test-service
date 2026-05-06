@@ -20,11 +20,12 @@ import {
 import { apiService } from '../services/api';
 import EntityCreateDialog from '../components/EntityCreateDialog';
 import EntityViewDialog from '../components/EntityViewDialog';
+import { getErrorMessage, getErrorStatus } from '../types';
 
 interface Entity {
   id: string;
   entityType: string;
-  fields: Record<string, any>;
+  fields: Record<string, unknown>;
   isConsumed: boolean;
   environment?: string;
   createdAt?: string;
@@ -81,6 +82,8 @@ const EntityList: React.FC = () => {
     if (entityType) {
       loadData();
     }
+    // loadData closes over `entityType` only; setters are stable. Re-running on entityType change is the explicit intent.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [entityType]);
 
   useEffect(() => {
@@ -109,11 +112,11 @@ const EntityList: React.FC = () => {
         url: `/api/entities/${entityType}`
       });
       setEntities(entitiesData);
-    } catch (err: any) {
-      if (err.response?.status === 404) {
+    } catch (err: unknown) {
+      if (getErrorStatus(err) === 404) {
         setSchemaNotFound(true);
       } else {
-        setError(err.response?.data?.message || 'Failed to load entities');
+        setError(getErrorMessage(err));
       }
       console.error('Failed to load entities:', err);
     } finally {
@@ -126,8 +129,8 @@ const EntityList: React.FC = () => {
     setTimeout(() => setSuccessMessage(''), 4000);
     try {
       await loadData();
-    } catch (refreshError: any) {
-      setError(refreshError.response?.data?.message || 'Entity was created but the list could not be refreshed.');
+    } catch (refreshError: unknown) {
+      setError(getErrorMessage(refreshError));
     }
   };
 
@@ -147,8 +150,8 @@ const EntityList: React.FC = () => {
       setTimeout(() => setSuccessMessage(''), 4000);
       setEntities((current) => current.filter((entity) => entity.id !== id));
       await loadData();
-    } catch (err: any) {
-      alert(err.response?.data?.message || 'Failed to delete entity');
+    } catch (err: unknown) {
+      alert(getErrorMessage(err));
     }
   };
 
@@ -163,8 +166,8 @@ const EntityList: React.FC = () => {
       if (selectedEntity?.id === id) {
         setSelectedEntity((current) => (current ? { ...current, isConsumed: false } : current));
       }
-    } catch (err: any) {
-      alert(err.response?.data?.message || 'Failed to reset entity');
+    } catch (err: unknown) {
+      alert(getErrorMessage(err));
     }
   };
 
@@ -179,8 +182,8 @@ const EntityList: React.FC = () => {
         url: `/api/entities/${entityType}/reset-all`
       });
       await loadData();
-    } catch (err: any) {
-      alert(err.response?.data?.message || 'Failed to reset entities');
+    } catch (err: unknown) {
+      alert(getErrorMessage(err));
     }
   };
 
@@ -194,8 +197,8 @@ const EntityList: React.FC = () => {
       await loadData();
       setSelectedEntity(entity);
       setIsViewDialogOpen(true);
-    } catch (err: any) {
-      alert(err.response?.data?.message || 'Failed to get next entity');
+    } catch (err: unknown) {
+      alert(getErrorMessage(err));
     }
   };
 
@@ -210,8 +213,8 @@ const EntityList: React.FC = () => {
       a.click();
       URL.revokeObjectURL(url);
       setShowExportMenu(false);
-    } catch (err: any) {
-      alert(err.response?.data?.message || 'Export failed');
+    } catch (err: unknown) {
+      alert(getErrorMessage(err));
     }
   };
 
@@ -243,19 +246,19 @@ const EntityList: React.FC = () => {
       if (result.created + result.updated > 0) {
         await loadData();
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       setImportResult({
         created: 0,
         updated: 0,
         skipped: 0,
-        errors: [{ row: 0, message: err.response?.data?.message || 'Import failed' }]
+        errors: [{ row: 0, message: getErrorMessage(err) }]
       });
     } finally {
       setIsImporting(false);
     }
   };
 
-  const handleEditFromDialog = async (updatedEntity: { fields: Record<string, any>; environment?: string }) => {
+  const handleEditFromDialog = async (updatedEntity: { fields: Record<string, unknown>; environment?: string }) => {
     if (!selectedEntity || !entityType) return;
 
     await apiService.updateEntity(entityType, selectedEntity.id, updatedEntity);

@@ -370,7 +370,7 @@ const Layout: React.FC = () => {
     }, 50);
 
     return () => clearTimeout(timer);
-  }, []);
+  }, [setBellCallback]);
 
   useEffect(() => {
     if (bellRef.current?.addNotification) {

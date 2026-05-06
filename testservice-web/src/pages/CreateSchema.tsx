@@ -114,7 +114,7 @@ const CreateSchema: React.FC = () => {
         excludeOnFetch
       });
       navigate('/schemas');
-    } catch (err: any) {
+    } catch (err: unknown) {
       setError(getErrorMessage(err));
       console.error('Failed to create schema:', err);
     } finally {

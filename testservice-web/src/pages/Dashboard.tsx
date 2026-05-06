@@ -61,7 +61,7 @@ const Dashboard: React.FC = () => {
           totalEntities += entities.length;
           
           // Count available vs consumed
-          entities.forEach((entity: any) => {
+          entities.forEach((entity: { isConsumed?: boolean }) => {
             if (entity.isConsumed) {
               consumedEntities++;
             } else {

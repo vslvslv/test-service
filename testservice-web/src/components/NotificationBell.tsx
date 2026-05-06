@@ -2,6 +2,9 @@ import React, { useState, useEffect, useRef, forwardRef, useImperativeHandle } f
 import { Bell, X, CheckCircle, AlertCircle, Info, AlertTriangle, Trash2 } from 'lucide-react';
 import { Notification } from '../services/notificationService';
 
+// Notifications gain a transient `read` flag while held in client state.
+type StoredNotification = Notification & { read?: boolean };
+
 interface NotificationBellProps {
   onNotification?: (notification: Notification) => void;
 }
@@ -11,7 +14,7 @@ export interface NotificationBellRef {
 }
 
 const NotificationBell = forwardRef<NotificationBellRef, NotificationBellProps>(({ onNotification }, ref) => {
-  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [notifications, setNotifications] = useState<StoredNotification[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -85,7 +88,7 @@ const NotificationBell = forwardRef<NotificationBellRef, NotificationBellProps>(
       localStorage.setItem('notification_history', JSON.stringify(updated));
       
       // Update unread count
-      if (!(prev[index] as any).read) {
+      if (!prev[index].read) {
         setUnreadCount(count => Math.max(0, count - 1));
       }
       
@@ -206,7 +209,7 @@ const NotificationBell = forwardRef<NotificationBellRef, NotificationBellProps>(
                   <div
                     key={index}
                     className={`p-4 hover:bg-gray-700/50 transition-colors group ${
-                      !(notification as any).read ? 'bg-gray-700/30' : ''
+                      !notification.read ? 'bg-gray-700/30' : ''
                     }`}
                   >
                     <div className="flex items-start gap-3">
@@ -253,7 +256,8 @@ NotificationBell.displayName = 'NotificationBell';
 
 export default NotificationBell;
 
-// Export hook for components to add notifications
+// Export hook for components to add notifications.
+// eslint-disable-next-line react-refresh/only-export-components -- colocated hook closes over component-local state; splitting would force the bell ref through a context just to satisfy HMR.
 export const useNotificationBell = () => {
   const [bellRef, setBellRef] = useState<{ addNotification: (n: Notification) => void } | null>(null);
 
