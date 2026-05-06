@@ -21,8 +21,8 @@ services:
     ports:
       - "27017:27017"
     environment:
-      MONGO_INITDB_ROOT_USERNAME: admin
-      MONGO_INITDB_ROOT_PASSWORD: password123
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER:-admin}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-devpassword}
       MONGO_INITDB_DATABASE: TestServiceDb
     volumes:
       - mongodb_data_dev:/data/db
@@ -74,6 +74,11 @@ services:
       ASPNETCORE_ENVIRONMENT: Docker
       ASPNETCORE_URLS: http://+:80
       PORT: "80"
+      # Override secrets from appsettings.Docker.json placeholders.
+      MongoDbSettings__ConnectionString: mongodb://${MONGO_USER:-admin}:${MONGO_PASSWORD:-devpassword}@mongodb:27017/TestServiceDb?authSource=admin
+      RabbitMqSettings__UserName: ${RABBITMQ_USER:-guest}
+      RabbitMqSettings__Password: ${RABBITMQ_PASSWORD:-guest}
+      JwtSettings__SecretKey: ${JWT_SECRET_KEY:-dev-only-do-not-use-in-prod-32chars-padding-required-here}
     depends_on:
       mongodb:
         condition: service_healthy
