@@ -15,6 +15,14 @@ ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
 ARG VITE_BASE_PATH=/testservice/ui/
 ENV VITE_BASE_PATH=$VITE_BASE_PATH
 
+# Version metadata surfaced in the About dialog. Injected by CI / the publish
+# script (e.g. --build-arg VITE_GIT_SHA=$(git rev-parse --short HEAD)); defaults
+# make a plain local `docker build` show a "dev" / local build.
+ARG VITE_GIT_SHA=dev
+ENV VITE_GIT_SHA=$VITE_GIT_SHA
+ARG VITE_BUILD_DATE=
+ENV VITE_BUILD_DATE=$VITE_BUILD_DATE
+
 # Copy package files
 COPY package*.json ./
 

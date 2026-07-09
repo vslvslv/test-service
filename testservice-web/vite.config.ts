@@ -5,6 +5,13 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   // GitHub Pages: '/test-service/'. Docker/root: use VITE_BASE_PATH=/ so SPA works at root.
   base: process.env.VITE_BASE_PATH ?? (process.env.GITHUB_PAGES === 'true' ? '/test-service/' : '/testservice/ui/'),
+  // Build-time app metadata surfaced in the About dialog. CI/Docker inject the real
+  // commit and build date; local builds fall back to 'dev' / empty.
+  define: {
+    __APP_VERSION__: JSON.stringify(process.env.npm_package_version ?? '0.0.0'),
+    __GIT_SHA__: JSON.stringify(process.env.VITE_GIT_SHA ?? 'dev'),
+    __BUILD_DATE__: JSON.stringify(process.env.VITE_BUILD_DATE ?? ''),
+  },
   plugins: [react()],
   server: {
     port: 5173,

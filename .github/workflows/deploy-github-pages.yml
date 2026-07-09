@@ -41,12 +41,16 @@ jobs:
     - name: Build for GitHub Pages
       run: |
         cd testservice-web
+        # Build timestamp surfaced in the About dialog (git SHA comes from the env below).
+        export VITE_BUILD_DATE="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
         npm run build
       env:
         # Enable GitHub Pages mode for base path
         GITHUB_PAGES: 'true'
         # Configure API URL for production (defaults to Railway prod URL)
         VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL || 'https://test-service-production-8201.up.railway.app' }}
+        # Version metadata for the About dialog
+        VITE_GIT_SHA: ${{ github.sha }}
     
     - name: Add .nojekyll file
       run: touch testservice-web/dist/.nojekyll

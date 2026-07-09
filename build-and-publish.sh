@@ -132,12 +132,18 @@ if [ "$NO_BUILD" = false ]; then
     fi
     echo ""
 
+    # Version metadata embedded into the images (surfaced by the About dialog / GET /api/info).
+    GIT_SHA="$(git rev-parse --short HEAD 2>/dev/null || echo dev)"
+    BUILD_DATE="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+    echo -e "  ${WHITE}Commit: $GIT_SHA  |  Build date: $BUILD_DATE${NC}"
+    echo ""
+
     # Build API image
     echo -e "${YELLOW}Building API image...${NC}"
     echo -e "  ${WHITE}Source: TestService.Api${NC}"
     echo -e "  ${WHITE}Target: $API_FULL_NAME${NC}"
-    
-    BUILD_ARGS="buildx build --platform $PLATFORM -t $API_FULL_NAME -f TestService.Api/Dockerfile"
+
+    BUILD_ARGS="buildx build --platform $PLATFORM -t $API_FULL_NAME -f TestService.Api/Dockerfile --build-arg GIT_SHA=$GIT_SHA"
     
     if [ "$PUSH" = true ]; then
         BUILD_ARGS="$BUILD_ARGS --push"
@@ -157,7 +163,7 @@ if [ "$NO_BUILD" = false ]; then
     echo -e "  ${WHITE}Source: testservice-web${NC}"
     echo -e "  ${WHITE}Target: $WEB_FULL_NAME${NC}"
     
-    BUILD_ARGS="buildx build --platform $PLATFORM -t $WEB_FULL_NAME -f testservice-web/Dockerfile"
+    BUILD_ARGS="buildx build --platform $PLATFORM -t $WEB_FULL_NAME -f testservice-web/Dockerfile --build-arg VITE_GIT_SHA=$GIT_SHA --build-arg VITE_BUILD_DATE=$BUILD_DATE"
     
     if [ "$PUSH" = true ]; then
         BUILD_ARGS="$BUILD_ARGS --push"
