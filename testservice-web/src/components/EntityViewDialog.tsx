@@ -139,8 +139,16 @@ const EntityViewDialog: React.FC<EntityViewDialogProps> = ({
   );
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal-shell max-h-[90vh] max-w-5xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
+    <div
+      className="modal-backdrop"
+      role="presentation"
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        className="modal-shell max-h-[90vh] max-w-5xl overflow-hidden"
+      >
         <div className="flex items-center justify-between border-b border-slate-800 px-6 py-5">
           <div className="flex items-center gap-3">
             <div className="page-hero-icon !p-2.5">

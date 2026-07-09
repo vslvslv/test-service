@@ -216,6 +216,7 @@ const Entities: React.FC = () => {
                   key={schema.entityName}
                   type="button"
                   onClick={() => navigate(`/entities/${schema.entityName}`)}
+                  aria-label={`Open ${schema.entityName} entities`}
                   className="group w-full px-5 py-5 text-left transition-colors hover:bg-slate-900/45"
                 >
                   <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">

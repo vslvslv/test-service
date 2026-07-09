@@ -347,6 +347,7 @@ const Schemas: React.FC = () => {
                 key={schema.entityName}
                 type="button"
                 onClick={() => navigate(`/schemas/${schema.entityName}`)}
+                aria-label={`Open schema ${schema.entityName}`}
                 className="panel group p-5 text-left transition-colors hover:bg-slate-900/70"
               >
                 <div className="flex items-start justify-between gap-3">

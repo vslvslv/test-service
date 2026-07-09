@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { LogIn } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
@@ -11,6 +11,11 @@ const Login: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
+  const usernameInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    usernameInputRef.current?.focus();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -101,6 +106,7 @@ const Login: React.FC = () => {
                 </div>
                 <input
                   id="username"
+                  ref={usernameInputRef}
                   type="text"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
@@ -108,7 +114,6 @@ const Login: React.FC = () => {
                   className="field-shell block w-full pl-10 pr-3"
                   placeholder="Enter your username"
                   required
-                  autoFocus
                 />
               </div>
             </div>

@@ -284,10 +284,11 @@ const Environments: React.FC = () => {
             </div>
             <form onSubmit={handleUpdateEnvironment} className="p-6 space-y-4">
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">
+                <label htmlFor="env-edit-name" className="block text-sm font-medium text-slate-300 mb-2">
                   Name
                 </label>
                 <input
+                  id="env-edit-name"
                   type="text"
                   value={editingEnvironment.name}
                   readOnly
@@ -296,10 +297,11 @@ const Environments: React.FC = () => {
                 <p className="text-xs text-slate-500 mt-1">Environment name cannot be changed</p>
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">
+                <label htmlFor="env-edit-display-name" className="block text-sm font-medium text-slate-300 mb-2">
                   Display Name
                 </label>
                 <input
+                  id="env-edit-display-name"
                   type="text"
                   value={editDisplayName}
                   onChange={(e) => setEditDisplayName(e.target.value)}
@@ -308,10 +310,11 @@ const Environments: React.FC = () => {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">
+                <label htmlFor="env-edit-description" className="block text-sm font-medium text-slate-300 mb-2">
                   Description (Optional)
                 </label>
                 <textarea
+                  id="env-edit-description"
                   value={editDescription}
                   onChange={(e) => setEditDescription(e.target.value)}
                   className="field-shell resize-none"
@@ -349,10 +352,11 @@ const Environments: React.FC = () => {
             </div>
             <form onSubmit={handleCreateEnvironment} className="p-6 space-y-4">
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">
+                <label htmlFor="env-create-name" className="block text-sm font-medium text-slate-300 mb-2">
                   Environment Name *
                 </label>
                 <input
+                  id="env-create-name"
                   type="text"
                   value={newEnvName}
                   onChange={(e) => setNewEnvName(e.target.value)}
@@ -362,10 +366,11 @@ const Environments: React.FC = () => {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">
+                <label htmlFor="env-create-description" className="block text-sm font-medium text-slate-300 mb-2">
                   Description (Optional)
                 </label>
                 <textarea
+                  id="env-create-description"
                   value={newEnvDescription}
                   onChange={(e) => setNewEnvDescription(e.target.value)}
                   className="field-shell resize-none"

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   AlertCircle,
   Calendar,
@@ -45,6 +45,13 @@ const Settings: React.FC = () => {
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [error, setError] = useState('');
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const createKeyNameInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (showCreateKeyDialog) {
+      createKeyNameInputRef.current?.focus();
+    }
+  }, [showCreateKeyDialog]);
 
   useEffect(() => {
     loadSettings();
@@ -421,8 +428,16 @@ const Settings: React.FC = () => {
       </section>
 
       {showCreateKeyDialog && (
-        <div className="modal-backdrop" onClick={() => setShowCreateKeyDialog(false)}>
-          <div className="modal-shell max-w-xl" onClick={(e) => e.stopPropagation()}>
+        <div
+          className="modal-backdrop"
+          role="presentation"
+          onClick={(e) => { if (e.target === e.currentTarget) setShowCreateKeyDialog(false); }}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            className="modal-shell max-w-xl"
+          >
             <div className="border-b border-slate-800 px-6 py-5">
               <h3 className="text-xl font-semibold text-white">Generate API key</h3>
               <p className="mt-2 text-sm text-slate-400">Create a credential for automation, integrations, or CI consumers.</p>
@@ -430,20 +445,22 @@ const Settings: React.FC = () => {
 
             <div className="space-y-4 px-6 py-5">
               <div>
-                <label className="mb-2 block text-sm font-medium text-slate-300">Key name</label>
+                <label htmlFor="settings-create-key-name" className="mb-2 block text-sm font-medium text-slate-300">Key name</label>
                 <input
+                  id="settings-create-key-name"
+                  ref={createKeyNameInputRef}
                   type="text"
                   value={newKeyName}
                   onChange={(e) => setNewKeyName(e.target.value)}
                   placeholder="e.g. CI Pipeline, Prod Sync"
                   className="field-shell"
-                  autoFocus
                 />
               </div>
 
               <div>
-                <label className="mb-2 block text-sm font-medium text-slate-300">Expiration</label>
+                <label htmlFor="settings-create-key-expiration" className="mb-2 block text-sm font-medium text-slate-300">Expiration</label>
                 <select
+                  id="settings-create-key-expiration"
                   value={newKeyExpiration === null ? 'never' : newKeyExpiration}
                   onChange={(e) => setNewKeyExpiration(e.target.value === 'never' ? null : parseInt(e.target.value, 10))}
                   className="field-shell"

@@ -190,8 +190,9 @@ const CreateSchema: React.FC = () => {
 
           <div className="grid gap-5 lg:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)]">
             <div>
-              <label className="mb-2 block text-sm font-medium text-slate-300">Schema name</label>
+              <label htmlFor="create-schema-name" className="mb-2 block text-sm font-medium text-slate-300">Schema name</label>
               <input
+                id="create-schema-name"
                 type="text"
                 value={schemaName}
                 onChange={(e) => setSchemaName(e.target.value)}
@@ -261,8 +262,9 @@ const CreateSchema: React.FC = () => {
 
                 <div className="grid gap-4 xl:grid-cols-2">
                   <div>
-                    <label className="mb-2 block text-sm font-medium text-slate-300">Field name</label>
+                    <label htmlFor={`create-schema-field-name-${field.id}`} className="mb-2 block text-sm font-medium text-slate-300">Field name</label>
                     <input
+                      id={`create-schema-field-name-${field.id}`}
                       type="text"
                       value={field.name}
                       onChange={(e) => updateField(index, { name: e.target.value })}
@@ -272,9 +274,9 @@ const CreateSchema: React.FC = () => {
                     />
                   </div>
                   <div>
-                    <label className="mb-2 block text-sm font-medium text-slate-300">Field type</label>
+                    <label htmlFor={`create-schema-field-type-${field.id}`} className="mb-2 block text-sm font-medium text-slate-300">Field type</label>
                     <select
-                      aria-label="Field type"
+                      id={`create-schema-field-type-${field.id}`}
                       value={field.type}
                       onChange={(e) => updateField(index, { type: e.target.value })}
                       className="field-shell"
@@ -287,8 +289,9 @@ const CreateSchema: React.FC = () => {
                     </select>
                   </div>
                   <div>
-                    <label className="mb-2 block text-sm font-medium text-slate-300">Default value</label>
+                    <label htmlFor={`create-schema-field-default-${field.id}`} className="mb-2 block text-sm font-medium text-slate-300">Default value</label>
                     <input
+                      id={`create-schema-field-default-${field.id}`}
                       type="text"
                       value={field.defaultValue || ''}
                       onChange={(e) => updateField(index, { defaultValue: e.target.value })}
