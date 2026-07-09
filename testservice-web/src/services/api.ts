@@ -290,7 +290,7 @@ class ApiService {
     return response.data;
   }
 
-  async updateSettings(settings: any) {
+  async updateSettings(settings: Record<string, unknown>) {
     const response = await this.api.put('/api/settings', settings);
     return response.data;
   }

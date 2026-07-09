@@ -191,14 +191,16 @@ public class DashboardTests : AuthenticatedTest
     [Test]
     public async Task ShowsSpinnerWhileDataLoads()
     {
+        var releaseSchemas = new TaskCompletionSource();
         await Page.RouteAsync("**/api/schemas", async route =>
         {
-            await Task.Delay(1_500);
+            await releaseSchemas.Task;
             await route.ContinueAsync();
         });
 
         await Page.GotoAsync("/");
         await Expect(_dashboard.Spinner).ToBeVisibleAsync();
+        releaseSchemas.SetResult();
         await Expect(_dashboard.Spinner).ToHaveCountAsync(0, new() { Timeout = 10_000 });
     }
 }

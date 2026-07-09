@@ -8,13 +8,14 @@ import {
   X,
 } from 'lucide-react';
 import { apiService } from '../services/api';
-import type { Environment } from '../types';
+import type { Environment, Schema, SchemaField } from '../types';
+import { getErrorMessage } from '../types';
 
 interface EntityCreateDialogProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
-  schema: any;
+  schema: Schema;
   entityType: string;
 }
 
@@ -25,7 +26,7 @@ const EntityCreateDialog: React.FC<EntityCreateDialogProps> = ({
   schema,
   entityType,
 }) => {
-  const [formData, setFormData] = useState<Record<string, any>>({});
+  const [formData, setFormData] = useState<Record<string, unknown>>({});
   const [environment, setEnvironment] = useState('');
   const [availableEnvironments, setAvailableEnvironments] = useState<Environment[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -60,7 +61,7 @@ const EntityCreateDialog: React.FC<EntityCreateDialogProps> = ({
 
   if (!isOpen || !schema) return null;
 
-  const coerceFieldValue = (field: any, rawValue: string) => {
+  const coerceFieldValue = (field: SchemaField, rawValue: string): string | number | boolean => {
     if (rawValue === '') return '';
 
     switch (field.type) {
@@ -75,7 +76,7 @@ const EntityCreateDialog: React.FC<EntityCreateDialogProps> = ({
     }
   };
 
-  const handleFieldChange = (fieldName: string, value: any) => {
+  const handleFieldChange = (fieldName: string, value: unknown) => {
     setFormData((prev) => ({ ...prev, [fieldName]: value }));
     if (errors[fieldName]) {
       setErrors((prev) => {
@@ -88,7 +89,7 @@ const EntityCreateDialog: React.FC<EntityCreateDialogProps> = ({
 
   const validateForm = () => {
     const nextErrors: Record<string, string> = {};
-    schema.fields.forEach((field: any) => {
+    schema.fields.forEach((field: SchemaField) => {
       if (field.required) {
         const value = formData[field.name];
         if (value === undefined || value === null || value === '') {
@@ -115,7 +116,7 @@ const EntityCreateDialog: React.FC<EntityCreateDialogProps> = ({
 
     setIsSubmitting(true);
     try {
-      const entityData: Record<string, any> = { fields: formData };
+      const entityData: Record<string, unknown> = { fields: formData };
       if (environment) {
         entityData.environment = environment;
       }
@@ -124,8 +125,8 @@ const EntityCreateDialog: React.FC<EntityCreateDialogProps> = ({
       resetState();
       onSuccess();
       onClose();
-    } catch (err: any) {
-      setSubmitError(err.response?.data?.message || 'Failed to create entity');
+    } catch (err: unknown) {
+      setSubmitError(getErrorMessage(err));
       console.error('Failed to create entity:', err);
     } finally {
       setIsSubmitting(false);
@@ -157,7 +158,7 @@ const EntityCreateDialog: React.FC<EntityCreateDialogProps> = ({
     }
   };
 
-  const renderField = (field: any) => {
+  const renderField = (field: SchemaField) => {
     const value = formData[field.name] ?? field.defaultValue ?? '';
     const hasError = !!errors[field.name];
 
@@ -315,7 +316,7 @@ const EntityCreateDialog: React.FC<EntityCreateDialogProps> = ({
                 <h3 className="text-lg font-semibold text-white">Entity fields</h3>
               </div>
               <div className="space-y-4">
-                {schema.fields.map((field: any) => renderField(field))}
+                {schema.fields.map((field: SchemaField) => renderField(field))}
               </div>
             </div>
 

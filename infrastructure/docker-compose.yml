@@ -9,8 +9,8 @@ services:
     ports:
       - "27017:27017"
     environment:
-      MONGO_INITDB_ROOT_USERNAME: admin
-      MONGO_INITDB_ROOT_PASSWORD: password123
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER:-admin}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-password123}
       MONGO_INITDB_DATABASE: TestServiceDb
     volumes:
       - mongodb_data:/data/db
@@ -33,8 +33,8 @@ services:
       - "5672:5672"   # AMQP port
       - "15672:15672" # Management UI
     environment:
-      RABBITMQ_DEFAULT_USER: guest
-      RABBITMQ_DEFAULT_PASS: guest
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-guest}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-guest}
       RABBITMQ_DEFAULT_VHOST: /
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
@@ -62,13 +62,13 @@ services:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_URLS=http://+:80
       - PORT=80
-      - MongoDbSettings__ConnectionString=mongodb://admin:password123@mongodb:27017/TestServiceDb?authSource=admin
+      - MongoDbSettings__ConnectionString=mongodb://${MONGO_USER:-admin}:${MONGO_PASSWORD:-password123}@mongodb:27017/TestServiceDb?authSource=admin
       - MongoDbSettings__DatabaseName=TestServiceDb
       - RabbitMqSettings__HostName=rabbitmq
       - RabbitMqSettings__Port=5672
-      - RabbitMqSettings__UserName=guest
-      - RabbitMqSettings__Password=guest
-      - JwtSettings__SecretKey=YourSuperSecretKeyThatIsAtLeast32CharactersLongForHS256Algorithm
+      - RabbitMqSettings__UserName=${RABBITMQ_USER:-guest}
+      - RabbitMqSettings__Password=${RABBITMQ_PASSWORD:-guest}
+      - JwtSettings__SecretKey=${JWT_SECRET_KEY:-dev-only-do-not-use-in-prod-32chars-padding-required-here}
       - JwtSettings__Issuer=TestServiceApi
       - JwtSettings__Audience=TestServiceClients
       - JwtSettings__ExpirationMinutes=60

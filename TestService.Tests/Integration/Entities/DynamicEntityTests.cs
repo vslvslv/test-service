@@ -40,8 +40,10 @@ public class DynamicEntityTests : IntegrationTestBase
         };
 
         var response = await Client.PostAsJsonAsync("/api/schemas", schema);
-        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Created).Or.EqualTo(HttpStatusCode.Conflict),
-            "Schema setup must return Created or Conflict");
+        // Conflict is acceptable here: a previous run may have left the fixture schema behind.
+        if (response.StatusCode == HttpStatusCode.Conflict) return;
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Created),
+            $"Schema setup must return Created (or Conflict if already present), got {response.StatusCode}");
     }
 
     protected override async Task OnOneTimeTearDown()

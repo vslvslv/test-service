@@ -14,15 +14,15 @@ import {
   XCircle,
 } from 'lucide-react';
 import { apiService } from '../services/api';
-import type { Environment } from '../types';
+import type { Entity, Environment, Schema, SchemaField } from '../types';
 
 interface EntityViewDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  entity: any;
-  schema: any;
+  entity: Entity;
+  schema: Schema;
   onReset?: () => void;
-  onEdit?: (updatedEntity: { fields: Record<string, any>; environment?: string }) => Promise<void> | void;
+  onEdit?: (updatedEntity: { fields: Record<string, unknown>; environment?: string }) => Promise<void> | void;
 }
 
 const EntityViewDialog: React.FC<EntityViewDialogProps> = ({
@@ -34,7 +34,7 @@ const EntityViewDialog: React.FC<EntityViewDialogProps> = ({
   onEdit,
 }) => {
   const [isEditing, setIsEditing] = useState(false);
-  const [draftFields, setDraftFields] = useState<Record<string, any>>({});
+  const [draftFields, setDraftFields] = useState<Record<string, unknown>>({});
   const [draftEnvironment, setDraftEnvironment] = useState('');
   const [availableEnvironments, setAvailableEnvironments] = useState<Environment[]>([]);
   const [isSaving, setIsSaving] = useState(false);
@@ -93,7 +93,7 @@ const EntityViewDialog: React.FC<EntityViewDialogProps> = ({
   };
 
   const handleFieldChange = (fieldName: string, value: string, fieldType?: string) => {
-    let parsedValue: any = value;
+    let parsedValue: string | number | boolean = value;
     if (fieldType === 'number') {
       parsedValue = value === '' ? '' : Number(value);
     } else if (fieldType === 'boolean') {
@@ -232,7 +232,7 @@ const EntityViewDialog: React.FC<EntityViewDialogProps> = ({
             </div>
 
             <div className="space-y-3">
-              {schema?.fields?.map((field: any) => {
+              {schema?.fields?.map((field: SchemaField) => {
                 const value = isEditing ? draftFields[field.name] : entity.fields[field.name];
                 const hasValue = value !== undefined && value !== null && value !== '';
 

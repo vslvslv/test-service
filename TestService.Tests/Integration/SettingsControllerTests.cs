@@ -37,7 +37,7 @@ public class SettingsControllerTests : IntegrationTestBase
 
         Assert.That(settings, Is.Not.Null);
         Assert.That(settings!.DataRetention, Is.Not.Null);
-        Assert.That(settings.DataRetention.AutoCleanupEnabled, Is.True.Or.False);
+        Assert.That(settings.DataRetention.AutoCleanupEnabled, Is.True);
     }
 
     [Test]

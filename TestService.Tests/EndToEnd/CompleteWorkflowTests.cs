@@ -11,11 +11,33 @@ namespace TestService.Tests.EndToEnd;
 [TestFixture]
 public class CompleteWorkflowTests : IntegrationTestBase
 {
+    private readonly List<string> _schemasToCleanup = new();
+
+    /// <summary>
+    /// Safety net: delete every schema registered with <see cref="Track"/> so a mid-test
+    /// failure does not leak schemas/entities into MongoDB for subsequent tests.
+    /// Idempotent with each test's own happy-path cleanup at the bottom of the test body.
+    /// </summary>
+    protected override async Task OnTearDown()
+    {
+        foreach (var entityType in _schemasToCleanup)
+        {
+            await ApiHelpers.DeleteSchemaIfExistsAsync(Client, entityType);
+        }
+        _schemasToCleanup.Clear();
+    }
+
+    private string Track(string entityType)
+    {
+        _schemasToCleanup.Add(entityType);
+        return entityType;
+    }
+
     [Test]
     public async Task E2E_CreateSchemaAndEntities_PerformCrud_DeleteAll()
     {
         // Step 1: Create Schema
-        var entityType = CreateUniqueName("E2E_Product");
+        var entityType = Track(CreateUniqueName("E2E_Product"));
         var schema = new EntitySchemaBuilder()
             .WithEntityName(entityType)
             .WithField("name", "string", required: true)
@@ -105,7 +127,7 @@ public class CompleteWorkflowTests : IntegrationTestBase
         // Scenario: Multiple tests running in parallel need unique test data
         
         // Step 1: Create Schema with ExcludeOnFetch
-        var entityType = CreateUniqueName("E2E_TestUser");
+        var entityType = Track(CreateUniqueName("E2E_TestUser"));
         var schema = new EntitySchemaBuilder()
             .WithEntityName(entityType)
             .WithField("username", "string", required: true)
@@ -185,7 +207,7 @@ public class CompleteWorkflowTests : IntegrationTestBase
         var uniqueId = CreateUniqueId();
         
         // Step 1: Create Customer Schema and Customer
-        var customerType = $"Customer_{uniqueId}";
+        var customerType = Track($"Customer_{uniqueId}");
         var customerSchema = new EntitySchemaBuilder()
             .WithEntityName(customerType)
             .WithField("name", "string", required: true)
@@ -203,7 +225,7 @@ public class CompleteWorkflowTests : IntegrationTestBase
         var createdCustomer = await ApiHelpers.CreateEntityAsync(Client, customerType, customer);
 
         // Step 2: Create Product Schema and Products
-        var productType = $"Product_{uniqueId}";
+        var productType = Track($"Product_{uniqueId}");
         var productSchema = new EntitySchemaBuilder()
             .WithEntityName(productType)
             .WithField("name", "string", required: true)
@@ -225,7 +247,7 @@ public class CompleteWorkflowTests : IntegrationTestBase
         }
 
         // Step 3: Create Order Schema and Order
-        var orderType = $"Order_{uniqueId}";
+        var orderType = Track($"Order_{uniqueId}");
         var orderSchema = new EntitySchemaBuilder()
             .WithEntityName(orderType)
             .WithField("customerId", "string", required: true)
@@ -263,7 +285,7 @@ public class CompleteWorkflowTests : IntegrationTestBase
     {
         // Scenario: Schema evolves over time, adding new fields
         
-        var entityType = CreateUniqueName("E2E_Evolution");
+        var entityType = Track(CreateUniqueName("E2E_Evolution"));
         
         // Step 1: Create Initial Schema (V1)
         var schemaV1 = new EntitySchemaBuilder()
@@ -331,7 +353,7 @@ public class CompleteWorkflowTests : IntegrationTestBase
     {
         // Scenario: Bulk operations for test data management
         
-        var entityType = CreateUniqueName("E2E_Bulk");
+        var entityType = Track(CreateUniqueName("E2E_Bulk"));
         
         // Step 1: Create Schema
         var schema = new EntitySchemaBuilder()

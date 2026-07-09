@@ -4,7 +4,6 @@ import {
   Calendar,
   CheckCircle,
   Copy,
-  Database,
   Eye,
   EyeOff,
   Info,
@@ -240,6 +239,7 @@ const Settings: React.FC = () => {
                 <div className="flex items-start gap-3">
                   <input
                     type="checkbox"
+                    aria-label="Enable automatic cleanup"
                     checked={dataRetention.autoCleanupEnabled}
                     onChange={(e) => handleRetentionChange('autoCleanupEnabled', e.target.checked)}
                     className="mt-1 h-4 w-4 rounded border-slate-600 bg-slate-800 text-blue-500 focus:ring-blue-500"
@@ -271,6 +271,7 @@ const Settings: React.FC = () => {
               </div>
               <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_180px]">
                 <select
+                  aria-label="Schema retention period"
                   value={dataRetention.schemaRetentionDays === null ? 'never' : dataRetention.schemaRetentionDays}
                   onChange={(e) => handleRetentionChange('schemaRetentionDays', e.target.value === 'never' ? null : parseInt(e.target.value, 10))}
                   className="field-shell"
@@ -302,6 +303,7 @@ const Settings: React.FC = () => {
               </div>
               <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_180px]">
                 <select
+                  aria-label="Entity retention period"
                   value={dataRetention.entityRetentionDays === null ? 'never' : dataRetention.entityRetentionDays}
                   onChange={(e) => handleRetentionChange('entityRetentionDays', e.target.value === 'never' ? null : parseInt(e.target.value, 10))}
                   className="field-shell"

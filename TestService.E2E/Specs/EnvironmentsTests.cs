@@ -32,11 +32,9 @@ public class EnvironmentsTests : AuthenticatedTest
         await Page.GotoAsync("/environments");
         await Page.Locator(".animate-spin").WaitForAsync(new() { State = WaitForSelectorState.Hidden, Timeout = 8_000 });
         var search = Page.GetByPlaceholder("Search environments...");
-        if (await search.IsVisibleAsync())
-        {
-            await search.FillAsync("zzznomatch");
-            await Expect(search).ToHaveValueAsync("zzznomatch");
-        }
+        await Expect(search).ToBeVisibleAsync();
+        await search.FillAsync("zzznomatch");
+        await Expect(search).ToHaveValueAsync("zzznomatch");
     }
 
     [Test]

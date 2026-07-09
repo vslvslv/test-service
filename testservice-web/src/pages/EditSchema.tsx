@@ -11,6 +11,7 @@ import {
   Trash2
 } from 'lucide-react';
 import { apiService } from '../services/api';
+import { getErrorMessage } from '../types';
 
 interface SchemaField {
   id: string;
@@ -87,8 +88,8 @@ const EditSchema: React.FC = () => {
         description: field.description ?? ''
       }));
       setFields(loadedFields.length > 0 ? loadedFields : [emptyField()]);
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to load schema');
+    } catch (err: unknown) {
+      setError(getErrorMessage(err));
       console.error('Failed to load schema:', err);
     } finally {
       setIsLoading(false);
@@ -154,8 +155,8 @@ const EditSchema: React.FC = () => {
         excludeOnFetch
       });
       navigate('/schemas');
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to update schema');
+    } catch (err: unknown) {
+      setError(getErrorMessage(err));
       console.error('Failed to update schema:', err);
     } finally {
       setIsSaving(false);
@@ -170,8 +171,8 @@ const EditSchema: React.FC = () => {
     try {
       await apiService.deleteSchema(schema!.entityName);
       navigate('/schemas');
-    } catch (err: any) {
-      alert(err.response?.data?.message || 'Failed to delete schema');
+    } catch (err: unknown) {
+      alert(getErrorMessage(err));
     }
   };
 

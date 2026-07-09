@@ -11,6 +11,7 @@ import {
   XCircle
 } from 'lucide-react';
 import { apiService } from '../services/api';
+import { getErrorMessage } from '../types';
 
 interface Schema {
   id?: string;
@@ -78,8 +79,8 @@ const Entities: React.FC = () => {
       }
 
       setEntityStats(statsMap);
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to load data');
+    } catch (err: unknown) {
+      setError(getErrorMessage(err));
       console.error('Failed to load data:', err);
     } finally {
       setIsLoading(false);

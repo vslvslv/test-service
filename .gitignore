@@ -419,6 +419,7 @@ FodyWeavers.xsd
 test-results/
 pre-pr-report-*.md
 TestService.E2E/.auth/
+e2e/.auth/
 
 # Playwright generated HTML reports
 testservice-web/playwright-report/

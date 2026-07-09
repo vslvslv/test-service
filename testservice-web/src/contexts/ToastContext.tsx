@@ -23,6 +23,7 @@ interface ToastContextType {
 
 const ToastContext = createContext<ToastContextType | undefined>(undefined);
 
+// eslint-disable-next-line react-refresh/only-export-components -- consumer hook colocated with provider; see AuthContext.tsx for the same rationale.
 export const useToast = () => {
   const context = useContext(ToastContext);
   if (!context) {

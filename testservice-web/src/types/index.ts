@@ -210,6 +210,14 @@ export function isApiError(error: unknown): error is ApiError {
   return typeof error === 'object' && error !== null && 'message' in error;
 }
 
+// Helper to extract a numeric HTTP status from an unknown error (Axios shape).
+// Returns undefined when the error is not Axios-shaped or has no numeric status.
+export function getErrorStatus(error: unknown): number | undefined {
+  const e = error as { response?: { status?: unknown } } | null | undefined;
+  const status = e?.response?.status;
+  return typeof status === 'number' ? status : undefined;
+}
+
 // Helper to get error message from unknown error (supports Axios and API { message } responses)
 export function getErrorMessage(error: unknown): string {
   if (isApiError(error)) {
