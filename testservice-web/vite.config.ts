@@ -23,9 +23,13 @@ export default defineConfig({
     sourcemap: false,
     rollupOptions: {
       output: {
+        // Bundle react, react-dom, and react-router-dom together to avoid
+        // TDZ (Cannot access 'X' before initialization) errors at runtime.
+        // react-router-dom depends on react; splitting them into separate
+        // chunks can cause ESM evaluation-order races in production.
+        // See: https://github.com/vitejs/vite/issues/14048
         manualChunks: {
-          'react-vendor': ['react', 'react-dom'],
-          'router': ['react-router-dom'],
+          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
           'icons': ['lucide-react']
         }
       }
