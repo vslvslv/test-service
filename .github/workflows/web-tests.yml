@@ -1,0 +1,50 @@
+name: Web Tests
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'testservice-web/**'
+      - '.github/workflows/web-tests.yml'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'testservice-web/**'
+      - '.github/workflows/web-tests.yml'
+
+defaults:
+  run:
+    working-directory: testservice-web
+
+jobs:
+  lint-and-test:
+    name: Lint, Unit Tests, Coverage
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: testservice-web/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Unit + Component Tests with Coverage
+        run: npm run coverage
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-coverage-report
+          path: testservice-web/coverage/
+          retention-days: 14
