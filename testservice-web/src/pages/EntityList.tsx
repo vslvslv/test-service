@@ -733,8 +733,9 @@ const EntityList: React.FC = () => {
 
             <div className="space-y-4 px-6 py-5">
               <div>
-                <label className="mb-2 block text-sm font-medium text-slate-300">File</label>
+                <label htmlFor="entitylist-import-file" className="mb-2 block text-sm font-medium text-slate-300">File</label>
                 <input
+                  id="entitylist-import-file"
                   type="file"
                   accept=".csv,.json"
                   onChange={(e) => setImportFile(e.target.files?.[0] ?? null)}
@@ -744,8 +745,8 @@ const EntityList: React.FC = () => {
 
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
-                  <label className="mb-2 block text-sm font-medium text-slate-300">Environment</label>
-                  <select value={importEnvironment} onChange={(e) => setImportEnvironment(e.target.value)} className="field-shell">
+                  <label htmlFor="entitylist-import-environment" className="mb-2 block text-sm font-medium text-slate-300">Environment</label>
+                  <select id="entitylist-import-environment" value={importEnvironment} onChange={(e) => setImportEnvironment(e.target.value)} className="field-shell">
                     <option value="">None</option>
                     {importEnvironments.map((environment) => (
                       <option key={environment} value={environment}>
@@ -755,8 +756,8 @@ const EntityList: React.FC = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="mb-2 block text-sm font-medium text-slate-300">Mode</label>
-                  <select value={importMode} onChange={(e) => setImportMode(e.target.value as 'append' | 'upsert')} className="field-shell">
+                  <label htmlFor="entitylist-import-mode" className="mb-2 block text-sm font-medium text-slate-300">Mode</label>
+                  <select id="entitylist-import-mode" value={importMode} onChange={(e) => setImportMode(e.target.value as 'append' | 'upsert')} className="field-shell">
                     <option value="append">Append</option>
                     <option value="upsert">Upsert</option>
                   </select>

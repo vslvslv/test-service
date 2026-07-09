@@ -297,21 +297,6 @@ const Mocks: React.FC = () => {
   }, [activeTab, canReadLogs, loadRequestLogs]);
 
   useEffect(() => {
-    const handleEscape = (event: KeyboardEvent) => {
-      if (event.key !== 'Escape') return;
-      if (selectedLog) {
-        setSelectedLog(null);
-        return;
-      }
-      if (showModal) {
-        closeModal();
-      }
-    };
-    window.addEventListener('keydown', handleEscape);
-    return () => window.removeEventListener('keydown', handleEscape);
-  }, [showModal, selectedLog, closeModal]);
-
-  useEffect(() => {
     try {
       const raw = localStorage.getItem(verifyPresetStorageKey);
       if (!raw) return;
@@ -522,6 +507,23 @@ const Mocks: React.FC = () => {
     setShowModal(false);
     resetForm();
   }, [resetForm]);
+
+  // Escape key dismisses (selectedLog | showModal). Must come AFTER closeModal
+  // is declared so the dep array can read it without hitting TDZ in production.
+  useEffect(() => {
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      if (selectedLog) {
+        setSelectedLog(null);
+        return;
+      }
+      if (showModal) {
+        closeModal();
+      }
+    };
+    window.addEventListener('keydown', handleEscape);
+    return () => window.removeEventListener('keydown', handleEscape);
+  }, [showModal, selectedLog, closeModal]);
 
   const setField = <K extends keyof MockFormState>(key: K, value: MockFormState[K]) => {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -1865,13 +1867,16 @@ const Mocks: React.FC = () => {
       )}
 
       {activeTab === 'logs' && selectedLog && (
-        <div className="fixed inset-0 z-50 bg-black/40 flex justify-end" onClick={() => setSelectedLog(null)}>
+        <div
+          className="fixed inset-0 z-50 bg-black/40 flex justify-end"
+          role="presentation"
+          onClick={(e) => { if (e.target === e.currentTarget) setSelectedLog(null); }}
+        >
           <div
             role="dialog"
             aria-modal="true"
             aria-labelledby="mock-log-detail-title"
             className="h-full w-full max-w-2xl bg-gray-900 border-l border-gray-700 p-6 overflow-y-auto"
-            onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-4">
               <h3 id="mock-log-detail-title" className="text-lg font-semibold text-white">Request Log Details</h3>

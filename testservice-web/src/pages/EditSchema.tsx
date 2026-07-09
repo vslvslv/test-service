@@ -261,8 +261,8 @@ const EditSchema: React.FC = () => {
           <div className="grid gap-5 lg:grid-cols-[minmax(0,1.1fr)_minmax(340px,0.9fr)]">
             <div className="space-y-4">
               <div>
-                <label className="mb-2 block text-sm font-medium text-slate-300">Schema name</label>
-                <input type="text" value={schema.entityName} disabled className="field-shell cursor-not-allowed opacity-70" />
+                <label htmlFor="edit-schema-name" className="mb-2 block text-sm font-medium text-slate-300">Schema name</label>
+                <input id="edit-schema-name" type="text" value={schema.entityName} disabled className="field-shell cursor-not-allowed opacity-70" />
                 <p className="mt-2 text-xs text-slate-500">Schema name is immutable after creation.</p>
               </div>
 
@@ -337,8 +337,9 @@ const EditSchema: React.FC = () => {
 
                 <div className="grid gap-4 xl:grid-cols-2">
                   <div>
-                    <label className="mb-2 block text-sm font-medium text-slate-300">Field name</label>
+                    <label htmlFor={`edit-schema-field-name-${field.id}`} className="mb-2 block text-sm font-medium text-slate-300">Field name</label>
                     <input
+                      id={`edit-schema-field-name-${field.id}`}
                       type="text"
                       value={field.name}
                       onChange={(e) => updateField(index, { name: e.target.value })}
@@ -348,8 +349,9 @@ const EditSchema: React.FC = () => {
                     />
                   </div>
                   <div>
-                    <label className="mb-2 block text-sm font-medium text-slate-300">Field type</label>
+                    <label htmlFor={`edit-schema-field-type-${field.id}`} className="mb-2 block text-sm font-medium text-slate-300">Field type</label>
                     <select
+                      id={`edit-schema-field-type-${field.id}`}
                       value={field.type}
                       onChange={(e) => updateField(index, { type: e.target.value })}
                       className="field-shell"
@@ -362,8 +364,9 @@ const EditSchema: React.FC = () => {
                     </select>
                   </div>
                   <div>
-                    <label className="mb-2 block text-sm font-medium text-slate-300">Default value</label>
+                    <label htmlFor={`edit-schema-field-default-${field.id}`} className="mb-2 block text-sm font-medium text-slate-300">Default value</label>
                     <input
+                      id={`edit-schema-field-default-${field.id}`}
                       type="text"
                       value={field.defaultValue || ''}
                       onChange={(e) => updateField(index, { defaultValue: e.target.value })}
@@ -372,8 +375,9 @@ const EditSchema: React.FC = () => {
                     />
                   </div>
                   <div>
-                    <label className="mb-2 block text-sm font-medium text-slate-300">Description</label>
+                    <label htmlFor={`edit-schema-field-description-${field.id}`} className="mb-2 block text-sm font-medium text-slate-300">Description</label>
                     <input
+                      id={`edit-schema-field-description-${field.id}`}
                       type="text"
                       value={field.description || ''}
                       onChange={(e) => updateField(index, { description: e.target.value })}

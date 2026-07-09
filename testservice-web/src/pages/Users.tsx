@@ -256,15 +256,19 @@ const Users: React.FC = () => {
                 <td className="px-4 py-3">
                   <div className="flex items-center justify-center gap-2">
                     <button
+                      type="button"
                       onClick={() => openEdit(user)}
                       className="rounded-xl p-2 hover:bg-slate-800"
+                      aria-label={`Edit user ${user.username}`}
                       title="Edit user"
                     >
                       <Pencil className="w-4 h-4 text-gray-300" />
                     </button>
                     <button
+                      type="button"
                       onClick={() => handleDelete(user)}
                       className="rounded-xl p-2 hover:bg-red-600/20"
+                      aria-label={`Delete user ${user.username}`}
                       title="Delete user"
                     >
                       <Trash2 className="w-4 h-4 text-red-300" />
@@ -398,6 +402,7 @@ const Users: React.FC = () => {
                         {groupPermissions.map((permission) => (
                           <label
                             key={permission.key}
+                            htmlFor={`user-permission-${permission.key}`}
                             className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
                               form.customPermissions.includes(permission.key)
                                 ? 'bg-blue-500/10 border-blue-500/40'
@@ -405,9 +410,11 @@ const Users: React.FC = () => {
                             }`}
                           >
                             <input
+                              id={`user-permission-${permission.key}`}
                               type="checkbox"
                               checked={form.customPermissions.includes(permission.key)}
                               onChange={() => togglePermission(permission.key)}
+                              aria-label={permission.label || permission.key}
                               className="mt-0.5"
                             />
                             <span className="min-w-0">

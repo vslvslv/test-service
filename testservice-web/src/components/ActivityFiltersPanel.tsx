@@ -85,11 +85,11 @@ const ActivityFiltersPanel: React.FC<ActivityFiltersPanelProps> = ({
       </div>
 
       <div className="mt-5 grid gap-4 xl:grid-cols-4">
-        <div className="rounded-[24px] border border-slate-800 bg-slate-950/35 p-4">
-          <label className="mb-3 flex items-center gap-2 text-sm font-medium text-slate-300">
+        <fieldset className="rounded-[24px] border border-slate-800 bg-slate-950/35 p-4">
+          <legend className="mb-3 flex items-center gap-2 text-sm font-medium text-slate-300">
             <Calendar className="h-4 w-4 text-slate-400" />
             Time Period
-          </label>
+          </legend>
           <div className="grid grid-cols-2 gap-2">
             <button type="button" onClick={() => handleDateRangeChange('today')} className="button-secondary !rounded-xl !px-3 !py-2 text-xs">
               Today
@@ -101,14 +101,15 @@ const ActivityFiltersPanel: React.FC<ActivityFiltersPanelProps> = ({
               Last 7 Days
             </button>
           </div>
-        </div>
+        </fieldset>
 
         <div className="rounded-[24px] border border-slate-800 bg-slate-950/35 p-4">
-          <label className="mb-3 flex items-center gap-2 text-sm font-medium text-slate-300">
+          <label htmlFor="activity-filter-schema" className="mb-3 flex items-center gap-2 text-sm font-medium text-slate-300">
             <Database className="h-4 w-4 text-slate-400" />
             Schema
           </label>
           <select
+            id="activity-filter-schema"
             value={localFilters.entityType || ''}
             onChange={(e) => handleFilterChange('entityType', e.target.value)}
             className="field-shell"
@@ -123,11 +124,12 @@ const ActivityFiltersPanel: React.FC<ActivityFiltersPanelProps> = ({
         </div>
 
         <div className="rounded-[24px] border border-slate-800 bg-slate-950/35 p-4">
-          <label className="mb-3 flex items-center gap-2 text-sm font-medium text-slate-300">
+          <label htmlFor="activity-filter-type" className="mb-3 flex items-center gap-2 text-sm font-medium text-slate-300">
             <Tag className="h-4 w-4 text-slate-400" />
             Type
           </label>
           <select
+            id="activity-filter-type"
             value={localFilters.type || ''}
             onChange={(e) => handleFilterChange('type', e.target.value)}
             className="field-shell"
@@ -142,11 +144,12 @@ const ActivityFiltersPanel: React.FC<ActivityFiltersPanelProps> = ({
         </div>
 
         <div className="rounded-[24px] border border-slate-800 bg-slate-950/35 p-4">
-          <label className="mb-3 flex items-center gap-2 text-sm font-medium text-slate-300">
+          <label htmlFor="activity-filter-action" className="mb-3 flex items-center gap-2 text-sm font-medium text-slate-300">
             <Tag className="h-4 w-4 text-slate-400" />
             Action
           </label>
           <select
+            id="activity-filter-action"
             value={localFilters.action || ''}
             onChange={(e) => handleFilterChange('action', e.target.value)}
             className="field-shell"
@@ -167,8 +170,9 @@ const ActivityFiltersPanel: React.FC<ActivityFiltersPanelProps> = ({
       {(localFilters.startDate || localFilters.endDate) && (
         <div className="mt-5 grid gap-4 lg:grid-cols-2">
           <div className="rounded-[24px] border border-slate-800 bg-slate-950/35 p-4">
-            <label className="mb-3 block text-sm font-medium text-slate-300">Start Date</label>
+            <label htmlFor="activity-filter-start-date" className="mb-3 block text-sm font-medium text-slate-300">Start Date</label>
             <input
+              id="activity-filter-start-date"
               type="datetime-local"
               value={localFilters.startDate ? new Date(localFilters.startDate).toISOString().slice(0, 16) : ''}
               onChange={(e) => handleFilterChange('startDate', e.target.value ? new Date(e.target.value).toISOString() : '')}
@@ -176,8 +180,9 @@ const ActivityFiltersPanel: React.FC<ActivityFiltersPanelProps> = ({
             />
           </div>
           <div className="rounded-[24px] border border-slate-800 bg-slate-950/35 p-4">
-            <label className="mb-3 block text-sm font-medium text-slate-300">End Date</label>
+            <label htmlFor="activity-filter-end-date" className="mb-3 block text-sm font-medium text-slate-300">End Date</label>
             <input
+              id="activity-filter-end-date"
               type="datetime-local"
               value={localFilters.endDate ? new Date(localFilters.endDate).toISOString().slice(0, 16) : ''}
               onChange={(e) => handleFilterChange('endDate', e.target.value ? new Date(e.target.value).toISOString() : '')}

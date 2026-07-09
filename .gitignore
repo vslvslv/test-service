@@ -427,3 +427,9 @@ testservice-web/playwright-report/
 # QA team skill run history and generated reports (local tooling state)
 .qa-team/
 qa-report-*.md
+
+# macOS Finder metadata
+.DS_Store
+
+# Local Claude Code / agent configuration
+.claude/

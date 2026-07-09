@@ -250,7 +250,9 @@ const Dashboard: React.FC = () => {
               recentSchemas.map((schema, index) => (
                 <button
                   key={index}
+                  type="button"
                   onClick={() => handleSchemaClick(schema.entityName)}
+                  aria-label={`Open schema ${schema.entityName}`}
                   className="group w-full rounded-2xl border border-slate-800 bg-slate-900/80 p-4 text-left transition-all hover:border-slate-600 hover:bg-slate-800/80"
                 >
                   <div className="flex items-center justify-between gap-4">
