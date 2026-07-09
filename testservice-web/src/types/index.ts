@@ -205,6 +205,20 @@ export interface ActivityFilters {
   user?: string;
 }
 
+// Version/runtime info returned by GET /api/info (see backend AppInfo record).
+export interface BackendInfo {
+  name: string;
+  version: string;
+  commit: string;
+  buildDateUtc: string | null;
+  environment: string;
+  apiVersion: string;
+  runtime: string;
+  serverTimeUtc: string;
+  uptime: string;
+  uptimeSeconds: number;
+}
+
 // Type guard to check if error is ApiError
 export function isApiError(error: unknown): error is ApiError {
   return typeof error === 'object' && error !== null && 'message' in error;

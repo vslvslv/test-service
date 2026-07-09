@@ -1,8 +1,9 @@
-import React, { useState, useRef, useEffect, useLayoutEffect, useMemo } from 'react';
+import React, { useState, useRef, useEffect, useLayoutEffect, useMemo, useCallback } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import NotificationBell, { NotificationBellRef } from './NotificationBell';
+import AboutDialog from './AboutDialog';
 import { apiService } from '../services/api';
 import { Permissions } from '../utils/permissions';
 import {
@@ -20,7 +21,8 @@ import {
   KeyRound,
   User as UserIcon,
   ChevronRight,
-  Boxes
+  Boxes,
+  Info
 } from 'lucide-react';
 
 interface SearchSchema {
@@ -65,6 +67,7 @@ interface SearchItem {
 
 const Layout: React.FC = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isAboutOpen, setIsAboutOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [schemas, setSchemas] = useState<SearchSchema[]>([]);
@@ -398,6 +401,10 @@ const Layout: React.FC = () => {
     navigate('login');
   };
 
+  // Stable identity so opening the About dialog doesn't re-subscribe its key handlers
+  // when Layout re-renders (e.g. on a background toast/notification).
+  const handleAboutClose = useCallback(() => setIsAboutOpen(false), []);
+
   const handleNavItemClick = () => {
     if (typeof window !== 'undefined' && window.innerWidth < 1024) {
       setIsSidebarOpen(false);
@@ -545,6 +552,18 @@ const Layout: React.FC = () => {
               )}
 
               <button
+                type="button"
+                onClick={() => setIsAboutOpen(true)}
+                title={!isSidebarOpen ? 'About' : undefined}
+                className={`flex w-full items-center rounded-2xl text-slate-400 transition-colors hover:bg-slate-900/80 hover:text-white ${
+                  isSidebarOpen ? 'gap-3 px-4 py-3' : 'justify-center px-2 py-3 lg:px-0'
+                }`}
+              >
+                <Info className="h-4 w-4" />
+                {isSidebarOpen && <span className="font-medium">About</span>}
+              </button>
+
+              <button
                 onClick={handleLogout}
                 title={!isSidebarOpen ? 'Logout' : undefined}
                 className={`flex w-full items-center rounded-2xl text-slate-400 transition-colors hover:bg-rose-500/10 hover:text-rose-300 ${
@@ -672,6 +691,8 @@ const Layout: React.FC = () => {
           <Outlet />
         </main>
       </div>
+
+      <AboutDialog isOpen={isAboutOpen} onClose={handleAboutClose} />
     </div>
   );
 };

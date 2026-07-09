@@ -178,9 +178,9 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
-    c.SwaggerDoc("v1", new() { 
-        Title = "Test Service API", 
-        Version = "v1",
+    c.SwaggerDoc(AppInfoService.ApiVersion, new() {
+        Title = "Test Service API",
+        Version = AppInfoService.ApiVersion,
         Description = "Dynamic test data management API with schema-based entities and JWT authentication"
     });
     
@@ -227,6 +227,10 @@ builder.Services.AddSingleton<INotificationService, NotificationService>();
 builder.Services.AddSingleton<ISettingsRepository, SettingsRepository>();
 
 builder.Services.AddSingleton<IPostmanImportService, PostmanImportService>();
+
+// Register application info service (surfaces version/runtime info via GET /api/info)
+builder.Services.AddSingleton<IAppInfoService, AppInfoService>();
+
 // Register Activity services
 builder.Services.AddSingleton<IActivityRepository, ActivityRepository>();
 builder.Services.AddScoped<IActivityService, ActivityService>();

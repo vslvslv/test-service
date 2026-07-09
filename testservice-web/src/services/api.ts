@@ -14,7 +14,8 @@ import type {
   MockRequestLog,
   MockVerificationRequest,
   MockVerificationResponse,
-  PostmanImportResult
+  PostmanImportResult,
+  BackendInfo
 } from '../types';
 
 // For development: use /api (proxied). For production: use env or relative path so same host is used (no localhost).
@@ -281,6 +282,12 @@ class ApiService {
   async getNextAvailable(entityType: string, environment?: string): Promise<Entity> {
     const params = environment ? { environment } : {};
     const response = await this.api.get<Entity>(`/api/entities/${entityType}/next`, { params });
+    return response.data;
+  }
+
+  // Application info (version / runtime metadata for the About dialog)
+  async getInfo(): Promise<BackendInfo> {
+    const response = await this.api.get('/api/info');
     return response.data;
   }
 
