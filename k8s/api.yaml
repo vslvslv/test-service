@@ -41,7 +41,7 @@ spec:
     spec:
       containers:
       - name: api
-        image: harbor.qa2-env01.cloudad.local/library/testservice-api:1.0.9
+        image: harbor.qa2-env01.cloudad.local/library/testservice-api:1.1.0
         imagePullPolicy: Always
         ports:
         - containerPort: 80
