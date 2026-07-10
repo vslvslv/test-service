@@ -121,9 +121,11 @@ public class SettingsRepository : ISettingsRepository
     {
         try
         {
-            // In production, you should hash the key and compare hashes
+            // Returns the key regardless of active/expiry state; the authentication
+            // handler is the single source of truth for those checks. (Note: keys are
+            // stored/compared in plaintext today — hashing is a separate hardening item.)
             return await _apiKeysCollection
-                .Find(k => k.Key == key && k.IsActive)
+                .Find(k => k.Key == key)
                 .FirstOrDefaultAsync();
         }
         catch (Exception ex)

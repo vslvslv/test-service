@@ -1,6 +1,8 @@
 using System.Text;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
+using TestService.Api.Authentication;
 using MongoDB.Bson.Serialization;
 using MongoDB.Bson.Serialization.Conventions;
 using MongoDB.Driver;
@@ -126,12 +128,26 @@ var jwtSettings = new JwtSettings();
 builder.Configuration.GetSection("JwtSettings").Bind(jwtSettings);
 builder.Services.AddSingleton(jwtSettings);
 
-// Add JWT Authentication
+// Add authentication: JWT bearer (Authorization header) and API key (X-Api-Key header).
+// A policy scheme is the default and routes each request to the correct handler based on
+// whether the X-Api-Key header is present, so every [Authorize] endpoint accepts either
+// credential with no per-endpoint changes.
 builder.Services.AddAuthentication(options =>
 {
-    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultScheme = ApiKeyAuthenticationHandler.CompositeSchemeName;
+    options.DefaultChallengeScheme = ApiKeyAuthenticationHandler.CompositeSchemeName;
 })
+.AddPolicyScheme(ApiKeyAuthenticationHandler.CompositeSchemeName, "JWT or API Key", options =>
+{
+    // Route to the API-key scheme only when a non-empty X-Api-Key is present; an empty/
+    // whitespace header (e.g. an unset Postman variable) must not hijack a valid JWT request.
+    options.ForwardDefaultSelector = context =>
+        !string.IsNullOrWhiteSpace(context.Request.Headers[ApiKeyAuthenticationHandler.HeaderName])
+            ? ApiKeyAuthenticationHandler.SchemeName
+            : JwtBearerDefaults.AuthenticationScheme;
+})
+.AddScheme<AuthenticationSchemeOptions, ApiKeyAuthenticationHandler>(
+    ApiKeyAuthenticationHandler.SchemeName, _ => { })
 .AddJwtBearer(options =>
 {
     options.TokenValidationParameters = new TokenValidationParameters

@@ -80,8 +80,16 @@ public class ApiKey
     [JsonPropertyName("createdAt")]
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
+    /// <summary>Username of the creator, for display/audit only.</summary>
     [JsonPropertyName("createdBy")]
     public string? CreatedBy { get; set; }
+
+    /// <summary>
+    /// Immutable id of the creating user. Authentication resolves the key's authority
+    /// from this (never the username, which can be deleted and reused).
+    /// </summary>
+    [JsonPropertyName("createdByUserId")]
+    public string? CreatedByUserId { get; set; }
 
     [JsonPropertyName("lastUsed")]
     public DateTime? LastUsed { get; set; }
