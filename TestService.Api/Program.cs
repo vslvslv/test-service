@@ -242,6 +242,9 @@ builder.Services.AddSingleton<INotificationService, NotificationService>();
 // Register Settings services
 builder.Services.AddSingleton<ISettingsRepository, SettingsRepository>();
 
+// One-time backfill of owner ids for legacy API keys (runs at startup)
+builder.Services.AddSingleton<IApiKeyOwnerBackfillService, ApiKeyOwnerBackfillService>();
+
 builder.Services.AddSingleton<IPostmanImportService, PostmanImportService>();
 
 // Register application info service (surfaces version/runtime info via GET /api/info)
@@ -273,6 +276,10 @@ _ = Task.Run(async () =>
             // Initialize default environments
             var environmentService = scope.ServiceProvider.GetRequiredService<IEnvironmentService>();
             await environmentService.InitializeDefaultEnvironmentsAsync();
+
+            // Backfill owner ids for legacy API keys created before owner-id tracking
+            var apiKeyBackfill = scope.ServiceProvider.GetRequiredService<IApiKeyOwnerBackfillService>();
+            await apiKeyBackfill.RunAsync();
         }
     }
     catch (Exception ex)
@@ -291,6 +298,9 @@ _ = Task.Run(async () =>
                 
                 var environmentService = scope.ServiceProvider.GetRequiredService<IEnvironmentService>();
                 await environmentService.InitializeDefaultEnvironmentsAsync();
+
+                var apiKeyBackfill = scope.ServiceProvider.GetRequiredService<IApiKeyOwnerBackfillService>();
+                await apiKeyBackfill.RunAsync();
                 Console.WriteLine("[INFO] Database initialization succeeded on retry");
             }
         }

@@ -1,7 +1,9 @@
 using System.Net;
 using System.Net.Http.Json;
+using Microsoft.Extensions.DependencyInjection;
 using TestService.Api.Authentication;
 using TestService.Api.Models;
+using TestService.Api.Services;
 using TestService.Tests.Infrastructure;
 
 namespace TestService.Tests.Integration;
@@ -88,5 +90,45 @@ public class ApiKeyAuthTests : IntegrationTestBase
         var response = await Client.GetAsync("/api/info");
 
         AssertStatusCode(response, HttpStatusCode.OK);
+    }
+
+    [Test]
+    public async Task LegacyKeyWithoutOwnerId_AuthenticatesAfterBackfill()
+    {
+        // Simulate a pre-1.1.0 key: created directly with a CreatedBy username but no
+        // CreatedByUserId (the field didn't exist when it was made).
+        var keyValue = "ts_legacy_" + Guid.NewGuid().ToString("N");
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var repo = scope.ServiceProvider.GetRequiredService<ISettingsRepository>();
+            await repo.CreateApiKeyAsync(new ApiKey
+            {
+                Name = "legacy-it",
+                Key = keyValue,
+                CreatedBy = "admin",
+                CreatedByUserId = null,
+                IsActive = true
+            });
+        }
+
+        using var apiKeyClient = Factory.CreateClient();
+        apiKeyClient.DefaultRequestHeaders.Add(ApiKeyAuthenticationHandler.HeaderName, keyValue);
+
+        // Before backfill: the legacy key has no owner id → rejected (fail closed).
+        var before = await apiKeyClient.GetAsync("/api/info");
+        AssertStatusCode(before, HttpStatusCode.Unauthorized);
+
+        // Run the startup backfill.
+        int updated;
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var backfill = scope.ServiceProvider.GetRequiredService<IApiKeyOwnerBackfillService>();
+            updated = await backfill.RunAsync();
+        }
+        Assert.That(updated, Is.GreaterThanOrEqualTo(1), "Backfill should update the legacy key.");
+
+        // After backfill: the same key now authenticates.
+        var after = await apiKeyClient.GetAsync("/api/info");
+        AssertStatusCode(after, HttpStatusCode.OK);
     }
 }

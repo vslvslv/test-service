@@ -91,6 +91,7 @@ public class SettingsController : ControllerBase
                 ExpiresAt = k.ExpiresAt,
                 CreatedAt = k.CreatedAt,
                 CreatedBy = k.CreatedBy,
+                CreatedByUserId = k.CreatedByUserId,
                 LastUsed = k.LastUsed,
                 IsActive = k.IsActive
             });
