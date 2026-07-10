@@ -14,6 +14,8 @@ import {
   XCircle,
 } from 'lucide-react';
 import { apiService } from '../services/api';
+import { useToast } from '../contexts/ToastContext';
+import { copyToClipboard } from '../utils/clipboard';
 import type { Entity, Environment, Schema, SchemaField } from '../types';
 
 interface EntityViewDialogProps {
@@ -39,6 +41,7 @@ const EntityViewDialog: React.FC<EntityViewDialogProps> = ({
   const [availableEnvironments, setAvailableEnvironments] = useState<Environment[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [showRawJson, setShowRawJson] = useState(false);
+  const { success, error } = useToast();
 
   useEffect(() => {
     if (!isOpen || !entity) return;
@@ -73,12 +76,20 @@ const EntityViewDialog: React.FC<EntityViewDialogProps> = ({
 
   if (!isOpen || !entity) return null;
 
-  const handleCopyField = (value: string) => {
-    navigator.clipboard.writeText(value);
+  const handleCopyField = async (value: string) => {
+    if (await copyToClipboard(value)) {
+      success('Copied', 'Value copied to clipboard');
+    } else {
+      error('Copy failed', 'Could not copy to the clipboard');
+    }
   };
 
-  const handleCopyAll = () => {
-    navigator.clipboard.writeText(JSON.stringify(entity.fields, null, 2));
+  const handleCopyAll = async () => {
+    if (await copyToClipboard(JSON.stringify(entity.fields, null, 2))) {
+      success('Copied', 'All field values copied to clipboard');
+    } else {
+      error('Copy failed', 'Could not copy to the clipboard');
+    }
   };
 
   const handleExportJson = () => {
