@@ -196,5 +196,19 @@ public class SettingsRepository : ISettingsRepository
         }
     }
 
+    public async Task UpdateApiKeyOwnerIdAsync(string id, string userId)
+    {
+        try
+        {
+            var update = Builders<ApiKey>.Update.Set(k => k.CreatedByUserId, userId);
+            await _apiKeysCollection.UpdateOneAsync(k => k.Id == id, update);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error updating API key owner id: {Id}", id);
+            throw;
+        }
+    }
+
     #endregion
 }

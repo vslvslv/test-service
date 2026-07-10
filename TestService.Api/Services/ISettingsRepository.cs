@@ -15,4 +15,5 @@ public interface ISettingsRepository
     Task<ApiKey> CreateApiKeyAsync(ApiKey apiKey);
     Task<bool> DeleteApiKeyAsync(string id);
     Task UpdateApiKeyLastUsedAsync(string id);
+    Task UpdateApiKeyOwnerIdAsync(string id, string userId);
 }
