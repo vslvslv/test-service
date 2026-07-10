@@ -119,6 +119,7 @@ public class SettingsController : ControllerBase
             }
 
             var username = User.FindFirst(ClaimTypes.Name)?.Value;
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
             // Generate a unique API key
             var keyValue = GenerateApiKey();
@@ -127,10 +128,11 @@ public class SettingsController : ControllerBase
             {
                 Name = request.Name,
                 Key = keyValue,
-                ExpiresAt = request.ExpirationDays.HasValue 
-                    ? DateTime.UtcNow.AddDays(request.ExpirationDays.Value) 
+                ExpiresAt = request.ExpirationDays.HasValue
+                    ? DateTime.UtcNow.AddDays(request.ExpirationDays.Value)
                     : null,
-                CreatedBy = username
+                CreatedBy = username,
+                CreatedByUserId = userId
             };
 
             var created = await _settingsRepository.CreateApiKeyAsync(apiKey);

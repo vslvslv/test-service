@@ -14,6 +14,7 @@ import {
   Trash2,
 } from 'lucide-react';
 import { apiService } from '../services/api';
+import { copyToClipboard as copyText } from '../utils/clipboard';
 
 interface DataRetentionSettings {
   schemaRetentionDays: number | null;
@@ -146,7 +147,9 @@ const Settings: React.FC = () => {
   };
 
   const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
+    // Uses a secure-context-safe helper with an HTTP fallback (navigator.clipboard
+    // is unavailable when the app is served over plain HTTP).
+    void copyText(text);
   };
 
   const handleRetentionChange = (field: keyof DataRetentionSettings, value: boolean | number | null) => {
