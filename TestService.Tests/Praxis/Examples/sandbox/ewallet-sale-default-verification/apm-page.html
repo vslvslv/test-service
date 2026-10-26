@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en-US">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="https://helios.cashier-test.com/css/themes/default-theme.css" rel="stylesheet">
+</head>
+<body  id="main" class="default-theme" >
+        
+        <head>
+    <script language="Javascript">
+        function setStatus(status) {
+            let buttons = document.querySelectorAll('.button');
+            for(var i = 0; i < buttons.length; i++) {
+                let button = buttons[i];
+                button.setAttribute('disabled', 'disabled');
+            }
+
+            var newTab = 0;
+            var url = "https://helios.cashier-test.com/api/apm/response/TestAPM/<tid>";
+
+            if(newTab == 1){
+                window.open(url + "?status=" + status, 'TheWindow');
+                setTimeout(function () {
+                    document.getElementsByClassName("text-center")[0].innerHTML =
+                        '<h3>Upon 3DSecure deposit confirmation, please <a href="' + url + '">click here</a> to return to your account</h3>';
+                    return false;
+                }, 500);
+            } else {
+                window.location.href = url + "?status=" + status;
+            }
+        }
+
+        $('#back_to_site_form').submit( function (event) {
+            event.preventDefault();
+
+            const loader = $('#preloader');
+
+            if (!loader.is(':visible')) {
+                loader.show();
+            }
+
+            $(this).unbind('submit').submit();
+
+            console.log(loader);
+        });
+
+        function sendNotification(event) {
+
+            const form = $(event.target);
+            const loader = $('#preloader');
+
+            if (!loader.is(':visible')) {
+                loader.show();
+            }
+
+            $.ajax({
+                type: 'POST',
+                url: form.attr('action'),
+                data: form.serializeArray(),
+                contentType: 'application/x-www-form-urlencoded',
+                dataType: 'json',
+                complete: function() {
+                    $('#preloader').hide();
+                }
+            });
+        }
+    </script>
+    <style>
+        .button {
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            text-align: center;
+            cursor:pointer;
+            display: inline-block;
+            font-size: 15px;
+            margin-left: 5px;
+        }
+        .approve {
+            background-color: #4CAF50;
+        }
+        .pending {
+            background-color: #5bc0de;
+        }
+        .declined {
+            background-color: #d9534f;
+        }
+        .canceled {
+            background-color: #FFA500;
+        }
+        .verification {
+            background-color: #13b4ea;
+        }
+        .main-container {
+            padding: 20px;
+        }
+        .text-center {
+            text-align: center;
+        }
+    </style
+</head>
+<body>
+
+
+    <div class="text-center">
+        <h3>Please click the button to continue</h3>
+        <div>
+            <div>
+                <button type="submit" onclick="setStatus('approved')" class="button approve">Approve</button>
+                <button type="submit" onclick="setStatus('pending')" class="button pending">Pending</button>
+            </div>
+            <div>
+                <button type="submit" onclick="setStatus('declined')" class="button declined">Declined</button>
+                <button type="submit" onclick="setStatus('cancelled')" class="button canceled">Cancelled</button>
+            </div>
+            <div>
+                <button type="submit" onclick="setStatus('verification')" class="button verification">Verification</button>
+            </div>
+        </div>
+    </div>
+
+</body>
+
+<script src="https://helios.cashier-test.com/js/views/views.js"></script>
+<script src="/assets/98cab536/jquery.js"></script></body>
+</html>

@@ -1,0 +1,4 @@
+{
+  "status": 400,
+  "description": "City cannot be blank.,Address cannot be blank.,User Agent cannot be blank.,Accept Header cannot be blank.,Language cannot be blank.,Ip Address cannot be blank.,Color Depth cannot be blank.,Pixel Depth cannot be blank.,Pixel Ratio cannot be blank."
+}

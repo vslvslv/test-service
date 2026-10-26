@@ -1,0 +1,7 @@
+{
+  "method": "GET",
+  "url": "https://helios.cashier-test.com/api/wallet/payout-redirect/RzRNYlpsVFpHWUpJUUt5c1JKNnBIdz09",
+  "form": null,
+  "http_status": 302,
+  "location": "https://helios.cashier-test.com/sandbox/payout-page?id=3365689"
+}

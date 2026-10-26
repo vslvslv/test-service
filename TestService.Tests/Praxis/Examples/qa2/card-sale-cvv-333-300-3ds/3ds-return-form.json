@@ -1,0 +1,6 @@
+{
+  "form": {
+    "paRes": "<paRes>"
+  },
+  "note": "Customer returns from the 3DS page with an application/x-www-form-urlencoded body containing only paRes."
+}

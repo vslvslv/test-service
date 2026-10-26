@@ -1,7 +1,10 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Text.Json;
+using Microsoft.Extensions.DependencyInjection;
 using TestService.Api.Models;
+using TestService.Api.Services;
 using TestService.Tests.Infrastructure;
 
 namespace TestService.Tests.Integration;
@@ -107,6 +110,229 @@ public class MocksControllerTests : IntegrationTestBase
         Assert.That(verifyResult, Is.Not.Null);
         Assert.That(verifyResult!.Success, Is.True);
         Assert.That(verifyResult.MatchedCount, Is.EqualTo(2));
+    }
+
+    [Test]
+    public async Task Verify_WithMoreThanOneThousandLogs_CountsEveryLog()
+    {
+        var environment = $"verify-many-{Guid.NewGuid():N}";
+        var repository = Factory.Services.GetRequiredService<IMockRepository>();
+        // Chunked so the driver's connection wait queue is not overrun.
+        foreach (var chunk in Enumerable.Range(0, 1500).Chunk(50))
+        {
+            await Task.WhenAll(chunk.Select(_ => repository.CreateRequestLogAsync(new MockRequestLog
+            {
+                Environment = environment,
+                Method = "GET",
+                Path = "/many",
+                ResponseStatusCode = 404
+            })));
+        }
+
+        try
+        {
+            var response = await Client.PostAsJsonAsync("/api/mocks/verify", new MockVerificationRequest
+            {
+                Environment = environment,
+                Matcher = new MockRequestMatcher { Method = "GET", Path = "/many" },
+                ExactCount = 1500
+            });
+
+            AssertStatusCode(response, HttpStatusCode.OK);
+            var result = await response.Content.ReadFromJsonAsync<MockVerificationResponse>();
+            Assert.That(result!.Success, Is.True, result.Message);
+            Assert.That(result.MatchedCount, Is.EqualTo(1500));
+        }
+        finally
+        {
+            await Client.DeleteAsync($"/api/mocks/requests?environment={environment}");
+        }
+    }
+
+    [Test]
+    public async Task Verify_WithQueryMatcher_CountsRequestsWithThatQuery()
+    {
+        var environment = $"verify-query-{Guid.NewGuid():N}";
+        try
+        {
+            Client.DefaultRequestHeaders.Authorization = null;
+            await Client.GetAsync($"/mock/{environment}/search?a=1");
+            await Client.GetAsync($"/mock/{environment}/search?a=1&b=2");
+            await Client.GetAsync($"/mock/{environment}/search?a=2");
+            await Client.GetAsync($"/mock/{environment}/search");
+            await SetAdminAuthTokenAsync();
+
+            var response = await Client.PostAsJsonAsync("/api/mocks/verify", new MockVerificationRequest
+            {
+                Environment = environment,
+                Matcher = new MockRequestMatcher
+                {
+                    Method = "GET",
+                    Path = "/search",
+                    Query = new Dictionary<string, string> { ["a"] = "1" }
+                },
+                ExactCount = 2
+            });
+
+            AssertStatusCode(response, HttpStatusCode.OK);
+            var result = await response.Content.ReadFromJsonAsync<MockVerificationResponse>();
+            Assert.That(result!.MatchedCount, Is.EqualTo(2));
+            Assert.That(result.Success, Is.True);
+        }
+        finally
+        {
+            await SetAdminAuthTokenAsync();
+            await Client.DeleteAsync($"/api/mocks/requests?environment={environment}");
+        }
+    }
+
+    [Test]
+    public async Task Verify_WithHeaderMatcher_IgnoresHeaderNameCase()
+    {
+        var environment = $"verify-header-{Guid.NewGuid():N}";
+        try
+        {
+            await SendMockRequestAsync(environment, "/hdr", "GET", headers: new Dictionary<string, string> { ["X-Test"] = "on" });
+            await SendMockRequestAsync(environment, "/hdr", "GET");
+
+            var response = await Client.PostAsJsonAsync("/api/mocks/verify", new MockVerificationRequest
+            {
+                Environment = environment,
+                Matcher = new MockRequestMatcher
+                {
+                    Method = "GET",
+                    Path = "/hdr",
+                    Headers = new Dictionary<string, string> { ["x-test"] = "on" }
+                },
+                ExactCount = 1
+            });
+
+            AssertStatusCode(response, HttpStatusCode.OK);
+            var result = await response.Content.ReadFromJsonAsync<MockVerificationResponse>();
+            Assert.That(result!.MatchedCount, Is.EqualTo(1));
+            Assert.That(result.Success, Is.True);
+        }
+        finally
+        {
+            await Client.DeleteAsync($"/api/mocks/requests?environment={environment}");
+        }
+    }
+
+    [Test]
+    public async Task Verify_SameRouteInTwoEnvironments_CountsOnlyTheRequestedEnvironment()
+    {
+        var environment = $"verify-env-a-{Guid.NewGuid():N}";
+        var other = $"verify-env-b-{Guid.NewGuid():N}";
+        try
+        {
+            await SendMockRequestAsync(environment, "/same", "GET");
+            await SendMockRequestAsync(other, "/same", "GET");
+            await SendMockRequestAsync(other, "/same", "GET");
+
+            var response = await Client.PostAsJsonAsync("/api/mocks/verify", new MockVerificationRequest
+            {
+                Environment = environment,
+                Matcher = new MockRequestMatcher { Method = "GET", Path = "/same" },
+                ExactCount = 1
+            });
+
+            AssertStatusCode(response, HttpStatusCode.OK);
+            var result = await response.Content.ReadFromJsonAsync<MockVerificationResponse>();
+            Assert.That(result!.MatchedCount, Is.EqualTo(1));
+            Assert.That(result.Success, Is.True);
+        }
+        finally
+        {
+            await Client.DeleteAsync($"/api/mocks/requests?environment={environment}");
+            await Client.DeleteAsync($"/api/mocks/requests?environment={other}");
+        }
+    }
+
+    [Test]
+    public async Task CreateExpectation_WithInvalidPathRegex_ReturnsBadRequestAndStoresNothing()
+    {
+        var environment = $"bad-regex-{Guid.NewGuid():N}";
+        var response = await Client.PostAsJsonAsync("/api/mocks/expectations", new MockExpectation
+        {
+            Environment = environment,
+            Name = "bad regex",
+            RequestMatcher = new MockRequestMatcher { Path = "(", PathMatchType = PathMatchType.Regex }
+        });
+
+        AssertStatusCode(response, HttpStatusCode.BadRequest);
+        Assert.That(await ReadMessageAsync(response), Does.Contain("requestMatcher.path"));
+        Assert.That(await GetExpectationsInAsync(environment), Is.Empty);
+    }
+
+    [Test]
+    public async Task CreateExpectation_WithInvalidBodyRegex_ReturnsBadRequestNamingBody()
+    {
+        var environment = $"bad-body-regex-{Guid.NewGuid():N}";
+        var response = await Client.PostAsJsonAsync("/api/mocks/expectations", new MockExpectation
+        {
+            Environment = environment,
+            Name = "bad body regex",
+            RequestMatcher = new MockRequestMatcher { Path = "/x", Body = "[a-", BodyMatchType = BodyMatchType.Regex }
+        });
+
+        AssertStatusCode(response, HttpStatusCode.BadRequest);
+        Assert.That(await ReadMessageAsync(response), Does.Contain("requestMatcher.body"));
+        Assert.That(await GetExpectationsInAsync(environment), Is.Empty);
+    }
+
+    [Test]
+    public async Task UpdateExpectation_WithInvalidPathRegex_ReturnsBadRequestAndKeepsStoredExpectation()
+    {
+        var environment = $"bad-regex-upd-{Guid.NewGuid():N}";
+        var created = await CreateExpectationAsync(environment, "/valid", "valid");
+
+        try
+        {
+            created.RequestMatcher.Path = "(";
+            created.RequestMatcher.PathMatchType = PathMatchType.Regex;
+
+            var response = await Client.PutAsJsonAsync($"/api/mocks/expectations/{created.Id}", created);
+
+            AssertStatusCode(response, HttpStatusCode.BadRequest);
+            Assert.That(await ReadMessageAsync(response), Does.Contain("requestMatcher.path"));
+            var stored = (await GetExpectationsInAsync(environment)).Single();
+            Assert.That(stored.RequestMatcher.Path, Is.EqualTo("/valid"));
+            Assert.That(stored.RequestMatcher.PathMatchType, Is.EqualTo(PathMatchType.Exact));
+        }
+        finally
+        {
+            await Client.DeleteAsync($"/api/mocks/expectations/{created.Id}");
+        }
+    }
+
+    [Test]
+    public async Task DuplicateExpectation_WithInvalidPathRegex_ReturnsBadRequestAndStoresNothing()
+    {
+        // Seeded through the repository: the API no longer accepts an invalid pattern.
+        var sourceEnvironment = $"bad-regex-src-{Guid.NewGuid():N}";
+        var targetEnvironment = $"bad-regex-tgt-{Guid.NewGuid():N}";
+        var repository = Factory.Services.GetRequiredService<IMockRepository>();
+        var source = await repository.CreateExpectationAsync(new MockExpectation
+        {
+            Environment = sourceEnvironment,
+            Name = "legacy bad regex",
+            RequestMatcher = new MockRequestMatcher { Path = "(", PathMatchType = PathMatchType.Regex }
+        });
+
+        try
+        {
+            var response = await Client.PostAsJsonAsync(
+                $"/api/mocks/expectations/{source.Id}/duplicate",
+                new DuplicateExpectationRequest { TargetEnvironment = targetEnvironment });
+
+            AssertStatusCode(response, HttpStatusCode.BadRequest);
+            Assert.That(await ReadMessageAsync(response), Does.Contain("requestMatcher.path"));
+            Assert.That(await GetExpectationsInAsync(targetEnvironment), Is.Empty);
+        }
+        finally
+        {
+            await repository.DeleteExpectationAsync(source.Id!);
+        }
     }
 
     [Test]
@@ -588,6 +814,65 @@ public class MocksControllerTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task ImportPostman_WithSavedResponse_MockAnswersWithThatResponse()
+    {
+        var environment = $"postman-resp-{Guid.NewGuid():N}";
+        var collectionJson = """
+            {
+              "info": {
+                "name": "Saved responses",
+                "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+              },
+              "item": [
+                {
+                  "name": "Create Order",
+                  "request": {
+                    "method": "POST",
+                    "url": { "raw": "https://example.com/orders", "path": ["orders"] }
+                  },
+                  "response": [
+                    {
+                      "name": "created",
+                      "code": 201,
+                      "header": [ { "key": "Content-Type", "value": "application/json" } ],
+                      "body": "{\"orderId\":42}"
+                    }
+                  ]
+                }
+              ]
+            }
+            """;
+
+        using var content = new MultipartFormDataContent();
+        var fileContent = new ByteArrayContent(System.Text.Encoding.UTF8.GetBytes(collectionJson));
+        fileContent.Headers.ContentType = new MediaTypeHeaderValue("application/json");
+        content.Add(fileContent, "file", "collection.json");
+
+        var importResponse = await Client.PostAsync(
+            $"/api/mocks/expectations/import/postman?targetEnvironment={environment}",
+            content);
+        AssertStatusCode(importResponse, HttpStatusCode.OK);
+        var result = await importResponse.Content.ReadFromJsonAsync<PostmanImportResult>();
+        Assert.That(result!.Created, Is.EqualTo(1));
+
+        try
+        {
+            var mockResponse = await SendMockRequestAsync(environment, "/orders", "POST", "{}");
+
+            AssertStatusCode(mockResponse, HttpStatusCode.Created);
+            Assert.That(await mockResponse.Content.ReadAsStringAsync(), Is.EqualTo("{\"orderId\":42}"));
+        }
+        finally
+        {
+            foreach (var expectation in await GetExpectationsInAsync(environment))
+            {
+                await Client.DeleteAsync($"/api/mocks/expectations/{expectation.Id}");
+            }
+            await Client.DeleteAsync($"/api/mocks/requests?environment={environment}");
+        }
+    }
+
+    [Test]
     public async Task ImportPostman_WithoutFile_ReturnsBadRequest()
     {
         using var content = new MultipartFormDataContent();
@@ -609,6 +894,19 @@ public class MocksControllerTests : IntegrationTestBase
         var response = await Client.PostAsync("/api/mocks/expectations/import/postman", content);
 
         AssertStatusCode(response, HttpStatusCode.BadRequest);
+    }
+
+    private async Task<List<MockExpectation>> GetExpectationsInAsync(string environment)
+    {
+        var response = await Client.GetAsync($"/api/mocks/expectations?environment={environment}&includeDisabled=true");
+        AssertStatusCode(response, HttpStatusCode.OK);
+        return (await response.Content.ReadFromJsonAsync<List<MockExpectation>>())!;
+    }
+
+    private static async Task<string> ReadMessageAsync(HttpResponseMessage response)
+    {
+        using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        return doc.RootElement.GetProperty("message").GetString() ?? string.Empty;
     }
 
     private async Task<MockExpectation> CreateExpectationAsync(

@@ -214,7 +214,7 @@ public class SidebarTests : AuthenticatedTest
     public async Task SessionClearedAfterLogout()
     {
         await _sidebar.LogoutButton.ClickAsync();
-        await Page.WaitForURLAsync(url => url.Contains("/login"), new() { Timeout = 10_000 });
+        await Expect(Page).ToHaveURLAsync(new System.Text.RegularExpressions.Regex("/login"), new() { Timeout = 10_000 });
 
         // Navigating back to root should redirect to login, not load the dashboard.
         await Page.GotoAsync("/");

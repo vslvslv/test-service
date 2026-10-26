@@ -42,6 +42,13 @@ public class DataRetentionSettings
     public int? EntityRetentionDays { get; set; }
 
     /// <summary>
+    /// Number of days to keep mock request logs (by timestamp) and mock callback logs (by sentAt)
+    /// before deletion (null = never delete). Defaults to 7, also for stored documents without the field.
+    /// </summary>
+    [JsonPropertyName("mockLogRetentionDays")]
+    public int? MockLogRetentionDays { get; set; } = 7;
+
+    /// <summary>
     /// Whether automatic cleanup is enabled
     /// </summary>
     [JsonPropertyName("autoCleanupEnabled")]

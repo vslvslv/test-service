@@ -1,0 +1,51 @@
+<html>
+<head>
+    <title>Please wait...</title>
+    <script>
+        function OnLoadEvent() { window.location.href = "https://helios.cashier-test.com/apm-web/process/<token>?"}
+    </script>
+
+        <style>
+                .loader-container {
+                position: absolute;
+                top: 0;
+                bottom: 0;
+                right: 0;
+                left: 0;
+                background-color: rgba(255, 255, 255, 0.5);
+                z-index: 100;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+            }
+            .loader-container .loader {
+                width: 50px;
+                height: 50px;
+                background-image: url("../../img/Cashier_cubes_preloader.gif");
+                background-size: contain;
+            }
+            .loader-container .loader.fixed {
+                position: fixed;
+                z-index: 1;
+                background-color: #fff;
+            }
+            .loader-container .loader.index {
+                z-index: 2;
+            }
+            @keyframes preloader {
+                to {
+                    transform: rotate(360deg);
+                }
+            }
+            body {font: 14px/1.5 'Open Sans','Arial', sans-serif;font-weight: 400;color: #111;background: #FFF;}
+        </style>
+    </head>
+<body onload="OnLoadEvent();">
+    <div class="loading-wrapper">
+        <span class="loading-text">Please wait...</span>
+        <div id="preloader" class="loader-container">
+            <div class="loader"></div>
+        </div>
+    </div>
+</body>
+</html>

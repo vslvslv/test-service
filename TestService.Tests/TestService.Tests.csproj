@@ -28,6 +28,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Include="Praxis\Examples\**\*" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\TestService.Api\TestService.Api.csproj" />
   </ItemGroup>
 

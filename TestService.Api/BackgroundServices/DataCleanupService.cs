@@ -47,7 +47,7 @@ public class DataCleanupService : BackgroundService
         _logger.LogInformation("Data Cleanup Service stopped");
     }
 
-    private async Task PerformCleanupAsync(CancellationToken cancellationToken)
+    internal async Task PerformCleanupAsync(CancellationToken cancellationToken)
     {
         using var scope = _serviceProvider.CreateScope();
         var settingsRepository = scope.ServiceProvider.GetRequiredService<ISettingsRepository>();
@@ -84,6 +84,15 @@ public class DataCleanupService : BackgroundService
                 database,
                 settings.DataRetention.EntityRetentionDays.Value,
                 cancellationToken);
+        }
+
+        // Cleanup expired mock request and callback logs
+        if (settings.DataRetention.MockLogRetentionDays.HasValue)
+        {
+            var mockRepository = scope.ServiceProvider.GetRequiredService<IMockRepository>();
+            await CleanupMockLogsAsync(
+                mockRepository,
+                settings.DataRetention.MockLogRetentionDays.Value);
         }
 
         _logger.LogInformation("Data cleanup cycle completed");
@@ -129,6 +138,51 @@ public class DataCleanupService : BackgroundService
         }
     }
 
+    /// <summary>Deletes old mock request logs and old callback logs; a failure of one does not skip the other.</summary>
+    private async Task CleanupMockLogsAsync(IMockRepository mockRepository, int retentionDays)
+    {
+        var cutoffDate = DateTime.UtcNow.AddDays(-retentionDays);
+        try
+        {
+            var requestLogsDeleted = await mockRepository.DeleteRequestLogsOlderThanAsync(cutoffDate);
+            _logger.LogInformation("Deleted {RequestLogs} mock request logs older than {Days} days", requestLogsDeleted, retentionDays);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error cleaning up mock request logs");
+        }
+
+        try
+        {
+            var callbackLogsDeleted = await mockRepository.DeleteCallbackLogsOlderThanAsync(cutoffDate);
+            _logger.LogInformation("Deleted {CallbackLogs} mock callback logs older than {Days} days", callbackLogsDeleted, retentionDays);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error cleaning up mock callback logs");
+        }
+    }
+
+    /// <summary>
+    /// Whether a collection can hold dynamic entities subject to entity retention.
+    /// System, configuration, mock, provider emulator and legacy test data collections never are.
+    /// </summary>
+    internal static bool IsEntityCollection(string name) =>
+        !name.StartsWith("system.") &&
+        name != "EntitySchemas" &&
+        name != "Settings" &&
+        name != "ApiKeys" &&
+        name != "Users" &&
+        name != "Environments" &&
+        name != "MockExpectations" &&
+        name != "MockRequestLogs" &&
+        name != "MockCallbackLogs" &&
+        name != "activities" &&
+        name != "PraxisMerchants" &&
+        name != "PraxisTransactions" &&
+        name != "EmulatorCounters" &&
+        name != "TestData";
+
     private async Task CleanupEntitiesAsync(
         IMongoDatabase database,
         int retentionDays,
@@ -143,12 +197,7 @@ public class DataCleanupService : BackgroundService
             var collectionNames = await cursor.ToListAsync(cancellationToken);
             
             var entityCollections = collectionNames
-                .Where(name => !name.StartsWith("system.") && 
-                              name != "EntitySchemas" && 
-                              name != "Settings" && 
-                              name != "ApiKeys" &&
-                              name != "Users" &&
-                              name != "Environments")
+                .Where(IsEntityCollection)
                 .ToList();
 
             int totalDeleted = 0;

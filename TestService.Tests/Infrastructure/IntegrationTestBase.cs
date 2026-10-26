@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -43,6 +44,8 @@ public abstract class IntegrationTestBase
                     services.RemoveAll<IMessageBusService>();
                     services.AddSingleton<IMessageBusService, FakeMessageBusService>();
                 });
+
+                ConfigureWebHost(builder);
             });
         Client = Factory.CreateClient();
 
@@ -82,6 +85,14 @@ public abstract class IntegrationTestBase
         await OnTearDown();
         Client.DefaultRequestHeaders.Remove("Authorization");
         Client.DefaultRequestHeaders.Authorization = null;
+    }
+
+    /// <summary>
+    /// Override to customise the test host (for example with <c>ConfigureTestServices</c>).
+    /// Runs inside <c>WithWebHostBuilder</c>, after the base test-service overrides.
+    /// </summary>
+    protected virtual void ConfigureWebHost(IWebHostBuilder builder)
+    {
     }
 
     /// <summary>

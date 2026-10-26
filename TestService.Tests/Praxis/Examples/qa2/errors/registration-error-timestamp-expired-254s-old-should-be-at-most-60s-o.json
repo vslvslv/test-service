@@ -1,0 +1,4 @@
+{
+  "status": 400,
+  "description": "Timestamp expired: 254s old, should be at most 60s old (required with merchant_id)"
+}

@@ -42,6 +42,7 @@ public class SettingsRepository : ISettingsRepository
                     {
                         SchemaRetentionDays = null, // Never delete by default
                         EntityRetentionDays = 30,   // 30 days default
+                        MockLogRetentionDays = 7,   // mock request and callback logs
                         AutoCleanupEnabled = true
                     }
                 };

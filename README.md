@@ -136,6 +136,7 @@ GET /api/entities/Agent/filter/brandId/brand123
    - Thread-safe parallel test execution support
    - **Bulk entity export/import** (CSV and JSON) with append/upsert modes
    - **Mocks:** Postman Collection v2.1 import and duplicate expectation to another environment
+   - **Outbound callbacks:** delivery component for provider emulators (delayed requests to allowed hosts, recorded in a callback log at `GET`/`DELETE /api/mocks/callbacks`); the upcoming Praxis emulator will be its first producer
    - Built with ASP.NET Core Web API
 
 2. **TestService.Tests** - NUnit test project
@@ -320,9 +321,24 @@ Configuration is in `appsettings.json`:
     "UserName": "guest",
     "Password": "guest",
     "ExchangeName": "test-service-exchange"
+  },
+  "Mocking": {
+    "AllowedCallbackHosts": []
   }
 }
 ```
+
+### Outbound callback hosts
+
+Callback delivery is the component provider emulators use to send delayed callbacks (for example payment notifications); the Praxis emulator (below) sends its signed notifications through it. Callbacks go only to hosts listed in `Mocking:AllowedCallbackHosts` (exact, case-insensitive host match). An empty list, the default in `appsettings.json` and Production, sends nothing; Development and Docker allow `localhost`. Override per index with environment variables, for example `Mocking__AllowedCallbackHosts__0=<host>` (this replaces index 0 rather than appending).
+
+Every attempt, including refused (`host not allowed`), failed, `dropped: queue full` and `lost: shutdown` ones, is recorded in the `MockCallbackLogs` collection with the request, the target's status code, headers and first 64 KB of the body, `dueAt`, `sentAt` and `durationMs`. Read it with `GET /api/mocks/callbacks?environment=&source=&correlationId=&limit=` (`mocks.logs.read`, newest first, limit 1..1000, default 100) and clear it with `DELETE /api/mocks/callbacks?environment=` (`mocks.logs.delete`). See [API_INTEGRATION_GUIDE.md](API_INTEGRATION_GUIDE.md#73-outbound-callbacks-and-the-callback-log).
+
+### Praxis emulator
+
+`/emulators/praxis/{environment}/<Praxis path>` emulates the Praxis card API ("Test Card Processor") so BillingServer can be tested without the Praxis sandbox: point its Praxis URLs at `<test-service>/emulators/praxis/<env>/api/direct-process`, `.../direct/refund` and the base `<test-service>/emulators/praxis/<env>/` (for `agent/find-transaction` and `agent/manage-transaction`). It checks and produces `GT-Authentication` signatures, decrypts card data with the merchant secret, keeps transactions in MongoDB (`PraxisTransactions`) for find-transaction, capture and refund, serves a 3DS page (`pages/3ds/{tid}`) and sends signed notifications to `notification_url` through callback delivery (allow the host in `Mocking:AllowedCallbackHosts`). Outcomes follow the Praxis testing page by CVV and amount (568 approved, 000 declined, 333/300 3DS, 555 authorized, amount 11 changes the final amount, ...). The "Test E-Wallet" flows are emulated too: set BillingServer's e-wallet `SiteUrl` to `<test-service>/emulators/praxis/<env>/` and register the e-wallet gateway with `kind: ewallet`; `direct/apm` deposits get a "Please wait" page and a five-button page (`pages/apm/{tid}`), payouts (`direct/apm`, `direct/wallet-token`; BillingServer's e-wallet withdrawal path is disabled and does not call them today) follow the payout amount table, and `agent/get-available-gateways`, `agent/get-gateway-options` and `agent/manage-withdrawal-request` answer as the sandbox (see API_INTEGRATION_GUIDE.md §7.5.7). test-service never calls Praxis.
+
+The emulator is anonymous and answers only for environments with a registered merchant (`POST /api/emulators/praxis/merchants`, `mocks.write`; fields `environment`, `merchantId`, `applicationKey`, `secret` (write-only, `GET` shows `secretLength`), `gateways`, `dropNotifications`, `timeScale`). `timeScale` multiplies every emulator delay (card: 15 s notifications, 540 s 3DS timeouts; e-wallet: 12 s notifications, 450 s page and Pending timeouts). At `0` everything is immediate, so a card 3DS page is already timed out when opened (409); tests that open the 3DS page use a small positive value such as `0.1`. Inspect transactions with `GET /api/emulators/praxis/transactions?environment=&orderId=&tid=` (`mocks.read`). See [API_INTEGRATION_GUIDE.md](API_INTEGRATION_GUIDE.md#75-praxis-emulator) for endpoints, signatures, rejections and the full case table.
 
 ---
 

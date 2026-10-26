@@ -1,0 +1,9 @@
+{
+  "method": "POST",
+  "url": "https://pci-gw-test.praxispay.com/api/gateway/response/Test/<merchant-number>-<tid>?status=pending",
+  "form": {
+    "error_code": "903"
+  },
+  "http_status": 302,
+  "location": "https://compute.cashier-test.com/return/<token>"
+}

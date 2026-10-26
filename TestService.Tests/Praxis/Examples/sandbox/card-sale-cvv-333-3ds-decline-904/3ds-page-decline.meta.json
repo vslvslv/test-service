@@ -1,0 +1,9 @@
+{
+  "method": "POST",
+  "url": "https://pci-gw-test.praxispay.com/api/gateway/response/Test/<merchant-number>-<tid>?status=declined",
+  "form": {
+    "error_code": "904"
+  },
+  "http_status": 302,
+  "location": "https://compute.cashier-test.com/return/<token>"
+}

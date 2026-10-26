@@ -1,0 +1,22 @@
+{
+  "path": "agent/find-transaction",
+  "elapsed_s": 0.22,
+  "http_status": 200,
+  "request": {
+    "merchant_id": "<merchant_id>",
+    "application_key": "<application_key>",
+    "version": "1.3",
+    "timestamp": 1792659751,
+    "tid": 9
+  },
+  "request_headers": {
+    "GT-Authentication": "<signature>"
+  },
+  "response_headers": {
+    "Content-Type": "application/json; charset=utf-8"
+  },
+  "response": {
+    "status": 401,
+    "description": "Wrong credentials"
+  }
+}

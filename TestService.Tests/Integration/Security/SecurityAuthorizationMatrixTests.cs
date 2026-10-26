@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using TestService.Api.Emulators.Praxis;
 using TestService.Api.Models;
 using TestService.Tests.Infrastructure;
 
@@ -94,7 +95,14 @@ public class SecurityAuthorizationMatrixTests : IntegrationTestBase
                 ResponseTemplate = new MockResponseTemplate { Status = 200, Body = "{}" },
                 Times = new MockTimes { Unlimited = true }
             }),
-            BuildRequest("DELETE", "/api/mocks/requests?environment=dev")
+            BuildRequest("DELETE", "/api/mocks/requests?environment=dev"),
+            BuildRequest("GET", "/api/mocks/callbacks"),
+            BuildRequest("DELETE", "/api/mocks/callbacks?environment=dev"),
+            BuildRequest("GET", "/api/emulators/praxis/merchants"),
+            BuildRequest("POST", "/api/emulators/praxis/merchants", MerchantRequest("dev")),
+            BuildRequest("PUT", "/api/emulators/praxis/merchants/507f1f77bcf86cd799439011", MerchantRequest("dev")),
+            BuildRequest("DELETE", "/api/emulators/praxis/merchants/507f1f77bcf86cd799439011"),
+            BuildRequest("GET", "/api/emulators/praxis/transactions")
         };
 
         foreach (var request in requests)
@@ -189,7 +197,83 @@ public class SecurityAuthorizationMatrixTests : IntegrationTestBase
         return request;
     }
 
-    private async Task<UserResponse> CreateContributorUserAsync(string adminToken)
+    [TestCase(PermissionDefinitions.MocksLogsRead, HttpStatusCode.OK, HttpStatusCode.Forbidden)]
+    [TestCase(PermissionDefinitions.MocksLogsDelete, HttpStatusCode.Forbidden, HttpStatusCode.OK)]
+    public async Task CallbackLogEndpoints_WithSinglePermission_EnforceTheirOwnPolicy(
+        string permission, HttpStatusCode expectedGet, HttpStatusCode expectedDelete)
+    {
+        var user = await CreateContributorUserAsync(_adminToken, [permission]);
+        try
+        {
+            SetAuthToken(await GetTokenAsync(user.Username, "Contrib@123"));
+            var environment = $"cb-perm-{Guid.NewGuid():N}";
+
+            var get = await Client.GetAsync($"/api/mocks/callbacks?environment={environment}");
+            var delete = await Client.DeleteAsync($"/api/mocks/callbacks?environment={environment}");
+
+            Assert.That(get.StatusCode, Is.EqualTo(expectedGet), $"GET with only {permission}");
+            Assert.That(delete.StatusCode, Is.EqualTo(expectedDelete), $"DELETE with only {permission}");
+        }
+        finally
+        {
+            SetAuthToken(_adminToken);
+            await Client.DeleteAsync($"/api/users/{user.Id}");
+        }
+    }
+
+    [TestCase(PermissionDefinitions.MocksRead)]
+    [TestCase(PermissionDefinitions.MocksWrite)]
+    public async Task EmulatorEndpoints_WithSinglePermission_EnforceTheirOwnPolicy(string permission)
+    {
+        var user = await CreateContributorUserAsync(_adminToken, [permission]);
+        var environment = $"px-perm-{Guid.NewGuid():N}";
+        string? createdId = null;
+        try
+        {
+            SetAuthToken(await GetTokenAsync(user.Username, "Contrib@123"));
+            const string unknownId = "507f1f77bcf86cd799439011";
+            var canRead = permission == PermissionDefinitions.MocksRead;
+
+            var list = await Client.GetAsync($"/api/emulators/praxis/merchants?environment={environment}");
+            var transactions = await Client.GetAsync($"/api/emulators/praxis/transactions?environment={environment}");
+            var create = await Client.PostAsJsonAsync("/api/emulators/praxis/merchants", MerchantRequest(environment));
+            var update = await Client.PutAsJsonAsync($"/api/emulators/praxis/merchants/{unknownId}", MerchantRequest(environment));
+            var delete = await Client.DeleteAsync($"/api/emulators/praxis/merchants/{unknownId}");
+            if (create.StatusCode == HttpStatusCode.Created)
+            {
+                createdId = (await create.Content.ReadFromJsonAsync<PraxisMerchantView>())!.Id;
+            }
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(list.StatusCode, Is.EqualTo(canRead ? HttpStatusCode.OK : HttpStatusCode.Forbidden), $"GET merchants with only {permission}");
+                Assert.That(transactions.StatusCode, Is.EqualTo(canRead ? HttpStatusCode.OK : HttpStatusCode.Forbidden), $"GET transactions with only {permission}");
+                Assert.That(create.StatusCode, Is.EqualTo(canRead ? HttpStatusCode.Forbidden : HttpStatusCode.Created), $"POST merchants with only {permission}");
+                Assert.That(update.StatusCode, Is.EqualTo(canRead ? HttpStatusCode.Forbidden : HttpStatusCode.NotFound), $"PUT merchants with only {permission}");
+                Assert.That(delete.StatusCode, Is.EqualTo(canRead ? HttpStatusCode.Forbidden : HttpStatusCode.NotFound), $"DELETE merchants with only {permission}");
+            });
+        }
+        finally
+        {
+            SetAuthToken(_adminToken);
+            if (createdId is not null)
+            {
+                await Client.DeleteAsync($"/api/emulators/praxis/merchants/{createdId}");
+            }
+            await Client.DeleteAsync($"/api/users/{user.Id}");
+        }
+    }
+
+    private static PraxisMerchantRequest MerchantRequest(string environment) => new()
+    {
+        Environment = environment,
+        MerchantId = "m-perm",
+        ApplicationKey = "app-perm",
+        Secret = "secret-perm",
+        Gateways = [new PraxisGateway { Id = "040e154f306f145b84208512d00ef8d9", Kind = "card" }]
+    };
+
+    private async Task<UserResponse> CreateContributorUserAsync(string adminToken, List<string>? customPermissions = null)
     {
         SetAuthToken(adminToken);
         var suffix = Guid.NewGuid().ToString("N")[..8];
@@ -199,7 +283,8 @@ public class SecurityAuthorizationMatrixTests : IntegrationTestBase
             Username = username,
             Email = $"{username}@test.local",
             Password = "Contrib@123",
-            Role = UserRole.Contributor
+            Role = UserRole.Contributor,
+            CustomPermissions = customPermissions
         });
 
         AssertStatusCode(response, HttpStatusCode.Created);

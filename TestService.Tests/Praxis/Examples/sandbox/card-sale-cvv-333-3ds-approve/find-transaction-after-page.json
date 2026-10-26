@@ -1,0 +1,85 @@
+{
+  "path": "agent/find-transaction",
+  "elapsed_s": 0.49,
+  "http_status": 200,
+  "request": {
+    "merchant_id": "<merchant_id>",
+    "application_key": "<application_key>",
+    "version": "1.3",
+    "timestamp": 1792660402,
+    "tid": 9999999
+  },
+  "request_headers": {
+    "GT-Authentication": "<signature>"
+  },
+  "response_headers": {
+    "Content-Type": "application/json; charset=UTF-8",
+    "GT-Authentication": "<signature>"
+  },
+  "response": {
+    "status": 0,
+    "description": "Ok",
+    "customer": {
+      "customer_token": "9999999999x9xx9x999999x9999x9x9x",
+      "country": "BG",
+      "first_name": "Jane",
+      "last_name": "Doe",
+      "avs_alert": 0,
+      "verification_alert": 0
+    },
+    "session": {
+      "auth_token": "999xx99x99x99999xx9x9xxxx9xx99x9",
+      "intent": "payment",
+      "session_status": "successful",
+      "order_id": "xxx-9999999999-9",
+      "currency": "USD",
+      "amount": 4900,
+      "conversion_rate": "1.000000",
+      "processed_currency": "USD",
+      "processed_amount": 4900,
+      "payment_method": "Credit Card",
+      "gateway": "040e154f306f145b84208512d00ef8d9",
+      "cid": "xxx-xxxxxxxx-9",
+      "variable1": null,
+      "variable2": null,
+      "variable3": null
+    },
+    "transaction": {
+      "transaction_type": "sale",
+      "transaction_status": "approved",
+      "tid": 9999999,
+      "transaction_id": "999999",
+      "currency": "USD",
+      "amount": 4900,
+      "conversion_rate": "1.000000",
+      "processed_currency": "USD",
+      "processed_amount": 4900,
+      "fee": 0,
+      "fee_included": 0,
+      "fee_type": "flat",
+      "payment_method": "Credit Card",
+      "payment_processor": "Test Card Processor",
+      "gateway": "040e154f306f145b84208512d00ef8d9",
+      "card": {
+        "card_token": "9xx99x999x9x999xx99999xx99999x99",
+        "card_type": "VISA",
+        "card_number": "999999******9999",
+        "card_exp": "99/9999",
+        "card_issuer_name": "CONOTOXIA SP. Z O.O",
+        "card_issuer_country": "PL"
+      },
+      "wallet": null,
+      "is_cascade": 0,
+      "cascade_level": 0,
+      "reference_id": null,
+      "withdrawal_request_id": null,
+      "created_by": "INTERNET",
+      "edited_by": null,
+      "status_code": "530",
+      "status_details": "Approved",
+      "is_3d": 1
+    },
+    "version": "1.3",
+    "timestamp": 1792660411
+  }
+}

@@ -105,7 +105,7 @@ public class AuthTests : PageTest
         await Expect(login.LoadingButton).ToBeDisabledAsync();
 
         releaseLogin.SetResult();
-        await Page.WaitForURLAsync(url => !url.Contains("/login"), new() { Timeout = 10_000 });
+        await Expect(Page).Not.ToHaveURLAsync(new System.Text.RegularExpressions.Regex("/login"), new() { Timeout = 10_000 });
     }
 
     // ── Credential handling ──────────────────────────────────────────────────
@@ -128,7 +128,7 @@ public class AuthTests : PageTest
         await Expect(Page.GetByText("Signing in...")).ToBeVisibleAsync();
 
         releaseLogin.SetResult();
-        await Page.WaitForURLAsync(url => !url.Contains("/login"), new() { Timeout = 10_000 });
+        await Expect(Page).Not.ToHaveURLAsync(new System.Text.RegularExpressions.Regex("/login"), new() { Timeout = 10_000 });
     }
 
     [Test]
@@ -138,8 +138,7 @@ public class AuthTests : PageTest
         await Page.GetByLabel("Username").FillAsync(TestConfig.Username);
         await Page.GetByLabel("Password").FillAsync(TestConfig.Password);
         await Page.GetByLabel("Username").PressAsync("Enter");
-        await Page.WaitForURLAsync(url => !url.Contains("/login"), new() { Timeout = 10_000 });
-        await Expect(Page).Not.ToHaveURLAsync(new System.Text.RegularExpressions.Regex("/login"));
+        await Expect(Page).Not.ToHaveURLAsync(new System.Text.RegularExpressions.Regex("/login"), new() { Timeout = 10_000 });
     }
 
     [Test]
@@ -168,8 +167,7 @@ public class AuthTests : PageTest
         await login.UsernameInput.FillAsync($" {TestConfig.Username} ");
         await login.PasswordInput.FillAsync($" {TestConfig.Password} ");
         await login.SubmitButton.ClickAsync();
-        await Page.WaitForURLAsync(url => !url.Contains("/login"), new() { Timeout = 10_000 });
-        await Expect(Page).Not.ToHaveURLAsync(new System.Text.RegularExpressions.Regex("/login"));
+        await Expect(Page).Not.ToHaveURLAsync(new System.Text.RegularExpressions.Regex("/login"), new() { Timeout = 10_000 });
     }
 
     [Test]
@@ -179,8 +177,7 @@ public class AuthTests : PageTest
         await Page.GetByLabel("Username").FillAsync(TestConfig.Username);
         await Page.GetByLabel("Password").FillAsync(TestConfig.Password);
         await Page.GetByLabel("Password").PressAsync("Enter");
-        await Page.WaitForURLAsync(url => !url.Contains("/login"), new() { Timeout = 10_000 });
-        await Expect(Page).Not.ToHaveURLAsync(new System.Text.RegularExpressions.Regex("/login"));
+        await Expect(Page).Not.ToHaveURLAsync(new System.Text.RegularExpressions.Regex("/login"), new() { Timeout = 10_000 });
     }
 
     // ── Error messages ───────────────────────────────────────────────────────
@@ -271,7 +268,7 @@ public class AuthTests : PageTest
         var login = new LoginPage(Page);
         await login.GotoAsync();
         await login.LoginAsync(TestConfig.Username, TestConfig.Password);
-        await Page.WaitForURLAsync(url => !url.Contains("/login"), new() { Timeout = 10_000 });
+        await Expect(Page).Not.ToHaveURLAsync(new System.Text.RegularExpressions.Regex("/login"), new() { Timeout = 10_000 });
 
         await Page.ReloadAsync();
 
@@ -329,7 +326,7 @@ public class AuthTests : PageTest
         await login.PasswordInput.FillAsync(TestConfig.Password);
         await login.SubmitButton.ClickAsync();
 
-        await Page.WaitForURLAsync(url => !url.Contains("/login"), new() { Timeout = 10_000 });
+        await Expect(Page).Not.ToHaveURLAsync(new System.Text.RegularExpressions.Regex("/login"), new() { Timeout = 10_000 });
     }
 
     // ── Post-login session state ─────────────────────────────────────────────
@@ -340,7 +337,7 @@ public class AuthTests : PageTest
         var login = new LoginPage(Page);
         await login.GotoAsync();
         await login.LoginAsync(TestConfig.Username, TestConfig.Password);
-        await Page.WaitForURLAsync(url => !url.Contains("/login"), new() { Timeout = 10_000 });
+        await Expect(Page).Not.ToHaveURLAsync(new System.Text.RegularExpressions.Regex("/login"), new() { Timeout = 10_000 });
 
         var token = await Page.EvaluateAsync<string?>("() => localStorage.getItem('token')");
         Assert.That(token, Is.Not.Null.And.Not.Empty);
@@ -352,7 +349,7 @@ public class AuthTests : PageTest
         var login = new LoginPage(Page);
         await login.GotoAsync();
         await login.LoginAsync(TestConfig.Username, TestConfig.Password);
-        await Page.WaitForURLAsync(url => !url.Contains("/login"), new() { Timeout = 10_000 });
+        await Expect(Page).Not.ToHaveURLAsync(new System.Text.RegularExpressions.Regex("/login"), new() { Timeout = 10_000 });
 
         var storedUser = await Page.EvaluateAsync<string?>("() => localStorage.getItem('user')");
         Assert.That(storedUser, Is.Not.Null.And.Not.Empty);
@@ -368,7 +365,7 @@ public class AuthTests : PageTest
         var login = new LoginPage(Page);
         await login.GotoAsync();
         await login.LoginAsync(TestConfig.Username, TestConfig.Password);
-        await Page.WaitForURLAsync(url => !url.Contains("/login"), new() { Timeout = 10_000 });
+        await Expect(Page).Not.ToHaveURLAsync(new System.Text.RegularExpressions.Regex("/login"), new() { Timeout = 10_000 });
 
         var role = await Page.EvaluateAsync<string?>(
             "() => { const u = JSON.parse(localStorage.getItem('user') ?? 'null'); return u?.role ?? null; }");
@@ -406,8 +403,7 @@ public class AuthTests : PageTest
             var login = new LoginPage(Page);
             await login.GotoAsync();
             await login.LoginAsync(username, password);
-            await Page.WaitForURLAsync(url => !url.Contains("/login"), new() { Timeout = 10_000 });
-            await Expect(Page).Not.ToHaveURLAsync(new System.Text.RegularExpressions.Regex("/login"));
+            await Expect(Page).Not.ToHaveURLAsync(new System.Text.RegularExpressions.Regex("/login"), new() { Timeout = 10_000 });
         }
         finally
         {

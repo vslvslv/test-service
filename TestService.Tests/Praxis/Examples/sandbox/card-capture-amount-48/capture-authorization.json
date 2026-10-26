@@ -1,0 +1,61 @@
+{
+  "path": "agent/manage-transaction",
+  "elapsed_s": 1.73,
+  "http_status": 200,
+  "request": {
+    "merchant_id": "<merchant_id>",
+    "application_key": "<application_key>",
+    "version": "1.3",
+    "timestamp": 1792660294,
+    "intent": "capture-authorization",
+    "tid": 9999999
+  },
+  "request_headers": {
+    "GT-Authentication": "<signature>"
+  },
+  "response_headers": {
+    "Content-Type": "application/json; charset=UTF-8",
+    "GT-Authentication": "<signature>"
+  },
+  "response": {
+    "status": 0,
+    "description": "Ok",
+    "transaction": {
+      "transaction_type": "sale",
+      "transaction_status": "error",
+      "tid": 9999999,
+      "transaction_id": "999999",
+      "currency": "USD",
+      "amount": 4800,
+      "conversion_rate": "1.000000",
+      "processed_currency": null,
+      "processed_amount": null,
+      "fee": 0,
+      "fee_included": 0,
+      "fee_type": "flat",
+      "payment_method": "Credit Card",
+      "payment_processor": "Test Card Processor",
+      "gateway": "040e154f306f145b84208512d00ef8d9",
+      "card": {
+        "card_token": "9xx99x999x9x999xx99999xx99999x99",
+        "card_type": "VISA",
+        "card_number": "999999******9999",
+        "card_exp": "99/9999",
+        "card_issuer_name": "CONOTOXIA SP. Z O.O",
+        "card_issuer_country": "PL"
+      },
+      "wallet": null,
+      "is_async": 0,
+      "is_cascade": 0,
+      "cascade_level": null,
+      "reference_id": null,
+      "withdrawal_request_id": null,
+      "created_by": "INTERNET",
+      "edited_by": null,
+      "status_code": "0",
+      "status_details": "[TEST] Transaction status: authorized"
+    },
+    "version": "1.3",
+    "timestamp": 1792660302
+  }
+}

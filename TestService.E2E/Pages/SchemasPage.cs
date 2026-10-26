@@ -17,8 +17,10 @@ public class SchemasPage(IPage page)
     // ── Toolbar ──────────────────────────────────────────────────────────────
     public ILocator SearchInput =>
         page.GetByPlaceholder("Search schemas by entity name");
+    // Scoped to the page header: when the schema list is empty, the empty state renders a
+    // second "Create Schema" button, and an unscoped locator resolves to two elements.
     public ILocator CreateButton =>
-        page.GetByRole(AriaRole.Button, new() {
+        page.Locator("section.page-hero").GetByRole(AriaRole.Button, new() {
             NameRegex = new System.Text.RegularExpressions.Regex(
                 "create schema", System.Text.RegularExpressions.RegexOptions.IgnoreCase)
         });

@@ -1,0 +1,211 @@
+{
+  "path": "agent/get-gateway-options",
+  "elapsed_s": 0.42,
+  "http_status": 200,
+  "request": {
+    "merchant_id": "<merchant_id>",
+    "application_key": "<application_key>",
+    "version": "1.3",
+    "timestamp": 1792659801,
+    "transaction_type": "payout"
+  },
+  "request_headers": {
+    "GT-Authentication": "<signature>"
+  },
+  "response_headers": {
+    "Content-Type": "application/json; charset=UTF-8",
+    "GT-Authentication": "<signature>"
+  },
+  "response": {
+    "status": 0,
+    "description": "Ok",
+    "gateway_options": [
+      {
+        "payment_method": "Credit Card",
+        "payment_processor": "Test Card Processor",
+        "gateway": "040e154f306f145b84208512d00ef8d9",
+        "system_name": "Test Card Processor - jane.doe@example.com",
+        "image": "",
+        "status": "active",
+        "deposit_supported": 1,
+        "authorization_supported": 0,
+        "payout_supported": 1,
+        "refund_supported": 1,
+        "is_3d": "no",
+        "input_fields": null
+      },
+      {
+        "payment_method": "altbankwire",
+        "payment_processor": "Test E-Wallet",
+        "gateway": "f7b7f9f8e9c5f906e1e7a8e91e28c820",
+        "system_name": "Test E-Wallet - jane.doe@example.com",
+        "image": "https://cdn.cashier-test.com/gateway_/gateway_662659f8ad5f1.svg",
+        "status": "active",
+        "deposit_supported": 1,
+        "authorization_supported": 0,
+        "payout_supported": 1,
+        "refund_supported": 0,
+        "is_3d": null,
+        "input_fields": {
+          "input_fields_for_payment": [
+            {
+              "key": "name",
+              "label": "Customer Name",
+              "required": 1,
+              "format": "text",
+              "min": 0,
+              "default_value": "",
+              "max": 50
+            },
+            {
+              "key": "email",
+              "label": "Enter your Email",
+              "required": 1,
+              "format": "text",
+              "min": 0,
+              "default_value": "",
+              "max": 50
+            },
+            {
+              "key": "phone",
+              "label": "Enter your phone",
+              "required": 1,
+              "format": "text",
+              "min": 0,
+              "default_value": "",
+              "max": 50
+            },
+            {
+              "key": "customer_country",
+              "label": "Enter your Country",
+              "required": 1,
+              "format": "select",
+              "min": 0,
+              "default_value": "country_cyprus",
+              "max": 50,
+              "options": {
+                "country_ukraine": "Ukriane",
+                "country_cyprus": "Cyprus",
+                "country_usa": "United States",
+                "country_canada": "Canada",
+                "IN": "India"
+              }
+            },
+            {
+              "key": "zip",
+              "label": "Postal code",
+              "required": 0,
+              "format": "text",
+              "min": 0,
+              "default_value": "",
+              "max": 50
+            },
+            {
+              "key": "dqa_t",
+              "label": "text",
+              "required": 0,
+              "format": "text",
+              "min": 0,
+              "default_value": "text",
+              "max": 50
+            },
+            {
+              "key": "test",
+              "label": "test_text_field",
+              "required": 1,
+              "format": "text",
+              "min": 0,
+              "default_value": "12345",
+              "max": 50
+            },
+            {
+              "key": "ip_address",
+              "label": "",
+              "required": 1,
+              "format": "hidden",
+              "min": 0,
+              "default_value": "",
+              "max": 50
+            },
+            {
+              "key": "QA",
+              "label": "QA",
+              "required": 1,
+              "format": "dynamic",
+              "min": 0,
+              "default_value": "",
+              "max": 50
+            },
+            {
+              "key": "testNumber",
+              "label": "testNumber",
+              "required": 0,
+              "format": "dynamic",
+              "min": 0,
+              "default_value": "",
+              "max": 50
+            }
+          ],
+          "input_fields_for_withdrawal": [
+            {
+              "key": "name",
+              "label": "Enter your name",
+              "required": 0,
+              "format": "text",
+              "min": 0,
+              "default_value": "",
+              "max": 50
+            },
+            {
+              "key": "email",
+              "label": "Enter your Email",
+              "required": 1,
+              "format": "text",
+              "min": 0,
+              "default_value": "",
+              "max": 50
+            },
+            {
+              "key": "phone",
+              "label": "Enter your phone",
+              "required": 0,
+              "format": "text",
+              "min": 0,
+              "default_value": "",
+              "max": 50
+            },
+            {
+              "key": "customer_country",
+              "label": "Enter your Country",
+              "required": 0,
+              "format": "text",
+              "min": 0,
+              "default_value": "",
+              "max": 50
+            },
+            {
+              "key": "ip_address",
+              "label": "",
+              "required": 0,
+              "format": "hidden",
+              "min": 0,
+              "default_value": "",
+              "max": 50
+            },
+            {
+              "key": "any_field",
+              "label": "any field",
+              "required": 0,
+              "format": "text",
+              "min": 0,
+              "default_value": "",
+              "max": 50
+            }
+          ]
+        }
+      }
+    ],
+    "version": "1.3",
+    "timestamp": 1792659811
+  }
+}

@@ -1,12 +1,16 @@
 using System.Text;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.IdentityModel.Tokens;
 using TestService.Api.Authentication;
 using MongoDB.Bson.Serialization;
 using MongoDB.Bson.Serialization.Conventions;
 using MongoDB.Driver;
 using TestService.Api.Configuration;
+using TestService.Api.Emulators;
+using TestService.Api.Emulators.Praxis;
+using TestService.Api.Emulators.Transactions;
 using TestService.Api.Services;
 using TestService.Api.Hubs;
 using TestService.Api.Models;
@@ -236,6 +240,25 @@ builder.Services.AddSingleton<IMessageBusService, MessageBusService>();
 builder.Services.AddSingleton<IMockRepository, MockRepository>();
 builder.Services.AddSingleton<IMockService, MockService>();
 
+// Outbound mock callbacks (provider emulator notifications): options pattern so tests can PostConfigure.
+builder.Services.Configure<MockingSettings>(builder.Configuration.GetSection("Mocking"));
+builder.Services.AddHttpClient(TestService.Api.BackgroundServices.CallbackDispatcher.HttpClientName, client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(30);
+})
+// No automatic redirects: an allowed host must not be able to bounce a callback to a host that is
+// not allowed. A 3xx is logged as the target's reply.
+.ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler { AllowAutoRedirect = false });
+builder.Services.TryAddSingleton(TimeProvider.System);
+builder.Services.AddSingleton<CallbackQueue>();
+builder.Services.AddSingleton<ICallbackDelivery>(sp => sp.GetRequiredService<CallbackQueue>());
+
+// Provider emulators (/emulators/{provider}/{environment}/...): Praxis card flows.
+builder.Services.AddSingleton<IPraxisMerchantRepository, MongoPraxisMerchantRepository>();
+builder.Services.AddSingleton<ITransactionRepository, MongoTransactionRepository>();
+builder.Services.AddSingleton<PraxisEmulator>();
+builder.Services.AddSingleton<IProviderEmulator>(sp => sp.GetRequiredService<PraxisEmulator>());
+
 // Register Notification service
 builder.Services.AddSingleton<INotificationService, NotificationService>();
 
@@ -257,6 +280,8 @@ builder.Services.AddScoped<IActivityService, ActivityService>();
 // Register background services
 builder.Services.AddHostedService<TestService.Api.BackgroundServices.DataCleanupService>();
 builder.Services.AddHostedService<TestService.Api.BackgroundServices.ActivityCleanupService>();
+builder.Services.AddHostedService<TestService.Api.BackgroundServices.CallbackDispatcher>();
+builder.Services.AddHostedService<PraxisDeadlineService>();
 
 var app = builder.Build();
 Console.WriteLine("[INFO] App built successfully, starting configuration...");
@@ -320,6 +345,9 @@ if (app.Environment.IsDevelopment())
 
 // Enable CORS
 app.UseCors("AllowWebUI");
+
+// Route /emulators/{provider}/{environment}/... (anonymous provider emulators), then /mock/{environment}/...
+app.UseMiddleware<EmulatorMiddleware>();
 
 // Route /mock/{environment}/... requests before MVC handles them.
 app.UseMiddleware<TestService.Api.Middleware.MockRoutingMiddleware>();

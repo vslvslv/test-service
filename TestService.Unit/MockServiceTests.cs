@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Microsoft.Extensions.Logging;
 
 namespace TestService.Unit;
@@ -15,6 +16,29 @@ public class MockServiceTests
         _repository = Substitute.For<IMockRepository>();
         _logger = Substitute.For<ILogger<MockService>>();
         _service = new MockService(_repository, _logger);
+    }
+
+    // ── Callback logs: pass-throughs ─────────────────────────────────────────
+
+    [Test]
+    public async Task GetCallbackLogsAsync_PassesFiltersToRepository()
+    {
+        var logs = new[] { new MockCallbackLog { CorrelationId = "42" } };
+        _repository.GetCallbackLogsAsync("e", "praxis", "42", 5).Returns(logs);
+
+        var result = await _service.GetCallbackLogsAsync("e", "praxis", "42", 5);
+
+        Assert.That(result, Is.SameAs(logs));
+    }
+
+    [Test]
+    public async Task DeleteCallbackLogsAsync_ReturnsRepositoryCount()
+    {
+        _repository.DeleteCallbackLogsAsync("e").Returns(3L);
+
+        var deleted = await _service.DeleteCallbackLogsAsync("e");
+
+        Assert.That(deleted, Is.EqualTo(3L));
     }
 
     // ── ExecuteAsync: path matching ──────────────────────────────────────────
@@ -239,8 +263,7 @@ public class MockServiceTests
     public async Task VerifyAsync_ExactCount_SucceedsWhenCountMatches()
     {
         var log = new MockRequestLog { Method = "GET", Path = "/" };
-        _repository.GetRequestLogsAsync(Arg.Any<string?>(), Arg.Any<string?>(), Arg.Any<int>(), Arg.Any<bool?>())
-            .Returns(new[] { log, log }); // 2 logs
+        StubLogs(new[] { log, log }); // 2 logs
 
         var request = new MockVerificationRequest
         {
@@ -258,8 +281,7 @@ public class MockServiceTests
     public async Task VerifyAsync_ExactCount_FailsWhenCountDoesNotMatch()
     {
         var log = new MockRequestLog { Method = "GET", Path = "/" };
-        _repository.GetRequestLogsAsync(Arg.Any<string?>(), Arg.Any<string?>(), Arg.Any<int>(), Arg.Any<bool?>())
-            .Returns(new[] { log });
+        StubLogs(new[] { log });
 
         var request = new MockVerificationRequest
         {
@@ -276,8 +298,7 @@ public class MockServiceTests
     public async Task VerifyAsync_MinCount_SucceedsWhenAtLeastMinMatched()
     {
         var log = new MockRequestLog { Method = "GET", Path = "/api" };
-        _repository.GetRequestLogsAsync(Arg.Any<string?>(), Arg.Any<string?>(), Arg.Any<int>(), Arg.Any<bool?>())
-            .Returns(new[] { log, log, log });
+        StubLogs(new[] { log, log, log });
 
         var request = new MockVerificationRequest
         {
@@ -288,6 +309,237 @@ public class MockServiceTests
         var result = await _service.VerifyAsync(request);
 
         Assert.That(result.Success, Is.True);
+    }
+
+    [Test]
+    public async Task VerifyAsync_StreamsEveryLog_BeyondOneThousand()
+    {
+        StubLogs(Enumerable.Range(0, 1500).Select(_ => new MockRequestLog { Method = "GET", Path = "/" }));
+
+        var result = await _service.VerifyAsync(new MockVerificationRequest
+        {
+            Environment = "e",
+            Matcher = new MockRequestMatcher { Path = "/" },
+            ExactCount = 1500
+        });
+
+        Assert.That(result.Success, Is.True);
+        Assert.That(result.MatchedCount, Is.EqualTo(1500));
+        _repository.Received(1).StreamRequestLogsAsync("e", Arg.Any<CancellationToken>());
+        await _repository.DidNotReceive().GetRequestLogsAsync(Arg.Any<string?>(), Arg.Any<string?>(), Arg.Any<int>(), Arg.Any<bool?>());
+    }
+
+    [Test]
+    public async Task VerifyAsync_BlankEnvironment_PassesBlankThroughToStream()
+    {
+        StubLogs(new[]
+        {
+            new MockRequestLog { Environment = "a", Method = "GET", Path = "/" },
+            new MockRequestLog { Environment = "b", Method = "GET", Path = "/" }
+        });
+
+        var result = await _service.VerifyAsync(new MockVerificationRequest
+        {
+            Environment = "",
+            Matcher = new MockRequestMatcher { Path = "/" },
+            ExactCount = 2
+        });
+
+        Assert.That(result.Success, Is.True);
+        _repository.Received(1).StreamRequestLogsAsync("", Arg.Any<CancellationToken>());
+    }
+
+    [Test]
+    public async Task VerifyAsync_QueryMatcher_CountsLogWithMatchingQueryString()
+    {
+        StubLogs(new[]
+        {
+            new MockRequestLog { Method = "GET", Path = "/q", QueryString = "?a=1" },
+            new MockRequestLog { Method = "GET", Path = "/q", QueryString = "?a=2" },
+            new MockRequestLog { Method = "GET", Path = "/q", QueryString = string.Empty }
+        });
+
+        var result = await _service.VerifyAsync(new MockVerificationRequest
+        {
+            Matcher = new MockRequestMatcher { Path = "/q", Query = new Dictionary<string, string> { ["a"] = "1" } },
+            ExactCount = 1
+        });
+
+        Assert.That(result.MatchedCount, Is.EqualTo(1));
+        Assert.That(result.Success, Is.True);
+    }
+
+    [Test]
+    public async Task VerifyAsync_HeaderMatcher_IsCaseInsensitiveOnHeaderName()
+    {
+        StubLogs(new[]
+        {
+            new MockRequestLog { Method = "GET", Path = "/h", Headers = new Dictionary<string, string> { ["X-Test"] = "yes" } }
+        });
+
+        var result = await _service.VerifyAsync(new MockVerificationRequest
+        {
+            Matcher = new MockRequestMatcher { Path = "/h", Headers = new Dictionary<string, string> { ["x-test"] = "yes" } },
+            ExactCount = 1
+        });
+
+        Assert.That(result.MatchedCount, Is.EqualTo(1));
+    }
+
+    // ── Regex timeout ────────────────────────────────────────────────────────
+
+    [Test]
+    public async Task ExecuteAsync_CatastrophicPathRegex_TimesOutAsNoMatchAndLogsWarning()
+    {
+        // "^/" rather than the bare "^(a+)+$": a path always starts with "/", which would fail the
+        // bare pattern at position 0 without backtracking; this way the nested quantifier is reached.
+        var expectation = BuildExpectation(path: "^/(a+)+$", pathMatchType: PathMatchType.Regex);
+        expectation.Name = "evil";
+        _repository.GetExpectationsAsync(Arg.Any<string?>(), Arg.Any<bool>())
+            .Returns(new[] { expectation });
+
+        var stopwatch = Stopwatch.StartNew();
+        var result = await _service.ExecuteAsync(new MockExecutionRequest { Path = "/" + new string('a', 40) + "!" });
+        stopwatch.Stop();
+
+        Assert.That(result.Matched, Is.False);
+        Assert.That(stopwatch.Elapsed, Is.LessThan(TimeSpan.FromSeconds(2)));
+        Assert.That(WarningMessages(), Has.Some.Contains($"expectation {expectation.Id} (evil)"));
+    }
+
+    [Test]
+    public async Task VerifyAsync_CatastrophicBodyRegex_TimesOutAsNoMatchAndLogsWarning()
+    {
+        StubLogs(new[] { new MockRequestLog { Method = "POST", Path = "/", Body = new string('a', 40) + "!" } });
+
+        var stopwatch = Stopwatch.StartNew();
+        var result = await _service.VerifyAsync(new MockVerificationRequest
+        {
+            Environment = "env1",
+            Matcher = new MockRequestMatcher { Path = "/", Body = "^(a+)+$", BodyMatchType = BodyMatchType.Regex },
+            ExactCount = 0
+        });
+        stopwatch.Stop();
+
+        Assert.That(result.MatchedCount, Is.EqualTo(0));
+        Assert.That(stopwatch.Elapsed, Is.LessThan(TimeSpan.FromSeconds(2)));
+        Assert.That(WarningMessages(), Has.Some.Contains("verification matcher (environment env1)"));
+    }
+
+    // ── Invalid regex at match time ──────────────────────────────────────────
+
+    [Test]
+    public async Task ExecuteAsync_InvalidStoredPathRegex_IsNoMatchAndTheNextExpectationAnswers()
+    {
+        // Stored before patterns were validated on save.
+        var invalid = BuildExpectation(path: "/(", pathMatchType: PathMatchType.Regex, status: 418);
+        invalid.Name = "legacy";
+        var valid = BuildExpectation(path: "/(", pathMatchType: PathMatchType.Exact, status: 200, body: "ok");
+        _repository.GetExpectationsAsync(Arg.Any<string?>(), Arg.Any<bool>())
+            .Returns(new[] { invalid, valid });
+
+        var result = await _service.ExecuteAsync(new MockExecutionRequest { Path = "/(" });
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.Matched, Is.True);
+            Assert.That(result.StatusCode, Is.EqualTo(200));
+            Assert.That(result.MatchedExpectationId, Is.EqualTo(valid.Id));
+            Assert.That(WarningMessages(), Has.Some.Contains($"expectation {invalid.Id} (legacy) is invalid"));
+        });
+    }
+
+    [Test]
+    public async Task VerifyAsync_InvalidBodyRegex_CountsNothingAndLogsWarning()
+    {
+        StubLogs(new[] { new MockRequestLog { Method = "POST", Path = "/", Body = "[a-" } });
+
+        var result = await _service.VerifyAsync(new MockVerificationRequest
+        {
+            Environment = "env1",
+            Matcher = new MockRequestMatcher { Path = "/", Body = "[a-", BodyMatchType = BodyMatchType.Regex },
+            ExactCount = 0
+        });
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.Success, Is.True);
+            Assert.That(result.MatchedCount, Is.EqualTo(0));
+            Assert.That(WarningMessages(), Has.Some.Contains("verification matcher (environment env1)"));
+        });
+    }
+
+    // ── Regex validation on save ─────────────────────────────────────────────
+
+    [Test]
+    public void CreateExpectationAsync_InvalidPathRegex_ThrowsNamingFieldAndDoesNotStore()
+    {
+        var ex = Assert.ThrowsAsync<MockExpectationValidationException>(() => _service.CreateExpectationAsync(new MockExpectation
+        {
+            RequestMatcher = new MockRequestMatcher { Path = "(", PathMatchType = PathMatchType.Regex }
+        }));
+
+        Assert.That(ex!.Field, Is.EqualTo("requestMatcher.path"));
+        Assert.That(ex.Message, Does.StartWith("requestMatcher.path is not a valid regular expression: "));
+        _repository.DidNotReceive().CreateExpectationAsync(Arg.Any<MockExpectation>());
+    }
+
+    [Test]
+    public void CreateExpectationAsync_InvalidBodyRegex_ThrowsNamingBodyField()
+    {
+        var ex = Assert.ThrowsAsync<MockExpectationValidationException>(() => _service.CreateExpectationAsync(new MockExpectation
+        {
+            RequestMatcher = new MockRequestMatcher { Body = "[a-", BodyMatchType = BodyMatchType.Regex }
+        }));
+
+        Assert.That(ex!.Field, Is.EqualTo("requestMatcher.body"));
+        _repository.DidNotReceive().CreateExpectationAsync(Arg.Any<MockExpectation>());
+    }
+
+    [Test]
+    public void UpdateExpectationAsync_InvalidPathRegex_ThrowsAndDoesNotStore()
+    {
+        _repository.GetExpectationByIdAsync("abc").Returns(new MockExpectation { Id = "abc" });
+
+        var ex = Assert.ThrowsAsync<MockExpectationValidationException>(() => _service.UpdateExpectationAsync("abc", new MockExpectation
+        {
+            RequestMatcher = new MockRequestMatcher { Path = "(", PathMatchType = PathMatchType.Regex }
+        }));
+
+        Assert.That(ex!.Field, Is.EqualTo("requestMatcher.path"));
+        _repository.DidNotReceive().UpdateExpectationAsync(Arg.Any<string>(), Arg.Any<MockExpectation>());
+    }
+
+    [Test]
+    public async Task CreateExpectationAsync_ValidRegexes_AreStored()
+    {
+        _repository.CreateExpectationAsync(Arg.Any<MockExpectation>()).Returns(ci => ci.Arg<MockExpectation>());
+
+        await _service.CreateExpectationAsync(new MockExpectation
+        {
+            RequestMatcher = new MockRequestMatcher
+            {
+                Path = @"^/api/items/\d+$",
+                PathMatchType = PathMatchType.Regex,
+                Body = @"""id""\s*:",
+                BodyMatchType = BodyMatchType.Regex
+            }
+        });
+
+        await _repository.Received(1).CreateExpectationAsync(Arg.Any<MockExpectation>());
+    }
+
+    [Test]
+    public async Task CreateExpectationAsync_InvalidPatternWithNonRegexMatchType_IsStored()
+    {
+        _repository.CreateExpectationAsync(Arg.Any<MockExpectation>()).Returns(ci => ci.Arg<MockExpectation>());
+
+        await _service.CreateExpectationAsync(new MockExpectation
+        {
+            RequestMatcher = new MockRequestMatcher { Path = "(", PathMatchType = PathMatchType.Prefix, Body = "(", BodyMatchType = BodyMatchType.Contains }
+        });
+
+        await _repository.Received(1).CreateExpectationAsync(Arg.Any<MockExpectation>());
     }
 
     // ── CreateExpectationAsync: normalization ────────────────────────────────
@@ -380,6 +632,27 @@ public class MockServiceTests
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────
+
+    private void StubLogs(IEnumerable<MockRequestLog> logs)
+    {
+        var list = logs.ToList();
+        _repository.StreamRequestLogsAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(_ => ToAsync(list));
+    }
+
+    private static async IAsyncEnumerable<T> ToAsync<T>(IEnumerable<T> items)
+    {
+        foreach (var item in items)
+        {
+            yield return item;
+        }
+        await Task.CompletedTask;
+    }
+
+    private List<string> WarningMessages() => _logger.ReceivedCalls()
+        .Where(c => c.GetMethodInfo().Name == nameof(ILogger.Log) && (LogLevel)c.GetArguments()[0]! == LogLevel.Warning)
+        .Select(c => c.GetArguments()[2]?.ToString() ?? string.Empty)
+        .ToList();
 
     private static MockExpectation BuildExpectation(
         string path = "/",

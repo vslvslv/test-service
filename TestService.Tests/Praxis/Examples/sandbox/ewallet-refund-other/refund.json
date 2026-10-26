@@ -1,0 +1,29 @@
+{
+  "path": "direct/refund",
+  "elapsed_s": 0.87,
+  "http_status": 200,
+  "request": {
+    "merchant_id": "<merchant_id>",
+    "application_key": "<application_key>",
+    "version": "1.3",
+    "timestamp": 1792661815,
+    "transaction_type": "refund",
+    "currency": "EUR",
+    "amount": 500,
+    "cid": "xxx-xxxxxxxx-9",
+    "locale": "en-GB",
+    "order_id": "xxx-9999999999-999",
+    "reference_id": 9999999
+  },
+  "request_headers": {
+    "GT-Authentication": "<signature>"
+  },
+  "response_headers": {
+    "Content-Type": "application/json; charset=UTF-8",
+    "GT-Authentication": "<signature>"
+  },
+  "response": {
+    "status": 1,
+    "description": "Gateway for reference_id  does not allow refunding"
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "method": "GET",
+  "url": "https://helios.cashier-test.com/api/apm/response/TestAPM/<tid>?status=approved",
+  "form": null,
+  "http_status": 302,
+  "location": "https://compute.cashier-test.com/return/<token>"
+}

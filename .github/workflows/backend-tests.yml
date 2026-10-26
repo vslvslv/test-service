@@ -101,14 +101,14 @@ jobs:
         run: docker compose -f infrastructure/docker-compose.dev.yml up -d --build --wait
 
       - name: Run E2E tests
+        env:
+          BASE_URL: http://localhost:3000
+          API_URL: http://localhost:5000
         run: >
           dotnet test TestService.E2E/TestService.E2E.csproj
           --configuration Release
           --no-build
           --logger "trx;LogFileName=e2e.trx"
-          --
-          TestRunParameters.Parameter\(name=\"WebUrl\",value=\"http://localhost:3000\"\)
-          TestRunParameters.Parameter\(name=\"ApiUrl\",value=\"http://localhost:5000\"\)
 
       - name: Capture stack logs on failure
         if: failure()

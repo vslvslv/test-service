@@ -19,6 +19,7 @@ import { copyToClipboard as copyText } from '../utils/clipboard';
 interface DataRetentionSettings {
   schemaRetentionDays: number | null;
   entityRetentionDays: number | null;
+  mockLogRetentionDays: number | null;
   autoCleanupEnabled: boolean;
 }
 
@@ -35,6 +36,7 @@ const Settings: React.FC = () => {
   const [dataRetention, setDataRetention] = useState<DataRetentionSettings>({
     schemaRetentionDays: null,
     entityRetentionDays: 30,
+    mockLogRetentionDays: 7,
     autoCleanupEnabled: true,
   });
   const [apiKeys, setApiKeys] = useState<ApiKey[]>([]);
@@ -333,9 +335,40 @@ const Settings: React.FC = () => {
                 </div>
               </div>
             </div>
+            <div className="rounded-[24px] border border-slate-800 bg-slate-950/35 p-5">
+              <div className="mb-4 flex items-center gap-2">
+                <span className="text-sm font-medium text-white">Mock log retention (days)</span>
+                <div className="group relative">
+                  <Info className="h-4 w-4 text-slate-500" />
+                  <div className="absolute left-0 top-full z-10 mt-2 hidden w-64 rounded-xl border border-slate-700 bg-slate-950 p-3 text-xs leading-5 text-slate-300 group-hover:block">
+                    Deletes mock request logs and callback logs older than this.
+                  </div>
+                </div>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_180px]">
+                <select
+                  aria-label="Mock log retention (days)"
+                  value={dataRetention.mockLogRetentionDays === null ? 'never' : dataRetention.mockLogRetentionDays}
+                  onChange={(e) => handleRetentionChange('mockLogRetentionDays', e.target.value === 'never' ? null : parseInt(e.target.value, 10))}
+                  className="field-shell"
+                >
+                  <option value="never">Never</option>
+                  <option value="1">1 day</option>
+                  <option value="3">3 days</option>
+                  <option value="7">7 days</option>
+                  <option value="14">14 days</option>
+                  <option value="30">30 days</option>
+                  <option value="90">90 days</option>
+                </select>
+                <div className="inline-flex items-center gap-2 rounded-2xl border border-slate-800 bg-slate-900/70 px-4 py-3 text-sm text-slate-300">
+                  <Calendar className="h-4 w-4 text-slate-500" />
+                  {getRetentionDisplay(dataRetention.mockLogRetentionDays)}
+                </div>
+              </div>
+            </div>
           </div>
 
-          {dataRetention.autoCleanupEnabled && (dataRetention.schemaRetentionDays !== null || dataRetention.entityRetentionDays !== null) && (
+          {dataRetention.autoCleanupEnabled && (dataRetention.schemaRetentionDays !== null || dataRetention.entityRetentionDays !== null || dataRetention.mockLogRetentionDays !== null) && (
             <div className="rounded-[24px] border border-amber-500/30 bg-amber-500/10 p-5">
               <div className="flex gap-3">
                 <AlertCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-amber-300" />

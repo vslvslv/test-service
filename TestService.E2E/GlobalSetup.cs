@@ -17,7 +17,7 @@ public class GlobalSetup
         await page.GetByLabel("Username").FillAsync(TestConfig.Username);
         await page.GetByLabel("Password").FillAsync(TestConfig.Password);
         await page.GetByRole(AriaRole.Button, new() { Name = "Sign In" }).ClickAsync();
-        await page.WaitForURLAsync(url => !url.Contains("/login"), new() { Timeout = 10_000 });
+        await Assertions.Expect(page).Not.ToHaveURLAsync(new System.Text.RegularExpressions.Regex("/login"), new() { Timeout = 10_000 });
 
         Directory.CreateDirectory(".auth");
         await context.StorageStateAsync(new() { Path = TestConfig.AuthStatePath });

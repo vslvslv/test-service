@@ -30,6 +30,10 @@ public class MocksController : ControllerBase
             var created = await _mockService.CreateExpectationAsync(expectation);
             return CreatedAtAction(nameof(GetExpectations), new { environment = created.Environment }, created);
         }
+        catch (MockExpectationValidationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error creating mock expectation");
@@ -67,6 +71,10 @@ public class MocksController : ControllerBase
                 return NotFound();
             }
             return NoContent();
+        }
+        catch (MockExpectationValidationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
         }
         catch (Exception ex)
         {
@@ -127,6 +135,42 @@ public class MocksController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error deleting mock request logs");
+            return StatusCode(500, "Internal server error");
+        }
+    }
+
+    [HttpGet("callbacks")]
+    [Authorize(Policy = PermissionDefinitions.MocksLogsRead)]
+    public async Task<ActionResult<IEnumerable<MockCallbackLog>>> GetCallbackLogs(
+        [FromQuery] string? environment = null,
+        [FromQuery] string? source = null,
+        [FromQuery] string? correlationId = null,
+        [FromQuery] int limit = 100)
+    {
+        try
+        {
+            var logs = await _mockService.GetCallbackLogsAsync(environment, source, correlationId, limit);
+            return Ok(logs);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting mock callback logs");
+            return StatusCode(500, "Internal server error");
+        }
+    }
+
+    [HttpDelete("callbacks")]
+    [Authorize(Policy = PermissionDefinitions.MocksLogsDelete)]
+    public async Task<ActionResult<object>> DeleteCallbackLogs([FromQuery] string? environment = null)
+    {
+        try
+        {
+            var deletedCount = await _mockService.DeleteCallbackLogsAsync(environment);
+            return Ok(new { deletedCount });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error deleting mock callback logs");
             return StatusCode(500, "Internal server error");
         }
     }
@@ -249,6 +293,10 @@ public class MocksController : ControllerBase
 
             var created = await _mockService.CreateExpectationAsync(clone);
             return Ok(created);
+        }
+        catch (MockExpectationValidationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
         }
         catch (Exception ex)
         {
